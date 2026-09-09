@@ -226,8 +226,8 @@ def cabecalho(corretor: dict, ativo: str, prefixo: str) -> str:
     return f"""<header class="topo">
   <div class="wrap topo-linha">
     <a class="marca" href="{prefixo}index.html">
+      <img class="marca-simbolo" src="{prefixo}assets/simbolo.png" alt="" width="28" height="32" />
       <span class="marca-nome">Igor Santiago</span>
-      <span class="marca-sub">Imóveis</span>
     </a>
     <nav class="nav" aria-label="Principal">{links}</nav>
     <a class="btn btn-wa nav-wa" href="{e(wa_link(corretor, corretor['mensagem_whatsapp_geral']))}"
@@ -244,7 +244,10 @@ def rodape(corretor: dict, prefixo: str) -> str:
     return f"""<footer class="rodape">
   <div class="wrap rodape-grade">
     <div>
-      <p class="rodape-marca">Igor Santiago <span>Imóveis</span></p>
+      <p class="rodape-marca">
+        <img class="marca-simbolo" src="{prefixo}assets/simbolo.png" alt="" width="24" height="27" />
+        Igor Santiago
+      </p>
       <p class="rodape-pos">{e(corretor['posicionamento'])}</p>
     </div>
     <nav class="rodape-links" aria-label="Rodapé">
@@ -285,13 +288,14 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>{e(titulo)}</title>
 <meta name="description" content="{e(descricao)}" />
-<meta name="theme-color" content="#14434f" />
+<meta name="theme-color" content="#0a0a0a" />
 <meta name="robots" content="noindex, nofollow" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800;900&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="{prefixo}assets/styles.css" />
-<link rel="icon" href="{prefixo}assets/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="{prefixo}assets/favicon.png" type="image/png" />
+<link rel="apple-touch-icon" href="{prefixo}assets/favicon-512.png" />
 <script>
   if (!window.matchMedia || !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {{
     if ("IntersectionObserver" in window) document.documentElement.className += " js";
@@ -372,11 +376,11 @@ def pagina_home(corretor: dict, imoveis: list[dict]) -> str:
 
     corpo = f"""
 <section class="hero">
-  <span class="hero-monograma" aria-hidden="true">IS</span>
+  <img class="hero-marca-agua" src="assets/simbolo.png" alt="" aria-hidden="true" />
   <div class="wrap hero-grade">
     <div class="hero-texto">
       <p class="sobrelinha" {reveal(0)}>{e(corretor['atuacao'])}</p>
-      <h1 {reveal(1)}>Imóveis de alto padrão com quem <em>responde</em> pelo negócio do começo ao fim.</h1>
+      <h1 {reveal(1)}>Imóveis de alto padrão com quem <span class="acento">responde</span> pelo negócio do começo ao fim.</h1>
       <p class="hero-sub" {reveal(2)}>{bio_ou_aviso(corretor, 'bio_curta',
         '[bio curta — Igor informar: uma frase sobre quem você é e como atende]')}</p>
       <div class="hero-assinatura" {reveal(3)}>
@@ -555,7 +559,7 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict]) -> str:
   </div>
 </section>
 
-<section class="secao secao-duvidas">
+<section class="secao secao-alt">
   <div class="wrap">
     <h2>Dúvidas comuns sobre este imóvel</h2>
     <p class="sub">Respondidas antes de você perguntar, para a conversa começar adiantada.</p>
@@ -788,19 +792,6 @@ def escrever_auxiliares(corretor: dict, imoveis: list[dict], publicar: bool) -> 
     # de rodar o build), nao artefato gerado. Nao recriar aqui.
 
 
-def escrever_favicon() -> None:
-    ASSETS.mkdir(parents=True, exist_ok=True)
-    alvo = ASSETS / "favicon.svg"
-    if alvo.exists():
-        return
-    alvo.write_text(
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
-        '<rect width="64" height="64" rx="12" fill="#14434f"/>'
-        '<text x="32" y="43" font-family="Georgia,serif" font-size="30" font-weight="700"'
-        ' fill="#faf8f5" text-anchor="middle">IS</text></svg>\n',
-        encoding="utf-8")
-
-
 # --------------------------------------------------------------------------
 # verificacao
 # --------------------------------------------------------------------------
@@ -858,7 +849,6 @@ def main(argv: list[str]) -> int:
         shutil.rmtree(SAIDA)
     (SAIDA / "imovel").mkdir(parents=True)
 
-    escrever_favicon()
     shutil.copytree(ASSETS, SAIDA / "assets")
 
     (SAIDA / "index.html").write_text(pagina_home(corretor, imoveis), encoding="utf-8")
