@@ -81,3 +81,23 @@
 
   aplicar();
 })();
+
+// --- revelação escalonada -------------------------------------------------
+// A classe "js" só existe no <html> quando JS rodou e o visitante não pediu
+// "reduzir movimento" (script inline no <head>). Sem ela, tudo já está visível.
+(function () {
+  "use strict";
+  if (!document.documentElement.classList.contains("js")) return;
+  if (!("IntersectionObserver" in window)) return;
+
+  var alvos = document.querySelectorAll("[data-reveal]");
+  var observador = new IntersectionObserver(function (entradas) {
+    entradas.forEach(function (entrada) {
+      if (!entrada.isIntersecting) return;
+      entrada.target.classList.add("in-view");
+      observador.unobserve(entrada.target);
+    });
+  }, { threshold: .15, rootMargin: "0px 0px -40px 0px" });
+
+  Array.prototype.forEach.call(alvos, function (el) { observador.observe(el); });
+})();

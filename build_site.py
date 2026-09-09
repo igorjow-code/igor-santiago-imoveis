@@ -196,6 +196,12 @@ def resumo(imovel: dict) -> str:
 # blocos de HTML
 # --------------------------------------------------------------------------
 
+def reveal(n: int = 0, passo_ms: int = 80) -> str:
+    """Atributo de revelação escalonada: n-ésimo elemento de um grupo visual.
+    Sem JS ou com "reduzir movimento", não faz nada (ver script no <head>)."""
+    return f'data-reveal style="--atraso:{n * passo_ms}ms"'
+
+
 def foto_placeholder(rotulo: str, altura: str = "aspect-4-3") -> str:
     return (f'<div class="foto {altura} pendente" role="img" '
             f'aria-label="Foto pendente: {e(rotulo)}">'
@@ -286,6 +292,11 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="{prefixo}assets/styles.css" />
 <link rel="icon" href="{prefixo}assets/favicon.svg" type="image/svg+xml" />
+<script>
+  if (!window.matchMedia || !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {{
+    if ("IntersectionObserver" in window) document.documentElement.className += " js";
+  }}
+</script>
 </head>
 <body>
 {barra_demo(imoveis)}
@@ -302,16 +313,20 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
 """
 
 
-def card(imovel: dict, corretor: dict, prefixo: str = "") -> str:
+def card(imovel: dict, corretor: dict, prefixo: str = "",
+         numero: int | None = None, atraso: int = 0) -> str:
     marca_reservado = ('<span class="selo selo-reservado">Reservado</span>'
                        if imovel.get("situacao") == "reservado" else "")
     operacao = "Locação" if imovel["operacao"] == "locacao" else "Venda"
+    lote = f'<span class="card-lote">{numero:02d}</span>' if numero else ""
     return f"""<article class="card" data-operacao="{e(imovel['operacao'])}"
          data-tipo="{e(imovel['tipo'])}" data-bairro="{e(imovel['bairro'])}"
-         data-quartos="{imovel.get('quartos', 0)}" data-preco="{imovel['preco']}">
+         data-quartos="{imovel.get('quartos', 0)}" data-preco="{imovel['preco']}"
+         data-reveal style="--atraso:{atraso}ms">
   <a class="card-link" href="{prefixo}imovel/{e(imovel['slug'])}.html">
     <div class="card-foto">
       {foto_placeholder(imovel['titulo'])}
+      {lote}
       <span class="selo selo-op">{operacao}</span>
       {marca_reservado}
     </div>
@@ -349,32 +364,35 @@ def anos_mercado(corretor: dict) -> str:
 
 def pagina_home(corretor: dict, imoveis: list[dict]) -> str:
     destaques = [i for i in imoveis if i.get("destaque")][:3]
-    cards = "".join(card(i, corretor) for i in destaques)
+    cards = "".join(card(i, corretor, numero=n, atraso=(n - 1) * 90)
+                    for n, i in enumerate(destaques, 1))
     provas = "".join(
-        f'<div class="prova"><h3>{e(p["titulo"])}</h3><p>{e(p["texto"])}</p></div>'
-        for p in corretor["provas"])
+        f'<div class="prova" {reveal(i)}><h3>{e(p["titulo"])}</h3><p>{e(p["texto"])}</p></div>'
+        for i, p in enumerate(corretor["provas"]))
 
     corpo = f"""
 <section class="hero">
+  <span class="hero-monograma" aria-hidden="true">IS</span>
   <div class="wrap hero-grade">
     <div class="hero-texto">
-      <p class="sobrelinha">{e(corretor['atuacao'])}</p>
-      <h1>Imóveis de alto padrão com quem responde pelo negócio do começo ao fim.</h1>
-      <p class="hero-sub">{bio_ou_aviso(corretor, 'bio_curta',
+      <p class="sobrelinha" {reveal(0)}>{e(corretor['atuacao'])}</p>
+      <h1 {reveal(1)}>Imóveis de alto padrão com quem <em>responde</em> pelo negócio do começo ao fim.</h1>
+      <p class="hero-sub" {reveal(2)}>{bio_ou_aviso(corretor, 'bio_curta',
         '[bio curta — Igor informar: uma frase sobre quem você é e como atende]')}</p>
-      <div class="hero-assinatura">
+      <div class="hero-assinatura" {reveal(3)}>
         <strong>{e(corretor['nome_pessoa'])}</strong>
         <span>{e(corretor['titulo_profissional'])} · {e(corretor['creci'])}</span>
         <span>{anos_mercado(corretor)}</span>
       </div>
-      <div class="hero-botoes">
+      <div class="hero-botoes" {reveal(4)}>
         <a class="btn btn-principal" href="imoveis.html">Ver imóveis</a>
         <a class="btn btn-wa" target="_blank" rel="noopener"
            href="{e(wa_link(corretor, corretor['mensagem_whatsapp_geral']))}">Falar no WhatsApp</a>
       </div>
     </div>
-    <div class="hero-foto">
+    <div class="hero-foto" {reveal(2)}>
       {foto_placeholder('Retrato de Igor Santiago', 'aspect-3-4')}
+      <span class="hero-selo-creci">{e(corretor['creci'])} · ativo</span>
       <p class="mini centro">Foto de Igor — pendente</p>
     </div>
   </div>
@@ -386,23 +404,23 @@ def pagina_home(corretor: dict, imoveis: list[dict]) -> str:
 
 <section class="secao">
   <div class="wrap">
-    <div class="secao-topo">
+    <div class="secao-topo" {reveal(0)}>
       <h2>Selecionados</h2>
       <a class="link-seta" href="imoveis.html">Ver todos os imóveis</a>
     </div>
-    <div class="grade-cards">{cards}</div>
+    <div class="grade-cards grade-cards--vitrine">{cards}</div>
   </div>
 </section>
 
 <section class="faixa-captacao">
   <div class="wrap captacao-grade">
-    <div>
+    <div {reveal(0)}>
       <h2>Tem um imóvel para vender?</h2>
       <p>Faço a avaliação de mercado do seu imóvel em {e(corretor['cidade'])} com base em
          comparáveis reais do bairro — e explico como cheguei ao número, sem promessa
          inflada para conseguir a exclusividade.</p>
     </div>
-    <div class="captacao-cta">
+    <div class="captacao-cta" {reveal(1)}>
       <a class="btn btn-claro" href="vender.html">Como funciona a avaliação</a>
     </div>
   </div>
@@ -417,7 +435,8 @@ def pagina_home(corretor: dict, imoveis: list[dict]) -> str:
 
 
 def pagina_catalogo(corretor: dict, imoveis: list[dict]) -> str:
-    cards = "".join(card(i, corretor) for i in imoveis)
+    cards = "".join(card(i, corretor, numero=n, atraso=min(n - 1, 5) * 70)
+                    for n, i in enumerate(imoveis, 1))
 
     def opcoes(chave: str) -> str:
         vistos = sorted({str(i[chave]) for i in imoveis})

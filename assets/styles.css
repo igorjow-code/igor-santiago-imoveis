@@ -31,6 +31,28 @@ body {
   font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+
+/* grão sutil sobre a página inteira — tira a chapadez de fundo sólido digital,
+   sem custar um asset: SVG de ruído embutido como data-uri. */
+body::after {
+  content: "";
+  position: fixed; inset: 0; z-index: 90;
+  pointer-events: none;
+  opacity: .035; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* --- revelação escalonada (progressive enhancement) --------------------- */
+/* Sem JS ou com "reduzir movimento" ativado, .js nunca é adicionada ao
+   <html> (ver script no <head>) — o conteúdo fica visível por padrão. */
+.js [data-reveal] { opacity: 0; transform: translateY(18px); }
+.js [data-reveal].in-view {
+  opacity: 1; transform: translateY(0);
+  transition: opacity .7s cubic-bezier(.16,1,.3,1),
+              transform .7s cubic-bezier(.16,1,.3,1);
+  transition-delay: var(--atraso, 0ms);
 }
 
 h1, h2, h3 { font-family: var(--serif); font-weight: 600; line-height: 1.15; margin: 0; letter-spacing: -.01em; }
@@ -109,9 +131,17 @@ a:hover { text-decoration-color: var(--accent); }
 .menu-btn[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
 /* --- hero -------------------------------------------------------------- */
-.hero { padding: clamp(3rem, 6vw, 5.5rem) 0 clamp(2.5rem, 5vw, 4rem); }
-.hero-grade { display: grid; grid-template-columns: 1.25fr .75fr; gap: clamp(2rem, 5vw, 4.5rem); align-items: center; }
+.hero { position: relative; overflow: hidden; padding: clamp(3rem, 6vw, 5.5rem) 0 clamp(2.5rem, 5vw, 4rem); }
+.hero-monograma {
+  position: absolute; top: -.35em; right: -.1em; z-index: 0;
+  font-family: var(--serif); font-style: italic; font-weight: 600;
+  font-size: clamp(9rem, 18vw, 16rem); line-height: .8;
+  color: var(--brand); opacity: .05;
+  pointer-events: none; user-select: none;
+}
+.hero-grade { position: relative; z-index: 1; display: grid; grid-template-columns: 1.25fr .75fr; gap: clamp(2rem, 5vw, 4.5rem); align-items: center; }
 .hero h1 { max-width: 16ch; }
+.hero h1 em { font-style: italic; color: var(--accent); font-weight: 500; }
 .hero-sub { font-size: 1.08rem; color: var(--ink-soft); max-width: 48ch; margin-top: 1.3rem; }
 .hero-assinatura {
   margin: 1.8rem 0; padding-left: 1.1rem; border-left: 3px solid var(--accent);
@@ -133,9 +163,32 @@ a:hover { text-decoration-color: var(--accent); }
 .aspect-3-4 { aspect-ratio: 3 / 4; }
 .pendente-txt { color: #8f2626; font-style: italic; }
 
+.hero-foto { position: relative; }
+.hero-foto::before {
+  content: ""; position: absolute; z-index: -1;
+  top: 16px; right: -16px; bottom: -16px; left: 16px;
+  border: 1.5px solid var(--accent); border-radius: var(--r);
+}
+.hero-selo-creci {
+  position: absolute; left: -1rem; bottom: -1rem; z-index: 2;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: .6rem 1rem; box-shadow: var(--sombra);
+  font-size: .74rem; font-weight: 600; letter-spacing: .03em; color: var(--brand);
+  white-space: nowrap;
+}
+
 /* --- provas ------------------------------------------------------------ */
-.faixa-provas { background: var(--brand-deep); color: #e6eef0; padding: clamp(2.5rem, 5vw, 3.6rem) 0; }
-.provas-grade { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5rem; }
+.faixa-provas {
+  position: relative; overflow: hidden;
+  background: var(--brand-deep); color: #e6eef0; padding: clamp(2.5rem, 5vw, 3.6rem) 0;
+}
+.faixa-provas::before, .faixa-captacao::before {
+  content: ""; position: absolute; z-index: 0; top: 50%; left: 82%;
+  width: 620px; height: 620px; transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(168,121,79,.16), transparent 68%);
+  pointer-events: none;
+}
+.provas-grade { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5rem; }
 .prova h3 { color: #fff; margin-bottom: .55rem; }
 .prova h3::before { content: ""; display: block; width: 26px; height: 2px; background: var(--accent); margin-bottom: .8rem; }
 .prova p { color: #b9cbd0; font-size: .93rem; margin: 0; }
@@ -153,7 +206,24 @@ a:hover { text-decoration-color: var(--accent); }
 
 /* --- cards ------------------------------------------------------------- */
 .grade-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 1.6rem; }
+
+/* variante "vitrine" — só a home usa: 1 imóvel grande + 2 empilhados,
+   em vez da grade uniforme (que fica reservada pro catálogo, onde o
+   JS reordena por filtro e uma peça "grande fixa" quebraria o resultado). */
+.grade-cards--vitrine {
+  grid-template-columns: 1.5fr 1fr;
+  grid-template-rows: repeat(2, 1fr);
+}
+.grade-cards--vitrine .card:first-child { grid-row: 1 / 3; }
+.grade-cards--vitrine .card:first-child .card-foto .foto { aspect-ratio: 1 / 1; }
+@media (max-width: 900px) {
+  .grade-cards--vitrine { grid-template-columns: 1fr; grid-template-rows: none; }
+  .grade-cards--vitrine .card:first-child { grid-row: auto; }
+  .grade-cards--vitrine .card:first-child .card-foto .foto { aspect-ratio: 4 / 3; }
+}
+
 .card {
+  position: relative;
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
   overflow: hidden; display: flex; flex-direction: column;
   transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
@@ -169,6 +239,13 @@ a:hover { text-decoration-color: var(--accent); }
   letter-spacing: .1em; text-transform: uppercase; padding: .3rem .65rem; border-radius: 999px;
 }
 .selo-reservado { left: auto; right: .8rem; background: var(--accent); }
+.card-lote {
+  /* canto inferior — os selos de operação/reservado já ocupam o topo */
+  position: absolute; z-index: 2; bottom: .6rem; right: .9rem;
+  font-family: var(--serif); font-style: italic; font-weight: 600;
+  font-size: 1.3rem; color: rgba(255,255,255,.92);
+  text-shadow: 0 1px 8px rgba(0,0,0,.4);
+}
 .card-corpo { padding: 1.1rem 1.2rem .4rem; }
 .card-preco { font-family: var(--serif); font-size: 1.55rem; font-weight: 700; color: var(--brand); margin: 0 0 .35rem; }
 .por-mes { font-family: var(--sans); font-size: .82rem; font-weight: 500; color: var(--ink-soft); }
@@ -248,8 +325,8 @@ a:hover { text-decoration-color: var(--accent); }
 .sobre-bio { font-size: 1.05rem; }
 .sobre-texto h3 { margin: 2rem 0 .9rem; }
 .sobre-texto .btn { margin-top: 1.8rem; }
-.faixa-captacao { background: var(--brand); color: #fff; padding: clamp(2.5rem, 5vw, 3.6rem) 0; }
-.captacao-grade { display: grid; grid-template-columns: 1.6fr auto; gap: 2rem; align-items: center; }
+.faixa-captacao { position: relative; overflow: hidden; background: var(--brand); color: #fff; padding: clamp(2.5rem, 5vw, 3.6rem) 0; }
+.captacao-grade { position: relative; z-index: 1; display: grid; grid-template-columns: 1.6fr auto; gap: 2rem; align-items: center; }
 .faixa-captacao h2 { color: #fff; margin-bottom: .8rem; }
 .faixa-captacao p { color: #cfe0e4; margin: 0; max-width: 62ch; }
 .passos { list-style: none; margin: 2rem 0 0; padding: 0; display: grid; gap: 1.6rem; max-width: 68ch; }
