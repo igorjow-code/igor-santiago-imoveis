@@ -1,0 +1,10 @@
+[build]
+  command = "python3 build_site.py"
+  publish = "publico"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"

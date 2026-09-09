@@ -1,0 +1,47 @@
+{
+  "_comentario": "Fonte unica dos dados do corretor. Campos com __PENDENTE_IGOR__ nao vao ao ar: o build --check lista todos.",
+
+  "nome_marca": "Igor Santiago Imóveis",
+  "nome_pessoa": "Igor Santiago",
+  "titulo_profissional": "Corretor de Imóveis",
+  "creci": "CRECI-BA 28.140",
+  "creci_confirmado_por_igor": false,
+  "regime": "__PENDENTE_IGOR__",
+
+  "cidade": "Feira de Santana",
+  "uf": "BA",
+  "atuacao": "Feira de Santana e região",
+
+  "whatsapp_e164": "5575991272134",
+  "whatsapp_exibicao": "(75) 99127-2134",
+  "instagram": "igorsantiagoimoveis",
+  "email": "__PENDENTE_IGOR__",
+
+  "anos_de_mercado": "__PENDENTE_IGOR__",
+  "foto": "__PENDENTE_IGOR__",
+
+  "posicionamento": "Alto padrão em Feira de Santana. Atendimento pessoal, do primeiro contato à escritura.",
+
+  "bio_curta": "__PENDENTE_IGOR__",
+  "bio_longa": "__PENDENTE_IGOR__",
+
+  "provas": [
+    {
+      "titulo": "CRECI-BA 28.140 ativo",
+      "texto": "Registro ativo no Conselho Regional de Corretores de Imóveis da Bahia. Cada negociação é conduzida dentro da norma da categoria."
+    },
+    {
+      "titulo": "Dois anos nos Estados Unidos",
+      "texto": "Padrão de atendimento, transparência de informação e leitura de mercado trazidos de fora e aplicados aqui."
+    },
+    {
+      "titulo": "Atendimento pessoal",
+      "texto": "Você fala comigo, não com um call center. Do primeiro WhatsApp à assinatura, é a mesma pessoa."
+    }
+  ],
+
+  "site_url": "https://igorsantiagoimoveis.com.br",
+
+  "mensagem_whatsapp_geral": "Olá, Igor. Vi seu site e gostaria de falar sobre imóveis em Feira de Santana.",
+  "mensagem_whatsapp_captacao": "Olá, Igor. Tenho um imóvel e gostaria de uma avaliação de mercado."
+}
