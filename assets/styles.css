@@ -315,20 +315,38 @@ a:hover { text-decoration-color: var(--laranja); }
 .migalha a { text-decoration: none; }
 .imovel-topo { padding: 1.5rem 0 0; }
 .imovel-grade { display: grid; grid-template-columns: 1.6fr .9fr; gap: 2.2rem; align-items: start; }
-.imovel-galeria { display: grid; grid-template-columns: repeat(3, 1fr); gap: .7rem; }
-.imovel-galeria .foto { aspect-ratio: 4 / 3; }
-.imovel-galeria .foto:first-child { grid-column: 1 / -1; aspect-ratio: 16 / 10; }
-.imovel-painel {
-  position: sticky; top: 110px;
-  background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--r);
-  padding: 1.5rem; box-shadow: var(--sombra);
+.aspect-16-10 { aspect-ratio: 16 / 10; }
+
+/* carrossel de fotos (mecanismo Field Team — foto cheia, sem card dividido) */
+.imovel-carrossel { position: relative; }
+.carrossel-trilho {
+  display: flex; border-radius: var(--r); overflow: hidden;
+  transition: transform .45s cubic-bezier(.16,1,.3,1);
 }
-.imovel-painel .selo { position: static; display: inline-block; margin-bottom: .9rem; }
-.imovel-preco { font-family: var(--display); font-size: 2.1rem; font-weight: 900; color: var(--laranja-fundo); margin: 0 0 .4rem; }
-.imovel-painel h1 { font-size: 1.3rem; margin-bottom: .35rem; color: var(--tinta); }
-.imovel-local { color: var(--tinta-suave); font-size: .9rem; margin-bottom: 1.2rem; }
-.aviso-reservado { background: #fdf0e6; border-left: 3px solid var(--laranja); padding: .7rem .9rem; font-size: .86rem; color: #7a3c15; border-radius: 0 8px 8px 0; margin-bottom: 1.2rem; }
-.painel-creci { font-size: .78rem; color: var(--tinta-suave); margin: 1rem 0 0; text-align: center; }
+.carrossel-slide { flex: 0 0 100%; }
+.carrossel-slide .foto { border-radius: 0; }
+.carrossel-seta {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 42px; height: 42px; border: 0; border-radius: 999px;
+  background: rgba(10,10,10,.55); color: #fff; font-size: 1.5rem; line-height: 1;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.carrossel-seta:hover { background: var(--laranja); }
+.carrossel-anterior { left: 14px; }
+.carrossel-proxima { right: 14px; }
+.carrossel-pontos { position: absolute; left: 0; right: 0; bottom: 14px; display: flex; justify-content: center; gap: 7px; }
+.carrossel-ponto { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,.55); cursor: pointer; }
+.carrossel-ponto.ativo { width: 20px; border-radius: 5px; background: var(--laranja); }
+
+/* painel de preco da ficha — mesmo cartao "recibo" da Home (IS-22),
+   com CTA e CRECI, que a Home nao precisa mostrar */
+.recibo-ficha { position: sticky; top: 110px; padding: 1.6rem 1.7rem 1.4rem; }
+.recibo-ficha .selo { position: static; display: inline-block; margin-bottom: .9rem; background: var(--laranja); color: var(--preto); }
+.recibo-ficha h1 { font-size: 1.4rem; color: var(--marfim); margin-bottom: .2rem; }
+.recibo-ficha .recibo-local { margin-bottom: 1.1rem; }
+.aviso-reservado { background: rgba(235,99,22,.14); border-left: 3px solid var(--laranja); padding: .7rem .9rem; font-size: .86rem; color: var(--marfim); border-radius: 0 8px 8px 0; margin-bottom: 1.2rem; }
+.painel-creci { font-size: .78rem; color: var(--marfim-suave); margin: 1rem 0 0; text-align: center; }
+
 .imovel-conteudo { display: grid; grid-template-columns: 1.5fr 1fr; gap: 3rem; align-items: start; }
 .imovel-texto h2 { margin: 0 0 1rem; }
 .imovel-texto h2 + h2, .imovel-texto p + h2 { margin-top: 2.2rem; }
@@ -336,12 +354,20 @@ a:hover { text-decoration-color: var(--laranja); }
 .lista-destaques li { position: relative; padding-left: 1.5rem; margin-bottom: .6rem; color: var(--tinta-suave); }
 .lista-destaques li::before { content: ""; position: absolute; left: 0; top: .62em; width: 7px; height: 7px; border-radius: 50%; background: var(--laranja); }
 .lista-nao li::before { background: #8f2626; }
+.imovel-lateral { display: flex; flex-direction: column; gap: 1.6rem; }
 .imovel-specs { background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--r); padding: 1.5rem; }
 .imovel-specs h2 { font-size: 1.15rem; margin-bottom: 1rem; }
 .specs-grade { margin: 0 0 1rem; display: grid; gap: 0; }
 .spec { display: flex; justify-content: space-between; gap: 1rem; padding: .6rem 0; border-bottom: 1px solid var(--linha); font-size: .9rem; }
 .spec dt { color: var(--tinta-suave); }
 .spec dd { margin: 0; font-weight: 700; }
+
+/* --- mapa do bairro (nao o endereco exato — padrao do setor) ------------ */
+.mapa-card { background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--r); padding: 1.5rem; }
+.mapa-card h2 { font-size: 1.15rem; margin-bottom: 1rem; }
+.mapa-frame { position: relative; aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden; border: 1px solid var(--linha); }
+.mapa-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; filter: grayscale(.15) contrast(1.02); }
+.mapa-legenda { font-size: .82rem; color: var(--tinta-suave); margin: .9rem 0 0; }
 
 /* --- duvidas (dentro de .secao-alt, agora escura) ------------------------ */
 .duvidas { margin-top: 1.8rem; max-width: 90ch; display: grid; gap: .7rem; }
@@ -402,7 +428,7 @@ a:hover { text-decoration-color: var(--laranja); }
 @media (max-width: 980px) {
   .hero-grade, .imovel-grade, .imovel-conteudo, .sobre-grade { grid-template-columns: 1fr; }
   .hero-foto, .sobre-foto { max-width: 320px; }
-  .imovel-painel { position: static; }
+  .recibo-ficha { position: static; }
   .provas-grade { grid-template-columns: 1fr; gap: 1.6rem; }
   .captacao-grade { grid-template-columns: 1fr; }
   .rodape-grade { grid-template-columns: 1fr 1fr; }
@@ -428,8 +454,7 @@ a:hover { text-decoration-color: var(--laranja); }
     text-decoration: none; box-shadow: 0 -6px 20px -10px rgba(0,0,0,.45);
   }
   .grade-cards { grid-template-columns: 1fr; }
-  .imovel-galeria { grid-template-columns: 1fr 1fr; }
-  .imovel-galeria .foto:first-child { grid-column: 1 / -1; aspect-ratio: 4 / 3; }
+  .carrossel-seta { width: 36px; height: 36px; font-size: 1.25rem; }
   .filtros label { flex: 1 1 100%; }
   .rodape-grade { grid-template-columns: 1fr; gap: 1.8rem; }
   .hero-botoes .btn { flex: 1 1 100%; }

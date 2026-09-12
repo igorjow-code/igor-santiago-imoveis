@@ -28,6 +28,18 @@ SAIDA = ROOT / "publico"
 
 PENDENTE = "__PENDENTE_IGOR__"
 
+# Centro aproximado de cada bairro (não o endereço exato do imóvel — por
+# padrão de privacidade do setor, a localização pública é por bairro).
+# Geocodificado uma vez via Nominatim/OpenStreetMap (12/09/2026); bairro sem
+# entrada aqui simplesmente não mostra mapa, em vez de adivinhar coordenada.
+COORDENADAS_BAIRRO = {
+    "Santa Mônica|Feira de Santana": (-12.2615379, -38.9385258),
+    "Muchila|Feira de Santana": (-12.2705727, -38.9684344),
+    "Sim|Feira de Santana": (-12.2512799, -38.9260106),
+    "Ponto Central|Feira de Santana": (-12.2526425, -38.9520510),
+    "Brasília|Feira de Santana": (-12.2666487, -38.9505934),
+}
+
 # Campos que toda ficha precisa ter para virar pagina.
 OBRIGATORIOS = ("slug", "titulo", "operacao", "tipo", "bairro", "cidade", "preco")
 NUMERICOS = ("area", "area_terreno", "quartos", "suites", "vagas",
@@ -390,6 +402,52 @@ def recibo(imovel: dict, atraso_base: int = 0) -> str:
 </article>"""
 
 
+def recibo_ficha(corretor: dict, imovel: dict) -> str:
+    """Painel de preço da ficha — mesmo mecanismo do recibo() da Home (IS-22),
+    com o botão de WhatsApp e o CRECI, que a Home não precisa mostrar."""
+    operacao = "Locação" if imovel["operacao"] == "locacao" else "Venda"
+    itens = "".join(
+        f'<div class="recibo-linha" {reveal(n + 1, 90)}><dt>{e(rotulo)}</dt>'
+        f'<dd>{valor}</dd></div>'
+        for n, (rotulo, valor) in enumerate(linhas_recibo(imovel)))
+    reservado = ('<p class="aviso-reservado">Proposta em análise — posso registrar '
+                 'seu interesse como segunda opção.</p>'
+                 if imovel.get("situacao") == "reservado" else "")
+    return f"""<aside class="recibo recibo-ficha" data-reveal style="--atraso:0ms">
+  <span class="selo selo-op" {reveal(0)}>{operacao}</span>
+  <h1 {reveal(1)}>{e(imovel['titulo'])}</h1>
+  <p class="recibo-local" {reveal(2)}>{e(imovel['bairro'])} · {e(imovel['cidade'])}</p>
+  <dl class="recibo-linhas">{itens}</dl>
+  {reservado}
+  <a class="btn btn-wa btn-largo" {reveal(5, 90)} target="_blank" rel="noopener"
+     href="{e(wa_imovel(corretor, imovel))}">Falar sobre este imóvel</a>
+  <p class="painel-creci" {reveal(6, 90)}>{e(corretor['nome_pessoa'])} ·
+     {e(corretor['titulo_profissional'])} · <strong>{e(corretor['creci'])}</strong></p>
+</aside>"""
+
+
+def mapa_bairro(imovel: dict) -> str:
+    chave = f"{imovel['bairro']}|{imovel['cidade']}"
+    coordenada = COORDENADAS_BAIRRO.get(chave)
+    if not coordenada:
+        return ""
+    lat, lon = coordenada
+    delta = 0.012
+    bbox = f"{lon - delta},{lat - delta},{lon + delta},{lat + delta}"
+    embed = (f"https://www.openstreetmap.org/export/embed.html"
+             f"?bbox={bbox}&layer=mapnik&marker={lat},{lon}")
+    rota = f"https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=15/{lat}/{lon}"
+    return f"""<div class="mapa-card">
+  <h2>Localização</h2>
+  <div class="mapa-frame">
+    <iframe src="{e(embed)}" loading="lazy" title="Mapa de {e(imovel['bairro'])}, {e(imovel['cidade'])}"
+            referrerpolicy="no-referrer-when-downgrade"></iframe>
+  </div>
+  <p class="mapa-legenda">{e(imovel['bairro'])} · {e(imovel['cidade'])} — localização
+     aproximada do bairro. <a href="{e(rota)}" target="_blank" rel="noopener">Ver rota</a></p>
+</div>"""
+
+
 def secao_recibo(destaques: list[dict]) -> str:
     if not destaques:
         return ""
@@ -545,9 +603,26 @@ def pagina_catalogo(corretor: dict, imoveis: list[dict]) -> str:
         ativo="imoveis.html")
 
 
+def galeria_carrossel(imovel: dict, n_fotos: int = 4) -> str:
+    titulo = imovel["titulo"]
+    slides = "".join(
+        f'<div class="carrossel-slide{" ativo" if n == 1 else ""}">'
+        f'{foto_placeholder(f"{titulo} — foto {n}", "aspect-16-10")}</div>'
+        for n in range(1, n_fotos + 1))
+    pontos = "".join(
+        f'<button class="carrossel-ponto{" ativo" if n == 1 else ""}" type="button" '
+        f'aria-label="Foto {n} de {n_fotos}" data-indice="{n - 1}"></button>'
+        for n in range(1, n_fotos + 1))
+    return f"""<div class="imovel-carrossel" data-carrossel>
+  <div class="carrossel-trilho">{slides}</div>
+  <button class="carrossel-seta carrossel-anterior" type="button" aria-label="Foto anterior" data-anterior>&#8249;</button>
+  <button class="carrossel-seta carrossel-proxima" type="button" aria-label="Próxima foto" data-proxima>&#8250;</button>
+  <div class="carrossel-pontos">{pontos}</div>
+</div>"""
+
+
 def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict]) -> str:
-    galeria = "".join(foto_placeholder(f"{imovel['titulo']} — foto {n}")
-                      for n in range(1, 5))
+    carrossel = galeria_carrossel(imovel)
     linhas_spec = "".join(
         f'<div class="spec"><dt>{e(k)}</dt><dd>{e(v)}</dd></div>' for k, v in specs(imovel))
     texto = "".join(f"<p>{e(p)}</p>" for p in imovel["descricao"])
@@ -555,10 +630,7 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict]) -> str:
     duvidas = "".join(
         f'<details class="duvida"><summary>{e(d["pergunta"])}</summary>'
         f'<p>{e(d["resposta"])}</p></details>' for d in imovel["duvidas"])
-    operacao = "Locação" if imovel["operacao"] == "locacao" else "Venda"
-    reservado = ('<p class="aviso-reservado">Este imóvel está com proposta em análise. '
-                 'Posso registrar seu interesse como segunda opção.</p>'
-                 if imovel.get("situacao") == "reservado" else "")
+    mapa = mapa_bairro(imovel)
 
     corpo = f"""
 <nav class="migalha wrap" aria-label="Você está em">
@@ -568,18 +640,8 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict]) -> str:
 
 <section class="imovel-topo">
   <div class="wrap imovel-grade">
-    <div class="imovel-galeria">{galeria}</div>
-    <aside class="imovel-painel">
-      <span class="selo selo-op">{operacao}</span>
-      <p class="imovel-preco">{preco_rotulo(imovel)}</p>
-      <h1>{e(imovel['titulo'])}</h1>
-      <p class="imovel-local">{e(imovel['bairro'])} · {e(imovel['cidade'])}</p>
-      {reservado}
-      <a class="btn btn-wa btn-largo" target="_blank" rel="noopener"
-         href="{e(wa_imovel(corretor, imovel))}">Falar sobre este imóvel</a>
-      <p class="painel-creci">{e(corretor['nome_pessoa'])} ·
-         {e(corretor['titulo_profissional'])} · <strong>{e(corretor['creci'])}</strong></p>
-    </aside>
+    {carrossel}
+    {recibo_ficha(corretor, imovel)}
   </div>
 </section>
 
@@ -591,11 +653,14 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict]) -> str:
       <h2>Destaques</h2>
       <ul class="lista-destaques">{destaques}</ul>
     </div>
-    <div class="imovel-specs">
-      <h2>Ficha técnica</h2>
-      <dl class="specs-grade">{linhas_spec}</dl>
-      <p class="mini">Medidas e valores conferidos na documentação antes de qualquer
-         proposta. Nada aqui substitui a certidão de matrícula, que eu levo na visita.</p>
+    <div class="imovel-lateral">
+      <div class="imovel-specs">
+        <h2>Ficha técnica</h2>
+        <dl class="specs-grade">{linhas_spec}</dl>
+        <p class="mini">Medidas e valores conferidos na documentação antes de qualquer
+           proposta. Nada aqui substitui a certidão de matrícula, que eu levo na visita.</p>
+      </div>
+      {mapa}
     </div>
   </div>
 </section>

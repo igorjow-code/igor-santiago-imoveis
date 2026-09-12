@@ -101,3 +101,32 @@
 
   Array.prototype.forEach.call(alvos, function (el) { observador.observe(el); });
 })();
+
+// --- carrossel de fotos (ficha de imovel) ---------------------------------
+(function () {
+  "use strict";
+  var carrosseis = document.querySelectorAll("[data-carrossel]");
+
+  Array.prototype.forEach.call(carrosseis, function (raiz) {
+    var trilho = raiz.querySelector(".carrossel-trilho");
+    var slides = raiz.querySelectorAll(".carrossel-slide");
+    var pontos = raiz.querySelectorAll(".carrossel-ponto");
+    var atual = 0;
+
+    function irPara(indice) {
+      atual = (indice + slides.length) % slides.length;
+      trilho.style.transform = "translateX(-" + (atual * 100) + "%)";
+      Array.prototype.forEach.call(pontos, function (ponto, n) {
+        ponto.classList.toggle("ativo", n === atual);
+      });
+    }
+
+    var anterior = raiz.querySelector("[data-anterior]");
+    var proxima = raiz.querySelector("[data-proxima]");
+    if (anterior) anterior.addEventListener("click", function () { irPara(atual - 1); });
+    if (proxima) proxima.addEventListener("click", function () { irPara(atual + 1); });
+    Array.prototype.forEach.call(pontos, function (ponto, n) {
+      ponto.addEventListener("click", function () { irPara(n); });
+    });
+  });
+})();
