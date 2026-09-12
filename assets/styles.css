@@ -209,6 +209,28 @@ a:hover { text-decoration-color: var(--laranja); }
 .secao-alt a:not(.btn) { color: var(--laranja); }
 .secao-alt .btn { margin-top: 1.8rem; }
 
+/* --- recibo de preço (home, dentro de .secao-alt) ----------------------- */
+.secao-recibo .sobrelinha { color: var(--laranja); }
+.secao-recibo h2 { max-width: 22ch; margin-bottom: .8rem; }
+.secao-recibo .sub { color: var(--marfim-suave); margin-bottom: 2.2rem; }
+.recibo-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.4rem; }
+.recibo {
+  background: var(--preto-elevado); border: 1px dashed var(--linha-escura); border-radius: var(--r);
+  padding: 1.3rem 1.4rem 1.1rem;
+}
+.recibo-titulo { font-family: var(--display); font-weight: 800; font-size: 1rem; color: var(--marfim); margin: 0 0 .15rem; }
+.recibo-local { font-size: .82rem; color: var(--marfim-suave); margin: 0 0 1rem; }
+.recibo-linhas { margin: 0 0 1rem; }
+.recibo-linha {
+  display: flex; justify-content: space-between; gap: 1rem;
+  padding: .55rem 0; border-bottom: 1px dashed var(--linha-escura);
+  font-size: .9rem;
+}
+.recibo-linha:last-child { border-bottom: 0; }
+.recibo-linha dt { color: var(--marfim-suave); margin: 0; }
+.recibo-linha dd { margin: 0; font-family: var(--display); font-weight: 800; color: var(--laranja); text-align: right; }
+.recibo-rodape { margin: 0; font-size: .78rem; color: var(--marfim-suave); text-align: center; padding-top: .6rem; border-top: 1px solid var(--linha-escura); }
+
 .secao-topo { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
 .cabeca-pagina { padding: clamp(2.5rem, 5vw, 4rem) 0 1.5rem; border-bottom: 1px solid var(--linha); }
 .cabeca-pagina p { color: var(--tinta-suave); max-width: 58ch; margin-top: .9rem; }

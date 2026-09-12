@@ -366,6 +366,47 @@ def anos_mercado(corretor: dict) -> str:
     return e(f"{valor} anos de mercado")
 
 
+def linhas_recibo(imovel: dict) -> list[tuple[str, str]]:
+    linhas = [("Preço", preco_texto(imovel))]
+    if imovel.get("condominio"):
+        linhas.append(("Condomínio", moeda(imovel["condominio"]) + "/mês"))
+    if imovel.get("iptu"):
+        linhas.append(("IPTU", moeda(imovel["iptu"]) + "/ano"))
+    if len(linhas) == 1:
+        linhas.append(("Condomínio e IPTU", "sem cobrança — confirmar na visita"))
+    return linhas
+
+
+def recibo(imovel: dict, atraso_base: int = 0) -> str:
+    itens = "".join(
+        f'<div class="recibo-linha" {reveal(n, 90)}><dt>{e(rotulo)}</dt>'
+        f'<dd>{valor}</dd></div>'
+        for n, (rotulo, valor) in enumerate(linhas_recibo(imovel)))
+    return f"""<article class="recibo" data-reveal style="--atraso:{atraso_base}ms">
+  <p class="recibo-titulo">{e(imovel['titulo'])}</p>
+  <p class="recibo-local">{e(imovel['bairro'])} · {e(imovel['cidade'])}</p>
+  <dl class="recibo-linhas">{itens}</dl>
+  <p class="recibo-rodape">Nada some depois do WhatsApp.</p>
+</article>"""
+
+
+def secao_recibo(destaques: list[dict]) -> str:
+    if not destaques:
+        return ""
+    recibos = "".join(recibo(i, atraso_base=n * 110) for n, i in enumerate(destaques))
+    return f"""
+<section class="secao secao-alt secao-recibo">
+  <div class="wrap">
+    <p class="sobrelinha" {reveal(0)}>Preço sem letra miúda</p>
+    <h2 {reveal(1)}>Preço, condomínio e IPTU — antes de você me chamar, não depois.</h2>
+    <p class="sub" {reveal(2)}>É a diferença entre um anúncio e uma negociação séria: você
+       decide se cabe no seu orçamento antes de eu te tomar tempo com uma visita.</p>
+    <div class="recibo-grade">{recibos}</div>
+  </div>
+</section>
+"""
+
+
 def pagina_home(corretor: dict, imoveis: list[dict]) -> str:
     destaques = [i for i in imoveis if i.get("destaque")][:3]
     cards = "".join(card(i, corretor, numero=n, atraso=(n - 1) * 90)
@@ -405,7 +446,7 @@ def pagina_home(corretor: dict, imoveis: list[dict]) -> str:
 <section class="faixa-provas">
   <div class="wrap provas-grade">{provas}</div>
 </section>
-
+{secao_recibo(destaques)}
 <section class="secao">
   <div class="wrap">
     <div class="secao-topo" {reveal(0)}>
