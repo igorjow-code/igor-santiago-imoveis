@@ -73,6 +73,16 @@
     aplicar();
   }
 
+  var cartoesBairro = document.querySelectorAll("[data-bairro-card]");
+  Array.prototype.forEach.call(cartoesBairro, function (elCard) {
+    elCard.addEventListener("click", function (evento) {
+      evento.preventDefault();
+      if (form.elements.bairro) form.elements.bairro.value = elCard.dataset.bairroCard;
+      aplicar();
+      lista.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+
   form.addEventListener("change", aplicar);
   var limpar1 = document.getElementById("limpar");
   var limpar2 = document.getElementById("limpar2");

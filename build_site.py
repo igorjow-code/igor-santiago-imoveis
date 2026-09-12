@@ -537,6 +537,44 @@ def pagina_home(corretor: dict, imoveis: list[dict]) -> str:
         ativo="index.html")
 
 
+def secao_mapa_bairros(imoveis: list[dict]) -> str:
+    por_bairro: dict[str, list[dict]] = {}
+    for i in imoveis:
+        por_bairro.setdefault(f"{i['bairro']}|{i['cidade']}", []).append(i)
+
+    cartoes = []
+    for n, chave in enumerate(sorted(por_bairro)):
+        coordenada = COORDENADAS_BAIRRO.get(chave)
+        if not coordenada:
+            continue
+        lista = por_bairro[chave]
+        bairro, cidade = lista[0]["bairro"], lista[0]["cidade"]
+        lat, lon = coordenada
+        delta = 0.012
+        bbox = f"{lon - delta},{lat - delta},{lon + delta},{lat + delta}"
+        embed = (f"https://www.openstreetmap.org/export/embed.html"
+                 f"?bbox={bbox}&layer=mapnik&marker={lat},{lon}")
+        rotulo = "1 imóvel" if len(lista) == 1 else f"{len(lista)} imóveis"
+        cartoes.append(f"""<a class="bairro-card" href="#lista" data-bairro-card="{e(bairro)}" {reveal(n, 80)}>
+  <div class="bairro-frame"><iframe src="{e(embed)}" loading="lazy" tabindex="-1"
+       title="Mapa de {e(bairro)}" referrerpolicy="no-referrer-when-downgrade"></iframe></div>
+  <p class="bairro-nome">{e(bairro)}</p>
+  <p class="bairro-qtd">{rotulo} · {e(cidade)}</p>
+</a>""")
+
+    if not cartoes:
+        return ""
+    return f"""
+<section class="secao secao-bairros">
+  <div class="wrap">
+    <p class="sobrelinha" {reveal(0)}>Onde ficam</p>
+    <h2 {reveal(1)}>Escolha pelo bairro, veja no mapa antes de abrir a ficha.</h2>
+    <div class="bairros-grade">{"".join(cartoes)}</div>
+  </div>
+</section>
+"""
+
+
 def pagina_catalogo(corretor: dict, imoveis: list[dict]) -> str:
     cards = "".join(card(i, corretor, numero=n, atraso=min(n - 1, 5) * 70)
                     for n, i in enumerate(imoveis, 1))
@@ -553,7 +591,7 @@ def pagina_catalogo(corretor: dict, imoveis: list[dict]) -> str:
        você sabe se cabe antes de me chamar.</p>
   </div>
 </section>
-
+{secao_mapa_bairros(imoveis)}
 <section class="secao">
   <div class="wrap">
     <form class="filtros" id="filtros" aria-label="Filtrar imóveis">
