@@ -299,9 +299,14 @@ def barra_demo(imoveis: list[dict]) -> str:
             'Nenhum destes imóveis existe. Não publicar.</div>')
 
 
+def marca_simbolo(prefixo: str = "") -> str:
+    return f'<img class="marca-simbolo" src="{prefixo}assets/simbolo-64.png" alt="" width="28" height="32" />'
+
+
 def cabecalho(corretor: dict, ativo: str, prefixo: str) -> str:
-    itens = [("index.html", "Início"), ("imoveis.html", "Imóveis"),
-             ("sobre.html", "Sobre"), ("vender.html", "Vender meu imóvel")]
+    itens = [("index.html", "Início"), ("imoveis.html", "Alugar"),
+             ("alugar-sala-comercial.html", "Salas comerciais"),
+             ("administracao.html", "Administração"), ("sobre.html", "Sobre")]
     partes = []
     for href, rotulo in itens:
         classe = ' class="ativo"' if href == ativo else ""
@@ -310,7 +315,7 @@ def cabecalho(corretor: dict, ativo: str, prefixo: str) -> str:
     return f"""<header class="topo">
   <div class="wrap topo-linha">
     <a class="marca" href="{prefixo}index.html">
-      <img class="marca-simbolo" src="{prefixo}assets/simbolo.png" alt="" width="28" height="32" />
+      {marca_simbolo(prefixo)}
       <span class="marca-nome">Igor Santiago</span>
     </a>
     <nav class="nav" aria-label="Principal">{links}</nav>
@@ -329,13 +334,15 @@ def rodape(corretor: dict, prefixo: str) -> str:
   <div class="wrap rodape-grade">
     <div>
       <p class="rodape-marca">
-        <img class="marca-simbolo" src="{prefixo}assets/simbolo.png" alt="" width="24" height="27" />
+        {marca_simbolo(prefixo)}
         Igor Santiago
       </p>
       <p class="rodape-pos">{e(corretor['posicionamento'])}</p>
     </div>
     <nav class="rodape-links" aria-label="Rodapé">
-      <a href="{prefixo}imoveis.html">Imóveis</a>
+      <a href="{prefixo}imoveis.html">Imóveis para alugar</a>
+      <a href="{prefixo}alugar-residencial.html">Aluguel residencial</a>
+      <a href="{prefixo}administracao.html">Administração</a>
       <a href="{prefixo}sobre.html">Sobre o corretor</a>
       <a href="{prefixo}vender.html">Vender meu imóvel</a>
       <a href="{prefixo}privacidade.html">Privacidade</a>
@@ -358,13 +365,17 @@ def rodape(corretor: dict, prefixo: str) -> str:
 
 def wa_fixo(corretor: dict, mensagem: str) -> str:
     return (f'<a class="wa-fixo" href="{e(wa_link(corretor, mensagem))}" '
-            f'target="_blank" rel="noopener">Falar no WhatsApp</a>')
+            f'target="_blank" rel="noopener">Agendar pelo WhatsApp</a>')
 
 
 def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
            imoveis: list[dict], ativo: str, prefixo: str = "",
-           mensagem_wa: str | None = None, extra_js: str = "") -> str:
+           mensagem_wa: str | None = None, extra_js: str = "",
+           publicar: bool = False, jsonld: str = "", no_pagina: str | None = None) -> str:
     mensagem_wa = mensagem_wa or corretor["mensagem_whatsapp_geral"]
+    no_pagina = no_pagina or ativo or "404.html"
+    indexar = publicar and no_pagina not in {"obrigado.html", "404.html"}
+    canonical = corretor["site_url"].rstrip("/") + "/" + no_pagina
     return f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -373,7 +384,9 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
 <title>{e(titulo)}</title>
 <meta name="description" content="{e(descricao)}" />
 <meta name="theme-color" content="#0a0a0a" />
-<meta name="robots" content="noindex, nofollow" />
+<meta name="robots" content="{'index, follow' if indexar else 'noindex, nofollow'}" />
+<link rel="canonical" href="{e(canonical)}" />
+{jsonld}
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800;900&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -407,8 +420,13 @@ def card(imovel: dict, corretor: dict, prefixo: str = "",
                        if imovel.get("situacao") == "reservado" else "")
     operacao = "Locação" if imovel["operacao"] == "locacao" else "Venda"
     lote = f'<span class="card-lote">{numero:02d}</span>' if numero else ""
+    custo = (f'<p class="custo-total">Custo mensal total: {moeda(custo_mensal(imovel))}/mês</p>'
+             '<p class="mini">Aluguel + encargos informados; IPTU em 12 meses. Consumos à parte, salvo inclusos.</p>'
+             if imovel['operacao'] == 'locacao' else '')
+    quando = disponibilidade(imovel)
+    quando = f'<p class="disponivel-em">{e(quando)}</p>' if quando else ''
     return f"""<article class="card" data-operacao="{e(imovel['operacao'])}"
-         data-tipo="{e(imovel['tipo'])}" data-bairro="{e(imovel['bairro'])}"
+         data-tipo="{e(imovel['tipo'])}" data-bairro="{e(imovel['bairro'])}" data-finalidade="{e(imovel['finalidade'])}"
          data-quartos="{imovel.get('quartos', 0)}" data-preco="{imovel['preco']}"
          data-reveal style="--atraso:{atraso}ms">
   <a class="card-link" href="{prefixo}imovel/{e(imovel['slug'])}.html">
@@ -420,13 +438,14 @@ def card(imovel: dict, corretor: dict, prefixo: str = "",
     </div>
     <div class="card-corpo">
       <p class="card-preco">{preco_rotulo(imovel)}</p>
+      {custo}{quando}
       <h3 class="card-titulo">{e(imovel['titulo'])}</h3>
       <p class="card-local">{e(imovel['bairro'])} · {e(imovel['cidade'])}</p>
       <p class="card-specs">{e(resumo(imovel))}</p>
     </div>
   </a>
   <a class="card-wa" href="{e(wa_imovel(corretor, imovel))}" target="_blank" rel="noopener">
-    Falar sobre este imóvel
+    Agendar visita pelo WhatsApp
   </a>
 </article>"""
 
@@ -543,21 +562,132 @@ def secao_recibo(destaques: list[dict]) -> str:
 """
 
 
-def pagina_home(corretor: dict, imoveis: list[dict]) -> str:
-    destaques = [i for i in imoveis if i.get("destaque")][:3]
+def secao_dor() -> str:
+    return '''<section class="secao"><div class="wrap">
+<h2>O anúncio cabe no orçamento. E a conta completa?</h2>
+<p>Buscar imóvel cansa quando falta resposta, o anúncio já saiu da carteira ou os encargos
+só aparecem depois. Aqui você compara aluguel, condomínio e IPTU antes de agendar.</p>
+</div></section>'''
+
+
+def secao_passos(passos: list[tuple[str, str]] | None = None) -> str:
+    passos = passos or [
+        ("Você conta o que procura", "Moradia ou negócio, bairro, faixa de aluguel e quando precisa mudar."),
+        ("Conferimos o custo e as condições", "Aluguel, encargos, garantia e documentos necessários antes da visita."),
+        ("Agendamos a visita", "Combinamos um horário para conhecer o imóvel e tirar as dúvidas."),
+        ("Proposta, análise e contrato", "Se fizer sentido, seguimos para análise, vistoria e assinatura. Sem promessa de aprovação.")]
+    lista = ''.join(f'<li class="passo"><span class="passo-num">{n}</span>'
+                    f'<div><h3>{e(t)}</h3><p>{e(d)}</p></div></li>'
+                    for n, (t, d) in enumerate(passos, 1))
+    return f'<section class="secao"><div class="wrap"><h2>Como funciona</h2><ol class="passos">{lista}</ol></div></section>'
+
+
+def faq_global(corretor: dict) -> list[dict]:
+    return [
+        {"pergunta": "Preciso de fiador?", "resposta": "Depende do imóvel. A ficha apresenta as alternativas informadas, como fiador, seguro-fiança ou caução. Confirmamos a garantia e seu custo antes da proposta."},
+        {"pergunta": "É meu primeiro aluguel e não tenho comprovação tradicional. Posso conversar?", "resposta": "Sim. Conte como é sua renda para verificarmos quais documentos e alternativas podem ser analisados. Não prometo aprovação."},
+        {"pergunta": "Posso levar meu pet?", "resposta": "Consulte o campo de pet da ficha. Quando estiver como consultar, verifico as condições do imóvel antes da visita."},
+        {"pergunta": "Posso procurar uma sala sem ter CNPJ ainda?", "resposta": "Sim. Podemos agendar uma conversa sobre o espaço e a atividade pretendida. A viabilidade do uso e os documentos precisam ser conferidos antes da contratação."},
+        {"pergunta": "Há opções mobiliadas?", "resposta": "As fichas indicam se o imóvel é mobiliado, semimobiliado ou sem mobília. A relação de itens deve ser conferida na vistoria e no contrato."},
+        {"pergunta": "Quem paga o quê além do aluguel?", "resposta": "O custo mensal mostrado soma aluguel, condomínio não incluso e IPTU anual dividido por 12, arredondado para baixo. Contas declaradas inclusas não são somadas novamente. Consumos e custos da garantia podem ser adicionais; confirmamos valores e responsabilidades no contrato."}]
+
+
+def secao_objecoes(corretor: dict) -> str:
+    itens = ''.join(f'<details class="duvida"><summary>{e(d["pergunta"])}</summary><p>{e(d["resposta"])}</p></details>' for d in faq_global(corretor))
+    wa = e(wa_link(corretor, "Olá, Igor. Quero agendar uma conversa para tirar dúvidas sobre garantia e custos do aluguel."))
+    return f'''<section class="secao secao-alt"><div class="wrap"><h2>Antes de alugar</h2>
+<div class="duvidas">{itens}</div><p class="duvidas-cta"><a class="btn btn-wa" href="{wa}" target="_blank" rel="noopener">Agendar conversa sobre as condições</a></p></div></section>'''
+
+
+def secao_prova(corretor: dict) -> str:
+    provas = ''.join(f'<h3>{e(p["titulo"])}</h3><p>{e(p["texto"])}</p>' for p in corretor['provas'])
+    return f'''<section class="secao"><div class="wrap sobre-grade">
+<div class="sobre-foto">{foto_placeholder('Retrato de Igor Santiago', 'aspect-3-4')}</div>
+<div class="sobre-texto"><h2>Quem acompanha você</h2><p>{bio_ou_aviso(corretor, 'bio_longa', 'Bio pendente')}</p>{provas}
+<a class="link-seta" href="sobre.html">Sobre Igor Santiago</a></div></div></section>'''
+
+
+def secao_nao_faco(corretor: dict) -> str:
+    wa = e(wa_link(corretor, "Olá, Igor. Quero agendar uma conversa para conferir custos e documentos antes de visitar um imóvel."))
+    return f'''<section class="secao"><div class="wrap"><h2>O que eu não faço</h2>
+<ul class="lista-destaques lista-nao"><li>Não escondo encargos para o aluguel parecer menor.</li>
+<li>Não prometo aprovação de cadastro ou garantia antes da análise.</li>
+<li>Não altero fotos para mudar a percepção de tamanho ou estado do imóvel.</li>
+<li>Não pressiono com prazo que não esteja informado na ficha.</li></ul>
+<a class="btn btn-wa" href="{wa}" target="_blank" rel="noopener">Agendar e conferir as condições</a></div></section>'''
+
+
+def formulario_lead(corretor: dict, publicar: bool) -> str:
+    # B3/B5 não desaparecem apenas porque alguém passou --publicar.
+    ativo = publicar and corretor.get('privacidade_revisada') is True and corretor.get('email') not in (None, '', PENDENTE)
+    abertura = ('<form class="form-lead" name="quero-alugar" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/obrigado.html">'
+                if ativo else '<div class="form-lead" role="group" aria-label="Formulário de interesse em prévia">')
+    fim = '</form>' if ativo else '</div>'
+    disabled = '' if ativo else ' disabled'
+    opcoes = ['Sala comercial até R$ 2.000', 'Sala comercial R$ 2.000–3.000',
+              'Apartamento ou casa até R$ 2.000', 'Apartamento ou casa R$ 2.000–3.000', 'Outro']
+    options = ''.join(f'<option>{e(o)}</option>' for o in opcoes)
+    return f'''<section class="secao" id="quero-alugar"><div class="wrap">
+<h2>Conte o que você quer alugar</h2>{abertura}
+<input type="hidden" name="form-name" value="quero-alugar"{disabled}>
+<p class="escondido" aria-hidden="true"><label>Deixe este campo vazio<input name="bot-field" tabindex="-1" autocomplete="off"{disabled}></label></p>
+<div class="form-campo"><label for="lead-nome">Nome</label><input id="lead-nome" name="nome" type="text" required autocomplete="name"{disabled}></div>
+<div class="form-campo"><label for="lead-whatsapp">WhatsApp</label><input id="lead-whatsapp" name="whatsapp" type="tel" required inputmode="tel" autocomplete="tel" pattern="[+0-9\\(\\) .\\-]{{8,25}}"{disabled}></div>
+<div class="form-campo"><label for="lead-procura">O que procura?</label><select id="lead-procura" name="procura" required{disabled}><option value="">Selecione</option>{options}</select></div>
+<div class="consentimento"><input id="lead-consentimento" type="checkbox" name="consentimento" required{disabled}>
+<label for="lead-consentimento">Autorizo Igor Santiago a me contatar por WhatsApp sobre imóveis para alugar. Meus dados não são repassados a terceiros para publicidade e posso pedir exclusão a qualquer momento.</label>
+<a href="privacidade.html">Como meus dados são tratados</a></div>
+<p>Resposta em até {e(corretor['resposta_prometida'])}, por mim mesmo.</p>
+<button class="btn btn-principal" type="{'submit' if ativo else 'button'}"{disabled}>Pedir contato</button>
+<p class="mini">{'Envio disponível após consentimento.' if ativo else 'Formulário ativo na publicação — após revisão de privacidade e configuração do e-mail.'}</p>
+<p>{e(corretor['nome_pessoa'])} · {e(corretor['titulo_profissional'])} · {e(corretor['creci'])}</p>{fim}</div></section>'''
+
+
+def pagina_obrigado(corretor: dict, imoveis: list[dict], publicar: bool = False) -> str:
+    texto = 'Obrigado pelo contato. Após o envio, respondo pelo WhatsApp em até ' + corretor['resposta_prometida'] + '.' if publicar else 'Página de confirmação em prévia. Nenhum dado foi enviado por este formulário.'
+    corpo = f'<section class="secao"><div class="wrap"><h1>Contato sobre aluguel</h1><p>{e(texto)}</p><a class="btn btn-principal" href="imoveis.html">Ver imóveis para alugar</a></div></section>'
+    return pagina('Contato — Igor Santiago Imóveis', 'Contato sobre aluguel.', corpo, corretor, imoveis, 'obrigado.html', publicar=publicar, jsonld=jsonld(corretor, imoveis, 'obrigado.html', []))
+
+
+def pagina_segmento(corretor: dict, imoveis: list[dict], finalidade: str, publicar: bool = False) -> str:
+    comercial = finalidade == 'comercial'
+    nome = 'alugar-sala-comercial.html' if comercial else 'alugar-residencial.html'
+    titulo = 'Sala ou ponto comercial para seu negócio' if comercial else 'Apartamento ou casa para morar'
+    texto = ('Para abrir ou expandir seu negócio: confira metragem, custo mensal e viabilidade da atividade antes de contratar.' if comercial else 'Para seu primeiro aluguel ou uma mudança: confira custo mensal, mobília, pet e garantias antes da visita.')
+    mensagem = corretor['mensagem_whatsapp_comercial'] if comercial else 'Olá, Igor. Quero agendar uma conversa para alugar um apartamento ou casa.'
+    lista = [i for i in imoveis if i['operacao'] == 'locacao' and i['finalidade'] == finalidade and i.get('situacao') not in {'alugado', 'vendido'}]
+    cards = ''.join(card(i, corretor) for i in lista)
+    corpo = f'''<section class="cabeca-pagina"><div class="wrap"><h1>{titulo}</h1><p>{texto}</p>
+<a class="btn btn-wa" href="{e(wa_link(corretor, mensagem))}" target="_blank" rel="noopener">Agendar pelo WhatsApp</a></div></section>
+<section class="secao"><div class="wrap"><div class="grade-cards">{cards}</div>
+<a class="link-seta" href="index.html#quero-alugar">Conte o que procura</a></div></section>{secao_passos()}{secao_objecoes(corretor)}'''
+    return pagina(titulo + ' — Igor Santiago Imóveis', texto, corpo, corretor, imoveis, nome, mensagem_wa=mensagem, publicar=publicar, jsonld=jsonld(corretor, imoveis, nome, faq_global(corretor)))
+
+
+def pagina_administracao(corretor: dict, imoveis: list[dict], publicar: bool = False) -> str:
+    msg = corretor['mensagem_whatsapp_administracao']
+    corpo = f'''<section class="cabeca-pagina"><div class="wrap"><h1>Administração para quem tem imóvel</h1>
+<p>Sou proprietário: quero organizar a locação e o acompanhamento do meu imóvel.</p>
+<a class="btn btn-wa" href="{e(wa_link(corretor, msg))}" target="_blank" rel="noopener">Agendar conversa sobre administração</a></div></section>
+<section class="secao"><div class="wrap"><h2>Definimos o serviço antes de começar</h2>
+<p>Na conversa, levantamos a situação do imóvel e combinamos o escopo de acompanhamento, a prestação de contas e os honorários por escrito.</p>
+<p>Seleção de interessados, contrato, vistoria e acompanhamento da locação entram na proposta conforme a necessidade. Não há promessa de renda garantida ou ausência de vacância.</p>
+<p>O atendimento é comigo, Igor Santiago, {e(corretor['creci'])}.</p></div></section>'''
+    return pagina('Administração de imóveis — Igor Santiago Imóveis', 'Administração de imóveis para proprietários em Feira de Santana.', corpo, corretor, imoveis, 'administracao.html', mensagem_wa=msg, publicar=publicar, jsonld=jsonld(corretor, imoveis, 'administracao.html', []))
+
+
+def pagina_home(corretor: dict, imoveis: list[dict], publicar: bool = False) -> str:
+    destaques = [i for i in imoveis if i["operacao"] == "locacao" and i.get("situacao") not in {"alugado", "vendido"}][:3]
     cards = "".join(card(i, corretor, numero=n, atraso=(n - 1) * 90)
                     for n, i in enumerate(destaques, 1))
-    provas = "".join(
-        f'<div class="prova" {reveal(i)}><h3>{e(p["titulo"])}</h3><p>{e(p["texto"])}</p></div>'
-        for i, p in enumerate(corretor["provas"]))
-
     corpo = f"""
 <section class="hero">
-  <img class="hero-marca-agua" src="assets/simbolo.png" alt="" aria-hidden="true" />
+  <img class="hero-marca-agua" src="assets/simbolo.png" alt="" aria-hidden="true" loading="lazy" />
   <div class="wrap hero-grade">
     <div class="hero-texto">
       <p class="sobrelinha" {reveal(0)}>{e(corretor['atuacao'])}</p>
-      <h1 {reveal(1)}>Imóveis de alto padrão com quem <span class="acento">responde</span> pelo negócio do começo ao fim.</h1>
+      <h1 {reveal(1)}>Aluguel para morar ou abrir seu negócio, com o <span class="acento">custo mensal</span> na tela.</h1>
+      <p class="faixa-preco">Aluguéis de {moeda(corretor['faixa_aluguel']['min'])} a {moeda(corretor['faixa_aluguel']['max'])}. Custo mensal total = aluguel + condomínio + IPTU mensalizado; contas inclusas não são cobradas novamente.</p>
       <p class="hero-sub" {reveal(2)}>{bio_ou_aviso(corretor, 'bio_curta',
         '[bio curta — Igor informar: uma frase sobre quem você é e como atende]')}</p>
       <div class="hero-assinatura" {reveal(3)}>
@@ -566,9 +696,10 @@ def pagina_home(corretor: dict, imoveis: list[dict]) -> str:
         <span>{anos_mercado(corretor)}</span>
       </div>
       <div class="hero-botoes" {reveal(4)}>
-        <a class="btn btn-principal" href="imoveis.html">Ver imóveis</a>
+
         <a class="btn btn-wa" target="_blank" rel="noopener"
-           href="{e(wa_link(corretor, corretor['mensagem_whatsapp_geral']))}">Falar no WhatsApp</a>
+           href="{e(wa_link(corretor, corretor['mensagem_whatsapp_geral']))}">Agendar pelo WhatsApp</a>
+        <a class="btn btn-claro" href="#quero-alugar">Conte o que procura</a>
       </div>
     </div>
     <div class="hero-foto" {reveal(2)}>
@@ -579,40 +710,33 @@ def pagina_home(corretor: dict, imoveis: list[dict]) -> str:
   </div>
 </section>
 
-<section class="faixa-provas">
-  <div class="wrap provas-grade">{provas}</div>
-</section>
-{secao_recibo(destaques)}
+<div class="wrap"><p class="prova-imediata">{e(corretor['creci'])} · {anos_mercado(corretor)} · Feira de Santana</p></div>
+{secao_dor()}
 <section class="secao">
   <div class="wrap">
     <div class="secao-topo" {reveal(0)}>
-      <h2>Selecionados</h2>
+      <h2>Imóveis para alugar</h2>
       <a class="link-seta" href="imoveis.html">Ver todos os imóveis</a>
     </div>
     <div class="grade-cards grade-cards--vitrine">{cards}</div>
   </div>
 </section>
 
-<section class="faixa-captacao">
-  <div class="wrap captacao-grade">
-    <div {reveal(0)}>
-      <h2>Tem um imóvel para vender?</h2>
-      <p>Faço a avaliação de mercado do seu imóvel em {e(corretor['cidade'])} com base em
-         comparáveis reais do bairro — e explico como cheguei ao número, sem promessa
-         inflada para conseguir a exclusividade.</p>
-    </div>
-    <div class="captacao-cta" {reveal(1)}>
-      <a class="btn btn-claro" href="vender.html">Como funciona a avaliação</a>
-    </div>
-  </div>
-</section>
+{secao_passos()}
+{secao_objecoes(corretor)}
+{secao_prova(corretor)}
+{secao_nao_faco(corretor)}
+{formulario_lead(corretor, publicar)}
+<section class="secao"><div class="wrap"><h2>Vamos agendar o próximo passo?</h2>
+<a class="btn btn-wa" href="{e(wa_link(corretor, 'Olá, Igor. Vi o custo mensal e quero agendar uma conversa para escolher meu aluguel.'))}" target="_blank" rel="noopener">Agendar pelo WhatsApp</a></div></section>
 """
     return pagina(
-        titulo="Igor Santiago Imóveis — alto padrão em Feira de Santana",
+        titulo="Igor Santiago Imóveis — aluguel em Feira de Santana",
         descricao=("Corretor de imóveis em Feira de Santana, CRECI-BA 28.140. "
-                   "Imóveis de alto padrão para venda e locação, com atendimento pessoal."),
+                   "Aluguel residencial e comercial, custo mensal visível e atendimento pessoal."),
         corpo=corpo, corretor=corretor, imoveis=imoveis,
-        ativo="index.html")
+        ativo="index.html", publicar=publicar,
+        jsonld=jsonld(corretor, imoveis, "index.html", faq_global(corretor)))
 
 
 def secao_mapa_bairros(imoveis: list[dict]) -> str:
@@ -653,7 +777,7 @@ def secao_mapa_bairros(imoveis: list[dict]) -> str:
 """
 
 
-def pagina_catalogo(corretor: dict, imoveis: list[dict]) -> str:
+def pagina_catalogo(corretor: dict, imoveis: list[dict], publicar: bool = False) -> str:
     cards = "".join(card(i, corretor, numero=n, atraso=min(n - 1, 5) * 70)
                     for n, i in enumerate(imoveis, 1))
 
@@ -664,7 +788,7 @@ def pagina_catalogo(corretor: dict, imoveis: list[dict]) -> str:
     corpo = f"""
 <section class="cabeca-pagina">
   <div class="wrap">
-    <h1>Imóveis disponíveis</h1>
+    <h1>Imóveis para alugar</h1>
     <p>Venda e locação em {e(corretor['atuacao'])}. Todos com preço à vista na tela —
        você sabe se cabe antes de me chamar.</p>
   </div>
@@ -677,7 +801,7 @@ def pagina_catalogo(corretor: dict, imoveis: list[dict]) -> str:
         <select name="operacao">
           <option value="">Todas</option>
           <option value="venda">Venda</option>
-          <option value="locacao">Locação</option>
+          <option value="locacao" selected>Locação</option>
         </select>
       </label>
       <label>Tipo
@@ -686,13 +810,11 @@ def pagina_catalogo(corretor: dict, imoveis: list[dict]) -> str:
       <label>Bairro
         <select name="bairro"><option value="">Todos</option>{opcoes('bairro')}</select>
       </label>
-      <label>Quartos
-        <select name="quartos">
-          <option value="">Qualquer</option>
-          <option value="2">2 ou mais</option>
-          <option value="3">3 ou mais</option>
-          <option value="4">4 ou mais</option>
-        </select>
+      <label>Finalidade
+        <select name="finalidade"><option value="">Todas</option><option value="residencial">Residencial</option><option value="comercial">Comercial</option></select>
+      </label>
+      <label>Faixa de aluguel
+        <select name="faixa"><option value="">Qualquer</option><option value="0-2000">Até R$ 2.000</option><option value="2000-3000">R$ 2.000–3.000</option><option value="3000-">Acima de R$ 3.000</option></select>
       </label>
       <label>Ordenar
         <select name="ordem">
@@ -708,14 +830,14 @@ def pagina_catalogo(corretor: dict, imoveis: list[dict]) -> str:
     <div class="grade-cards" id="lista">{cards}</div>
     <p class="vazio" id="vazio" hidden>Nenhum imóvel com esses filtros.
        <button type="button" class="link-botao" id="limpar2">Limpar filtros</button>
-       ou me chame no WhatsApp: eu procuro na carteira e fora dela.</p>
+       ou <a href="index.html#quero-alugar">conte o que procura</a>.</p>
   </div>
 </section>
 """
     return pagina(
         titulo="Imóveis à venda e para locação — Igor Santiago Imóveis",
-        descricao="Catálogo de imóveis de alto padrão em Feira de Santana, com preço visível.",
-        corpo=corpo, corretor=corretor, imoveis=imoveis,
+        descricao="Aluguel residencial e comercial em Feira de Santana, com custo mensal visível.",
+        corpo=corpo, publicar=publicar, jsonld=jsonld(corretor, imoveis, "imoveis.html", []), corretor=corretor, imoveis=imoveis,
         ativo="imoveis.html")
 
 
@@ -737,7 +859,7 @@ def galeria_carrossel(imovel: dict, n_fotos: int = 4) -> str:
 </div>"""
 
 
-def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict]) -> str:
+def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: bool = False) -> str:
     carrossel = galeria_carrossel(imovel)
     linhas_spec = "".join(
         f'<div class="spec"><dt>{e(k)}</dt><dd>{e(v)}</dd></div>' for k, v in specs(imovel))
@@ -765,6 +887,7 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict]) -> str:
   <div class="wrap imovel-conteudo">
     <div class="imovel-texto">
       <h2>Sobre o imóvel</h2>
+      <p class="disponivel-em">{e(disponibilidade(imovel))}</p>
       {texto}
       <h2>Destaques</h2>
       <ul class="lista-destaques">{destaques}</ul>
@@ -797,12 +920,14 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict]) -> str:
         descricao=(f"{imovel['titulo']}. {resumo(imovel)}. {preco_texto(imovel)}. "
                    f"{corretor['creci']}."),
         corpo=corpo, corretor=corretor, imoveis=imoveis,
-        ativo="imoveis.html", prefixo="../",
+        ativo="imoveis.html", prefixo="../", publicar=publicar,
+        no_pagina=f"imovel/{imovel['slug']}.html",
+        jsonld=jsonld(corretor, imoveis, f"imovel/{imovel['slug']}.html", imovel["duvidas"]),
         mensagem_wa=(f"Olá, Igor. Vi no seu site o imóvel \"{imovel['titulo']}\" "
-                     f"e gostaria de mais informações."))
+                     f"e gostaria de agendar uma visita."))
 
 
-def pagina_sobre(corretor: dict, imoveis: list[dict]) -> str:
+def pagina_sobre(corretor: dict, imoveis: list[dict], publicar: bool = False) -> str:
     provas = "".join(
         f'<div class="prova"><h3>{e(p["titulo"])}</h3><p>{e(p["texto"])}</p></div>'
         for p in corretor["provas"])
@@ -833,7 +958,7 @@ def pagina_sobre(corretor: dict, imoveis: list[dict]) -> str:
       <p class="sobre-bio">{bio}</p>
       <h3>Como eu trabalho</h3>
       <ul class="lista-destaques">
-        <li>Você fala comigo do primeiro contato à escritura. Não passo você adiante.</li>
+        <li>Você fala comigo do primeiro contato à assinatura. Não passo você adiante.</li>
         <li>Preço na tela e custo mensal real (condomínio e IPTU) antes da visita.</li>
         <li>Matrícula e certidões conferidas antes de qualquer proposta ser apresentada.</li>
         <li>O que eu não sei, eu digo que não sei e vou verificar.</li>
@@ -851,11 +976,11 @@ def pagina_sobre(corretor: dict, imoveis: list[dict]) -> str:
     return pagina(
         titulo="Sobre Igor Santiago — Corretor de Imóveis, CRECI-BA 28.140",
         descricao=("Igor Santiago, corretor de imóveis em Feira de Santana, "
-                   "CRECI-BA 28.140. Atendimento pessoal em imóveis de alto padrão."),
-        corpo=corpo, corretor=corretor, imoveis=imoveis, ativo="sobre.html")
+                   "CRECI-BA 28.140. Locação residencial e comercial com atendimento pessoal."),
+        corpo=corpo, publicar=publicar, jsonld=jsonld(corretor, imoveis, "sobre.html", []), corretor=corretor, imoveis=imoveis, ativo="sobre.html")
 
 
-def pagina_vender(corretor: dict, imoveis: list[dict]) -> str:
+def pagina_vender(corretor: dict, imoveis: list[dict], publicar: bool = False) -> str:
     wa = e(wa_link(corretor, corretor["mensagem_whatsapp_captacao"]))
     passos = [
         ("Você me manda o imóvel",
@@ -871,27 +996,18 @@ def pagina_vender(corretor: dict, imoveis: list[dict]) -> str:
          "Se quiser seguir comigo, fechamos a captação. Se não quiser, a avaliação é sua "
          "do mesmo jeito."),
     ]
-    lista = "".join(
-        f'<li class="passo"><span class="passo-num">{n}</span>'
-        f'<div><h3>{e(t)}</h3><p>{e(d)}</p></div></li>'
-        for n, (t, d) in enumerate(passos, 1))
-
     corpo = f"""
 <section class="cabeca-pagina cabeca-escura">
   <div class="wrap">
     <h1>Vender seu imóvel</h1>
+    <p>Também trabalho com venda. Meu histórico inclui casa de R$ 200 mil; não apresento experiência de venda de alto padrão que ainda não tenho.</p>
     <p>Avaliação de mercado com o raciocínio na mesa. Preço inflado não vende — só faz o
        imóvel envelhecer no anúncio e perder valor de negociação.</p>
     <a class="btn btn-wa" href="{wa}" target="_blank" rel="noopener">Pedir avaliação</a>
   </div>
 </section>
 
-<section class="secao">
-  <div class="wrap">
-    <h2>Como funciona</h2>
-    <ol class="passos">{lista}</ol>
-  </div>
-</section>
+{secao_passos(passos)}
 
 <section class="secao secao-alt">
   <div class="wrap">
@@ -912,17 +1028,21 @@ def pagina_vender(corretor: dict, imoveis: list[dict]) -> str:
         titulo="Vender meu imóvel — avaliação de mercado | Igor Santiago Imóveis",
         descricao=("Avaliação de mercado do seu imóvel em Feira de Santana, com "
                    "comparáveis reais do bairro. CRECI-BA 28.140."),
-        corpo=corpo, corretor=corretor, imoveis=imoveis, ativo="vender.html",
+        corpo=corpo, publicar=publicar, jsonld=jsonld(corretor, imoveis, "vender.html", []), corretor=corretor, imoveis=imoveis, ativo="vender.html",
         mensagem_wa=corretor["mensagem_whatsapp_captacao"])
 
 
-def pagina_privacidade(corretor: dict, imoveis: list[dict]) -> str:
+def pagina_privacidade(corretor: dict, imoveis: list[dict], publicar: bool = False) -> str:
+    ativo = publicar and corretor.get('privacidade_revisada') is True and corretor.get('email') not in (None, '', PENDENTE)
+    aviso = ('Aviso de privacidade do atendimento imobiliário.' if ativo else
+             'Rascunho — aguarda revisão jurídica e aprovação de Igor antes de o site ir ao ar.')
+    estado_form = ('O formulário está disponível mediante seu consentimento.' if ativo else
+                   'Nesta prévia ele está desativado: só será ativado após revisão jurídica e configuração do contato de Igor.')
     corpo = f"""
 <section class="cabeca-pagina">
   <div class="wrap">
     <h1>Aviso de privacidade</h1>
-    <p class="mini">Rascunho — aguarda revisão jurídica e aprovação de Igor antes de o
-       site ir ao ar.</p>
+    <p class="mini">{aviso}</p>
   </div>
 </section>
 
@@ -934,30 +1054,42 @@ def pagina_privacidade(corretor: dict, imoveis: list[dict]) -> str:
        Contato: {e(corretor['whatsapp_exibicao'])}.</p>
 
     <h2>Quais dados são coletados</h2>
-    <p>Este site não tem formulário e não coleta dados por conta própria. O contato
-       acontece pelo WhatsApp, por iniciativa sua. A partir daí, ficam registrados o
-       nome, o telefone e as informações que você mesmo enviar sobre o imóvel que
-       procura ou que quer vender.</p>
+    <p>O formulário de interesse solicita nome, WhatsApp e o tipo/faixa de imóvel que
+       você procura, além do registro do consentimento. {estado_form}
+       Você também pode iniciar uma conversa diretamente pelo WhatsApp.</p>
 
     <h2>Para que os dados são usados</h2>
     <p>Exclusivamente para atender ao seu contato: entender o que você procura, indicar
-       imóveis, agendar visita e conduzir a negociação. A base legal é a execução de
-       procedimentos preliminares a contrato, a seu pedido (art. 7º, V, da LGPD).</p>
+       imóveis e agendar visita. Para o formulário, a base prevista é o consentimento
+       (art. 7º, I, da LGPD), que pode ser revogado. Procedimentos preliminares a contrato
+       solicitados por você serão tratados conforme a base aplicável (art. 7º, V),
+       sujeita à revisão jurídica deste aviso.</p>
 
     <h2>Compartilhamento</h2>
+    <p>Quando ativado, o Netlify Forms processará e armazenará os envios como operador
+       do formulário, com filtragem de spam. A notificação será enviada ao e-mail
+       configurado de Igor, que registrará manualmente o contato no CRM de atendimento.
+       O processamento pode ocorrer fora do Brasil; condições, suboperadores e transferência
+       internacional precisam ser validados na revisão jurídica antes da ativação.</p>
     <p>Seus dados são compartilhados apenas com quem for necessário para a negociação que
        você mesmo pediu: proprietário do imóvel, cartório, banco ou administradora de
        condomínio. Não há venda de dados, não há repasse para lista de terceiros e não há
        disparo de mensagem em massa.</p>
 
     <h2>Por quanto tempo</h2>
-    <p>Contato que não avança é descartado em até 12 meses. Dados de negociação concluída
-       são mantidos pelo prazo legal aplicável ao contrato.</p>
+    <p>Prazo proposto para contato que não avança: até 12 meses, sujeito à revisão jurídica.
+       A exclusão deve abranger formulário, e-mail e CRM, salvo obrigação de conservação.
+       Dados de negociação concluída são mantidos pelo prazo legal aplicável ao contrato.</p>
 
     <h2>Seus direitos</h2>
     <p>Você pode pedir a qualquer momento o acesso, a correção ou a exclusão dos seus
        dados, além de pedir para não ser mais contatado. Basta escrever no mesmo WhatsApp
        — o pedido é atendido sem que você precise justificar.</p>
+    <p><a href="{e(wa_link(corretor, 'Olá, Igor. Quero solicitar acesso, correção ou exclusão dos meus dados.'))}">Solicitar acesso, correção ou exclusão pelo WhatsApp</a></p>
+    <h2>Serviços carregados no navegador</h2>
+    <p>Fontes do Google e mapas do OpenStreetMap podem receber dados técnicos da conexão,
+       como endereço IP. WhatsApp e Instagram têm políticas próprias quando você abre
+       seus links. Esses fluxos também integram a revisão de privacidade.</p>
 
     <h2>Sobre as imagens dos imóveis</h2>
     <p>Fotos podem receber ajuste de exposição, nitidez e correção de perspectiva. Quando
@@ -970,21 +1102,22 @@ def pagina_privacidade(corretor: dict, imoveis: list[dict]) -> str:
     return pagina(
         titulo="Aviso de privacidade — Igor Santiago Imóveis",
         descricao="Como os dados de quem entra em contato são tratados. LGPD.",
-        corpo=corpo, corretor=corretor, imoveis=imoveis, ativo="privacidade.html")
+        corpo=corpo, publicar=publicar, jsonld=jsonld(corretor, imoveis, "privacidade.html", []), corretor=corretor, imoveis=imoveis, ativo="privacidade.html")
 
 
-def pagina_404(corretor: dict, imoveis: list[dict]) -> str:
+def pagina_404(corretor: dict, imoveis: list[dict], publicar: bool = False) -> str:
     corpo = """
 <section class="cabeca-pagina">
   <div class="wrap">
     <h1>Página não encontrada</h1>
     <p>O endereço não existe ou o imóvel saiu do catálogo.</p>
-    <a class="btn btn-principal" href="imoveis.html">Ver imóveis disponíveis</a>
+    <a class="btn btn-principal" href="imoveis.html">Ver imóveis para alugar</a>
+    <a class="btn btn-claro" href="index.html#quero-alugar">Conte o que procura</a>
   </div>
 </section>
 """
     return pagina(titulo="Página não encontrada — Igor Santiago Imóveis",
-                  descricao="Página não encontrada.", corpo=corpo,
+                  descricao="Página não encontrada.", corpo=corpo, publicar=publicar, jsonld=jsonld(corretor, imoveis, "404.html", []),
                   corretor=corretor, imoveis=imoveis, ativo="")
 
 
@@ -992,19 +1125,65 @@ def pagina_404(corretor: dict, imoveis: list[dict]) -> str:
 # arquivos auxiliares
 # --------------------------------------------------------------------------
 
+def jsonld(corretor: dict, imoveis: list[dict], no_pagina: str, faq: list[dict]) -> str:
+    base = corretor['site_url'].rstrip('/')
+    agente, pessoa, site = base + '/#agente', base + '/#pessoa', base + '/#site'
+    url = base + '/' + no_pagina
+    grafo = [
+        {'@type': 'RealEstateAgent', '@id': agente, 'name': corretor['nome_marca'],
+         'url': base + '/', 'telephone': '+' + corretor['whatsapp_e164'],
+         'areaServed': ['Feira de Santana', 'Salvador'], 'founder': {'@id': pessoa}},
+        {'@type': 'Person', '@id': pessoa, 'name': corretor['nome_pessoa'],
+         'jobTitle': corretor['titulo_profissional'], 'identifier': corretor['creci'],
+         'description': corretor['bio_longa']},
+        {'@type': 'WebSite', '@id': site, 'name': corretor['nome_marca'], 'url': base + '/',
+         'inLanguage': 'pt-BR', 'publisher': {'@id': agente}},
+        {'@type': 'WebPage', '@id': url + '#pagina', 'url': url, 'inLanguage': 'pt-BR',
+         'isPartOf': {'@id': site}, 'about': {'@id': agente}},
+    ]
+    for slug, nome, pagina_servico in [('locacao', 'Locação residencial e comercial', 'imoveis.html'),
+                                      ('venda', 'Venda de imóveis', 'vender.html'),
+                                      ('administracao', 'Administração de imóveis', 'administracao.html')]:
+        grafo.append({'@type': 'Service', '@id': base + '/#' + slug, 'name': nome,
+                      'serviceType': nome, 'provider': {'@id': agente},
+                      'url': base + '/' + pagina_servico, 'areaServed': corretor['atuacao']})
+    if faq:
+        grafo.append({'@type': 'FAQPage', '@id': url + '#faq', 'mainEntity': [
+            {'@type': 'Question', 'name': d['pergunta'],
+             'acceptedAnswer': {'@type': 'Answer', 'text': d['resposta']}} for d in faq]})
+    # Escape HTML delimiters without corrupting JSON; no demo Offer is emitted.
+    texto = json.dumps({'@context': 'https://schema.org', '@graph': grafo}, ensure_ascii=False).replace('<', '\\u003c')
+    return f'<script type="application/ld+json">{texto}</script>'
+
+
+def escrever_llms_txt(corretor: dict, urls: list[str], publicar: bool) -> None:
+    base = corretor['site_url'].rstrip('/')
+    linhas = [f"# {corretor['nome_marca']}", '',
+              '> ' + ('Site de corretagem.' if publicar else 'Prévia local: imóveis fictícios de demonstração. Não são ofertas reais.'),
+              '', corretor['posicionamento'], corretor['creci'], '', '## Páginas', '']
+    linhas.extend(f'- [{u}]({base}/{u})' for u in urls)
+    (SAIDA / 'llms.txt').write_text('\n'.join(linhas) + '\n', encoding='utf-8')
+
+
 def escrever_auxiliares(corretor: dict, imoveis: list[dict], publicar: bool) -> None:
     base = corretor["site_url"].rstrip("/")
 
     # Enquanto houver demo, robots.txt proibe tudo. So o build --publicar libera.
     if publicar:
-        robots = f"User-agent: *\nAllow: /\n\nSitemap: {base}/sitemap.xml\n"
+        agentes = ['*', 'GPTBot', 'OAI-SearchBot', 'ClaudeBot', 'PerplexityBot', 'Google-Extended']
+        robots = ''.join(f'User-agent: {agente}\nAllow: /\n\n' for agente in agentes)
+        robots += f"Sitemap: {base}/sitemap.xml\n"
     else:
         robots = "User-agent: *\nDisallow: /\n"
     (SAIDA / "robots.txt").write_text(robots, encoding="utf-8")
 
-    urls = ["index.html", "imoveis.html", "sobre.html", "vender.html", "privacidade.html"]
-    urls += [f"imovel/{i['slug']}.html" for i in imoveis]
-    corpo = "".join(f"  <url><loc>{base}/{u}</loc></url>\n" for u in urls)
+    urls = sorted(p.relative_to(SAIDA).as_posix() for p in SAIDA.rglob('*.html')
+                  if p.name not in {'404.html', 'obrigado.html'})
+    # Timestamp real do artefato gerado, em vez de uma data inventada fixa.
+    corpo = ''.join(f'  <url><loc>{e(base + "/" + u)}</loc><lastmod>'
+                    f'{datetime.fromtimestamp((SAIDA / u).stat().st_mtime, timezone.utc).isoformat(timespec="seconds")}'
+                    '</lastmod></url>\n' for u in urls)
+    escrever_llms_txt(corretor, urls, publicar)
     (SAIDA / "sitemap.xml").write_text(
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
@@ -1085,28 +1264,36 @@ def main(argv: list[str]) -> int:
               file=sys.stderr)
         return 2
 
+    if publicar and (corretor.get('privacidade_revisada') is not True
+                     or corretor.get('email') in (None, '', PENDENTE)):
+        print('RECUSADO: B3/B5 — revisão de privacidade e e-mail são necessários para ativar o formulário.', file=sys.stderr)
+        return 2
+
     if SAIDA.exists():
+        if SAIDA.resolve() != (ROOT / 'publico').resolve():
+            raise ValueError(f'Saída fora do diretório de build autorizado: {SAIDA}')
         shutil.rmtree(SAIDA)
     (SAIDA / "imovel").mkdir(parents=True)
 
     shutil.copytree(ASSETS, SAIDA / "assets")
 
-    (SAIDA / "index.html").write_text(pagina_home(corretor, imoveis), encoding="utf-8")
-    (SAIDA / "imoveis.html").write_text(pagina_catalogo(corretor, imoveis), encoding="utf-8")
-    (SAIDA / "sobre.html").write_text(pagina_sobre(corretor, imoveis), encoding="utf-8")
-    (SAIDA / "vender.html").write_text(pagina_vender(corretor, imoveis), encoding="utf-8")
-    (SAIDA / "privacidade.html").write_text(pagina_privacidade(corretor, imoveis),
-                                            encoding="utf-8")
-    (SAIDA / "404.html").write_text(pagina_404(corretor, imoveis), encoding="utf-8")
+    paginas = {'index.html': pagina_home, 'imoveis.html': pagina_catalogo,
+               'sobre.html': pagina_sobre, 'vender.html': pagina_vender,
+               'privacidade.html': pagina_privacidade, '404.html': pagina_404,
+               'obrigado.html': pagina_obrigado, 'administracao.html': pagina_administracao}
+    for nome, render in paginas.items():
+        (SAIDA / nome).write_text(render(corretor, imoveis, publicar=publicar), encoding='utf-8')
+    for nome, finalidade in [('alugar-sala-comercial.html', 'comercial'), ('alugar-residencial.html', 'residencial')]:
+        (SAIDA / nome).write_text(pagina_segmento(corretor, imoveis, finalidade, publicar), encoding='utf-8')
     for imovel in imoveis:
         (SAIDA / "imovel" / f"{imovel['slug']}.html").write_text(
-            pagina_imovel(corretor, imovel, imoveis), encoding="utf-8")
+            pagina_imovel(corretor, imovel, imoveis, publicar), encoding="utf-8")
 
     escrever_auxiliares(corretor, imoveis, publicar)
 
     faltas = pendencias(corretor, imoveis)
     print(f"OK -> {SAIDA / 'index.html'}")
-    print(f"{len(imoveis)} imóveis · {len(imoveis) + 6} páginas")
+    print(f"{len(imoveis)} imóveis · {len(list(SAIDA.rglob('*.html')))} páginas")
     if demos:
         print(f"AVISO: {len(demos)} imóvel(is) de demonstração no build. "
               "robots.txt está bloqueando tudo. Não publicar.")

@@ -4,6 +4,24 @@
 (function () {
   "use strict";
 
+  // Barra de demonstração quebra em várias linhas no celular.
+  var barra = document.querySelector(".barra-demo");
+  var topo = document.querySelector(".topo");
+  function medirTopo() {
+    var alturaBarra = barra ? barra.getBoundingClientRect().height : 0;
+    var alturaTopo = topo ? topo.getBoundingClientRect().height : 0;
+    document.documentElement.style.setProperty("--altura-demo", alturaBarra + "px");
+    document.documentElement.style.setProperty("--ancora-topo", Math.max(96, alturaBarra + alturaTopo + 16) + "px");
+  }
+  medirTopo();
+  window.addEventListener("resize", medirTopo);
+  if ("ResizeObserver" in window) {
+    var medidor = new ResizeObserver(medirTopo);
+    if (barra) medidor.observe(barra);
+    if (topo) medidor.observe(topo);
+  }
+  if (document.fonts) document.fonts.ready.then(medirTopo);
+
   // --- menu do celular ---------------------------------------------------
   var botao = document.querySelector(".menu-btn");
   var nav = document.querySelector(".nav");
@@ -34,12 +52,23 @@
     var tipo = valor("tipo");
     var bairro = valor("bairro");
     var quartos = parseInt(valor("quartos"), 10) || 0;
+    var finalidade = valor("finalidade");
+    var faixaCampo = form.elements.faixa;
+    if (faixaCampo) {
+      faixaCampo.disabled = operacao !== "locacao";
+      if (faixaCampo.disabled) faixaCampo.value = "";
+    }
+    var faixa = valor("faixa").split("-");
+    var minimo = parseInt(faixa[0], 10) || 0;
+    var maximo = parseInt(faixa[1], 10) || Infinity;
     var ordem = valor("ordem");
     var visiveis = 0;
 
     cards.forEach(function (card) {
       var ok =
         (!operacao || card.dataset.operacao === operacao) &&
+        (!finalidade || card.dataset.finalidade === finalidade) &&
+        (!valor("faixa") || (parseInt(card.dataset.preco, 10) > minimo && parseInt(card.dataset.preco, 10) <= maximo)) &&
         (!tipo || card.dataset.tipo === tipo) &&
         (!bairro || card.dataset.bairro === bairro) &&
         (!quartos || parseInt(card.dataset.quartos, 10) >= quartos);
@@ -50,6 +79,9 @@
     var ordenados = ordemOriginal.slice();
     if (ordem === "menor" || ordem === "maior") {
       ordenados.sort(function (a, b) {
+        if (a.dataset.operacao !== b.dataset.operacao) {
+          return a.dataset.operacao === "locacao" ? -1 : 1;
+        }
         var pa = parseInt(a.dataset.preco, 10);
         var pb = parseInt(b.dataset.preco, 10);
         return ordem === "menor" ? pa - pb : pb - pa;
@@ -66,9 +98,10 @@
   }
 
   function limpar() {
-    ["operacao", "tipo", "bairro", "quartos"].forEach(function (nome) {
+    ["tipo", "bairro", "quartos", "finalidade", "faixa"].forEach(function (nome) {
       if (form.elements[nome]) form.elements[nome].value = "";
     });
+    if (form.elements.operacao) form.elements.operacao.value = "locacao";
     if (form.elements.ordem) form.elements.ordem.value = "destaque";
     aplicar();
   }
@@ -79,7 +112,7 @@
       evento.preventDefault();
       if (form.elements.bairro) form.elements.bairro.value = elCard.dataset.bairroCard;
       aplicar();
-      lista.scrollIntoView({ behavior: "smooth", block: "start" });
+      lista.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
     });
   });
 
