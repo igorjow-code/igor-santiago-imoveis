@@ -18,6 +18,7 @@ import json
 import re
 import shutil
 import sys
+from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import quote
 
@@ -33,6 +34,8 @@ PENDENTE = "__PENDENTE_IGOR__"
 # Geocodificado uma vez via Nominatim/OpenStreetMap (12/09/2026); bairro sem
 # entrada aqui simplesmente não mostra mapa, em vez de adivinhar coordenada.
 COORDENADAS_BAIRRO = {
+    # Nominatim, 17/09/2026: node 1778006256, Centro (suburb).
+    "Centro|Feira de Santana": (-12.2565682, -38.9648737),
     "Santa Mônica|Feira de Santana": (-12.2615379, -38.9385258),
     "Muchila|Feira de Santana": (-12.2705727, -38.9684344),
     "Sim|Feira de Santana": (-12.2512799, -38.9260106),
@@ -41,10 +44,18 @@ COORDENADAS_BAIRRO = {
 }
 
 # Campos que toda ficha precisa ter para virar pagina.
-OBRIGATORIOS = ("slug", "titulo", "operacao", "tipo", "bairro", "cidade", "preco")
+OBRIGATORIOS = ("slug", "titulo", "operacao", "finalidade", "tipo", "bairro", "cidade", "preco")
 NUMERICOS = ("area", "area_terreno", "quartos", "suites", "vagas",
              "preco", "condominio", "iptu")
 BOOLEANOS = ("destaque", "demo")
+ALIASES = {"aluguel": "preco", "valor_aluguel": "preco", "taxa_condominio": "condominio"}
+DATAS = ("disponivel_a_partir",)
+LISTAS = ("garantias", "contas_inclusas")
+ENUMS = {"operacao": {"locacao", "venda"},
+         "finalidade": {"residencial", "comercial"},
+         "situacao": {"disponivel", "reservado", "alugado", "vendido"},
+         "mobiliado": {"sim", "nao", "semi"},
+         "aceita_pet": {"sim", "nao", "consultar"}}
 
 
 # --------------------------------------------------------------------------
@@ -71,15 +82,46 @@ def ler_ficha(caminho: Path) -> dict:
         chave, valor = linha.split(":", 1)
         dados[chave.strip()] = valor.strip()
 
-    for chave in NUMERICOS:
-        if chave in dados and dados[chave] != "":
-            dados[chave] = int(dados[chave])
-    for chave in BOOLEANOS:
-        dados[chave] = str(dados.get(chave, "false")).lower() == "true"
+    origens = {}
+    for alias, chave in ALIASES.items():
+        if alias in dados:
+            if chave in dados and dados[chave] != dados[alias]:
+                raise ValueError(f"{caminho}: campos '{alias}' e '{chave}' conflitantes")
+            dados[chave] = dados.pop(alias)
+            origens[chave] = alias
+    _coerce(dados, caminho, origens)
+    if not dados.get("finalidade"):
+        dados["finalidade"] = ("comercial" if dados.get("tipo") in
+                               {"Sala comercial", "Loja", "Ponto comercial", "Galpão"}
+                               else "residencial")
 
     dados.update(_secoes(corpo))
     dados["_arquivo"] = caminho
     return dados
+
+
+def _coerce(dados: dict, caminho: Path, origens: dict | None = None) -> None:
+    for chave in NUMERICOS:
+        valor = dados.get(chave, "")
+        if valor != "":
+            try:
+                dados[chave] = int(valor)
+            except (ValueError, TypeError) as exc:
+                nome = (origens or {}).get(chave, chave)
+                raise ValueError(f"{caminho}: campo '{nome}' = {valor!r} não é número inteiro") from exc
+        elif chave in dados:
+            dados.pop(chave)
+    for chave in BOOLEANOS:
+        dados[chave] = str(dados.get(chave, "false")).lower() == "true"
+    for chave in DATAS:
+        valor = dados.get(chave)
+        if valor:
+            try:
+                dados[chave] = date.fromisoformat(valor)
+            except (ValueError, TypeError) as exc:
+                raise ValueError(f"{caminho}: campo '{chave}' = {valor!r} não é data ISO válida") from exc
+    for chave in LISTAS:
+        dados[chave] = [v.strip() for v in dados.get(chave, "").split(",") if v.strip()]
 
 
 def _secoes(corpo: str) -> dict:
@@ -134,7 +176,9 @@ def ler_imoveis() -> list[dict]:
         return []
     imoveis = [ler_ficha(f / "ficha.md")
                for f in sorted(pasta.iterdir()) if (f / "ficha.md").is_file()]
-    imoveis.sort(key=lambda i: (i.get("operacao") != "venda", -i.get("preco", 0)))
+    imoveis.sort(key=lambda i: (i.get("operacao") != "locacao",
+                               i.get("preco", 0) if i.get("operacao") == "locacao"
+                               else -i.get("preco", 0)))
     return imoveis
 
 
@@ -152,7 +196,7 @@ def moeda(valor: int) -> str:
 
 def preco_rotulo(imovel: dict) -> str:
     if imovel.get("operacao") == "locacao":
-        return moeda(imovel["preco"]) + '<span class="por-mes">/mês</span>'
+        return 'Aluguel ' + moeda(imovel["preco"]) + '<span class="por-mes">/mês</span>'
     return moeda(imovel["preco"])
 
 
@@ -161,15 +205,35 @@ def wa_link(corretor: dict, mensagem: str) -> str:
 
 
 def wa_imovel(corretor: dict, imovel: dict) -> str:
-    verbo = "alugar" if imovel["operacao"] == "locacao" else "comprar"
     msg = (f"Olá, Igor. Vi no seu site o imóvel \"{imovel['titulo']}\" "
-           f"({preco_texto(imovel)}) e gostaria de {verbo}.")
+           f"({preco_texto(imovel)}) e gostaria de agendar uma visita.")
     return wa_link(corretor, msg)
 
 
 def preco_texto(imovel: dict) -> str:
     base = moeda(imovel["preco"])
-    return base + "/mês" if imovel["operacao"] == "locacao" else base
+    return "Aluguel " + base + "/mês" if imovel["operacao"] == "locacao" else base
+
+
+def custo_mensal(imovel: dict) -> int:
+    # Encargos incluídos no aluguel não podem ser cobrados duas vezes.
+    inclusas = imovel.get("contas_inclusas", [])
+    condominio = 0 if "condominio" in inclusas else imovel.get("condominio", 0)
+    iptu = 0 if "iptu" in inclusas else imovel.get("iptu", 0) // 12
+    return imovel["preco"] + condominio + iptu
+
+
+def data_br(d: date) -> str:
+    meses = ("janeiro", "fevereiro", "março", "abril", "maio", "junho",
+             "julho", "agosto", "setembro", "outubro", "novembro", "dezembro")
+    return f"{'1º' if d.day == 1 else d.day} de {meses[d.month - 1]}"
+
+
+def disponibilidade(imovel: dict, hoje: date | None = None) -> str:
+    d = imovel.get("disponivel_a_partir")
+    if not d or d < (hoje or date.today()) or imovel.get("situacao") in {"alugado", "vendido"}:
+        return ""
+    return f"Disponível a partir de {data_br(d)} de {d.year}"
 
 
 def specs(imovel: dict) -> list[tuple[str, str]]:
@@ -178,9 +242,9 @@ def specs(imovel: dict) -> list[tuple[str, str]]:
         itens.append(("Área construída", f"{imovel['area']} m²"))
     if imovel.get("area_terreno"):
         itens.append(("Terreno", f"{imovel['area_terreno']} m²"))
-    if imovel.get("quartos"):
+    if imovel.get("quartos") and imovel.get("finalidade") != "comercial":
         itens.append(("Quartos", str(imovel["quartos"])))
-    if imovel.get("suites"):
+    if imovel.get("suites") and imovel.get("finalidade") != "comercial":
         itens.append(("Suítes", str(imovel["suites"])))
     if imovel.get("vagas"):
         itens.append(("Vagas", str(imovel["vagas"])))
@@ -188,6 +252,14 @@ def specs(imovel: dict) -> list[tuple[str, str]]:
         itens.append(("Condomínio", moeda(imovel["condominio"]) + "/mês"))
     if imovel.get("iptu"):
         itens.append(("IPTU", moeda(imovel["iptu"]) + "/ano"))
+    rotulos = {"sim": "Sim", "nao": "Não", "semi": "Semimobiliado", "consultar": "Consultar"}
+    for chave, rotulo in (("mobiliado", "Mobiliado"), ("aceita_pet", "Aceita pet")):
+        if imovel.get(chave):
+            itens.append((rotulo, rotulos.get(imovel[chave], imovel[chave])))
+    nomes = {"seguro-fianca": "seguro-fiança", "caucao": "caução", "agua": "água"}
+    for chave, rotulo in (("garantias", "Garantias a consultar"), ("contas_inclusas", "Contas inclusas")):
+        if imovel.get(chave):
+            itens.append((rotulo, ", ".join(nomes.get(v, v) for v in imovel[chave])))
     return itens
 
 
@@ -195,9 +267,9 @@ def resumo(imovel: dict) -> str:
     partes = []
     if imovel.get("area"):
         partes.append(f"{imovel['area']} m²")
-    if imovel.get("quartos"):
+    if imovel.get("quartos") and imovel.get("finalidade") != "comercial":
         partes.append(f"{imovel['quartos']} quartos")
-    if imovel.get("suites"):
+    if imovel.get("suites") and imovel.get("finalidade") != "comercial":
         partes.append(f"{imovel['suites']} suítes")
     if imovel.get("vagas"):
         partes.append(f"{imovel['vagas']} vagas")
@@ -379,13 +451,19 @@ def anos_mercado(corretor: dict) -> str:
 
 
 def linhas_recibo(imovel: dict) -> list[tuple[str, str]]:
-    linhas = [("Preço", preco_texto(imovel))]
+    locacao = imovel.get("operacao") == "locacao"
+    linhas = [("Aluguel" if locacao else "Preço", moeda(imovel["preco"]) + ("/mês" if locacao else ""))]
     if imovel.get("condominio"):
-        linhas.append(("Condomínio", moeda(imovel["condominio"]) + "/mês"))
+        linhas.append(("Condomínio", "Incluso no aluguel" if locacao and "condominio" in imovel.get("contas_inclusas", []) else moeda(imovel["condominio"]) + "/mês"))
     if imovel.get("iptu"):
-        linhas.append(("IPTU", moeda(imovel["iptu"]) + "/ano"))
+        linhas.append(("IPTU", "Incluso no aluguel" if locacao and "iptu" in imovel.get("contas_inclusas", []) else moeda(imovel["iptu"]) + "/ano"))
     if len(linhas) == 1:
-        linhas.append(("Condomínio e IPTU", "sem cobrança — confirmar na visita"))
+        linhas.append(("Condomínio e IPTU", "valores não informados — consultar"))
+    if locacao:
+        linhas.append(("Custo mensal total", f'<strong class="custo-total">{moeda(custo_mensal(imovel))}/mês</strong>'))
+        linhas.append(("Composição", "Aluguel + encargos informados; IPTU rateado em 12 meses, arredondado para baixo. Consumos à parte, salvo contas inclusas."))
+        # O total encerra o recibo; a observação vem antes dele.
+        linhas[-2], linhas[-1] = linhas[-1], linhas[-2]
     return linhas
 
 
@@ -943,10 +1021,24 @@ def escrever_auxiliares(corretor: dict, imoveis: list[dict], publicar: bool) -> 
 def pendencias(corretor: dict, imoveis: list[dict]) -> list[str]:
     faltas = [f"corretor.json → {chave}" for chave, valor in corretor.items()
               if valor == PENDENTE]
+    if not corretor.get("privacidade_revisada"):
+        faltas.append("corretor.json → privacidade_revisada (B3: revisão jurídica antes de ativar formulário)")
     if not corretor.get("creci_confirmado_por_igor"):
         faltas.append("corretor.json → creci_confirmado_por_igor (Igor precisa confirmar "
                       f"que a grafia \"{corretor['creci']}\" bate com a carteirinha)")
     for imovel in imoveis:
+        ficha = f"{imovel['_arquivo'].parent.name}/ficha.md"
+        for campo, valores in ENUMS.items():
+            if imovel.get(campo) and imovel[campo] not in valores:
+                faltas.append(f"{ficha} → {campo} inválido: {imovel[campo]!r}")
+        if imovel.get("operacao") == "locacao" and not imovel.get("garantias"):
+            faltas.append(f"{ficha} → garantias (obrigatórias em locação)")
+        d = imovel.get("disponivel_a_partir")
+        if d and d < date.today():
+            faltas.append(f"{ficha} → disponivel_a_partir vencida: {d.isoformat()}")
+        bairro = f"{imovel['bairro']}|{imovel['cidade']}"
+        if bairro not in COORDENADAS_BAIRRO:
+            faltas.append(f"{ficha} → bairro sem coordenadas: {bairro}")
         for campo in OBRIGATORIOS:
             if not imovel.get(campo):
                 faltas.append(f"{imovel['_arquivo'].parent.name}/ficha.md → {campo}")
@@ -959,6 +1051,10 @@ def pendencias(corretor: dict, imoveis: list[dict]) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
+    # O console Windows em cp1252 não representa as setas das pendências.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     checar = "--check" in argv
     publicar = "--publicar" in argv
 
