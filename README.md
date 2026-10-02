@@ -18,6 +18,14 @@ assets/           CSS, JS, favicon
 publico/          saída gerada (não versionada — Netlify gera a cada deploy)
 ```
 
+Fotos reais: exportar JPG, PNG ou WebP para `dados/imoveis/<pasta>/fotos-tratadas/`,
+em ordem pelo nome do arquivo (ex.: `01-fachada.webp`). O build copia as fotos para
+`publico/assets/imoveis/<slug>/`. Sem arquivos, não há bloco de foto nem carrossel.
+O retrato usa o caminho local em `corretor.json` → `foto`, dentro de `assets/`.
+Não inserir imagens de demonstração para preencher espaços vazios.
+
+Verificação local: `python -m unittest -v test_site.py test_visual.py`.
+
 ## Rodar local
 
 ```

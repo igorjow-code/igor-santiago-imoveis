@@ -16,28 +16,24 @@
   "anos_de_mercado": "7+",
   "foto": "__PENDENTE_IGOR__",
   "posicionamento": "Aluguel residencial e comercial em Feira de Santana. Atendimento pessoal, da escolha à assinatura.",
-  "bio_curta": "Sou Igor Santiago, corretor há mais de 7 anos. Atendo quem busca moradia ou um espaço para o próprio negócio.",
-  "bio_longa": "Sou Igor Santiago, corretor de imóveis há mais de 7 anos em Feira de Santana. Vivi 2,5 anos nos Estados Unidos e aprendi a profissão com meu pai, que tem mais de 40 anos de mercado. Meu trabalho principal é a locação residencial e comercial, na faixa de R$ 1.500 a R$ 3.000. Também atuo com venda e administração de imóveis. Atendo em português, presencialmente e a distância, em Feira de Santana, Salvador e região.",
+  "bio_curta": "Sou Igor Santiago. Há mais de 7 anos, acompanho quem procura um imóvel em Feira de Santana, da escolha do bairro à assinatura do contrato.",
+  "bio_longa": "Escolher um imóvel é decidir onde a vida ou o negócio vai acontecer. Meu trabalho é ajudar você a fazer essa escolha com clareza, conhecendo os custos e as condições antes de assumir um compromisso.\n\nSou Igor Santiago, corretor de imóveis há mais de 7 anos em Feira de Santana. Minha formação começou ao lado do meu pai, profissional com mais de 40 anos de mercado. Essa base familiar faz parte de uma trajetória que também inclui 2 anos e meio de vivência nos Estados Unidos.\n\nHoje, meu foco é a locação residencial e comercial, com atendimento pessoal da primeira conversa à assinatura. Também atuo com venda e administração de imóveis em Feira de Santana, Salvador e região, presencialmente e a distância.",
   "provas": [
     {
-      "titulo": "CRECI-BA 28.140",
-      "texto": "Registro profissional informado por Igor. Grafia da carteirinha ainda em conferência antes da publicação."
+      "titulo": "Mais de 7 anos de atuação",
+      "texto": "Experiência própria na corretagem em Feira de Santana, com foco em locação residencial e comercial."
     },
     {
-      "titulo": "Mais de 7 anos de corretagem",
-      "texto": "Atendimento pessoal para locação residencial e comercial, venda e administração."
+      "titulo": "Uma trajetória de família",
+      "texto": "Formação ao lado do meu pai, corretor com mais de 40 anos de mercado."
     },
     {
-      "titulo": "2,5 anos nos Estados Unidos",
-      "texto": "Vivência pessoal no exterior que faz parte da minha trajetória."
-    },
-    {
-      "titulo": "Formação com meu pai",
-      "texto": "Aprendi a profissão com meu pai, que tem mais de 40 anos de mercado."
+      "titulo": "Contato direto comigo",
+      "texto": "Da primeira conversa à assinatura, você sabe quem está acompanhando seu imóvel."
     }
   ],
   "site_url": "https://igorsantiagoimoveis.com.br",
-  "mensagem_whatsapp_geral": "Olá, Igor. Quero agendar uma conversa sobre aluguel residencial ou comercial em Feira de Santana.",
+  "mensagem_whatsapp_geral": "Olá, Igor. Quero encontrar um imóvel para alugar em Feira de Santana e entender os custos e as condições.",
   "mensagem_whatsapp_captacao": "Olá, Igor. Quero agendar uma avaliação do meu imóvel para venda.",
   "faixa_aluguel": {
     "min": 1500,
@@ -46,5 +42,6 @@
   "resposta_prometida": "1 dia útil",
   "mensagem_whatsapp_comercial": "Olá, Igor. Quero agendar uma conversa para alugar uma sala ou ponto comercial.",
   "mensagem_whatsapp_administracao": "Olá, Igor. Sou proprietário e quero agendar uma conversa sobre administração do meu imóvel.",
-  "privacidade_revisada": false
+  "privacidade_revisada": false,
+  "bio_abordagem": "Você fala diretamente comigo para entender os custos, comparar as opções e esclarecer as condições de cada imóvel. Assim, cada visita começa com informação e cada decisão tem acompanhamento."
 }

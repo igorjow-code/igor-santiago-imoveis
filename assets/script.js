@@ -56,6 +56,8 @@
     var faixaCampo = form.elements.faixa;
     if (faixaCampo) {
       faixaCampo.disabled = operacao !== "locacao";
+      var avisoFaixa = form.querySelector(".faixa-aviso");
+      if (avisoFaixa) avisoFaixa.hidden = !faixaCampo.disabled;
       if (faixaCampo.disabled) faixaCampo.value = "";
     }
     var faixa = valor("faixa").split("-");
@@ -143,6 +145,38 @@
   }, { threshold: .15, rootMargin: "0px 0px -40px 0px" });
 
   Array.prototype.forEach.call(alvos, function (el) { observador.observe(el); });
+})();
+
+// Pontos decorativos seguem a etapa no centro da leitura.
+(function () {
+  "use strict";
+  var pontos = document.querySelectorAll(".percurso-pontos span");
+  if (!pontos.length) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    pontos.forEach(function (p) { p.classList.add("ativo"); });
+    return;
+  }
+  if (!("IntersectionObserver" in window)) return;
+  var observador = new IntersectionObserver(function (entradas) {
+    entradas.forEach(function (entrada) {
+      if (!entrada.isIntersecting) return;
+      var indice = Number(entrada.target.dataset.passo) - 1;
+      pontos.forEach(function (p, n) { p.classList.toggle("ativo", n === indice); });
+    });
+  }, { rootMargin: "-45% 0px -45% 0px", threshold: 0 });
+  document.querySelectorAll("[data-passo]").forEach(function (p) { observador.observe(p); });
+})();
+
+// Sentinela em y=24: nenhum listener contínuo de scroll.
+(function () {
+  "use strict";
+  if (!document.body.classList.contains("pagina-home")) return;
+  var sentinela = document.querySelector(".topo-sentinela");
+  var topo = document.querySelector(".topo");
+  if (!sentinela || !topo || !("IntersectionObserver" in window)) return;
+  new IntersectionObserver(function (entradas) {
+    topo.classList.toggle("topo--fixado", !entradas[0].isIntersecting);
+  }).observe(sentinela);
 })();
 
 // --- carrossel de fotos (ficha de imovel) ---------------------------------

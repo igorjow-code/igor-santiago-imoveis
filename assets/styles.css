@@ -538,3 +538,28 @@ a:hover { text-decoration-color: var(--laranja); }
   .js [data-reveal] { opacity: 1; transform: none; }
   .card:hover, .bairro-card:hover { transform: none; }
 }
+
+
+/* Refinamento 02/10/2026: selos no fluxo, leitura do custo e apresentação. */
+.card-selos { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .9rem; }
+.card-selos .selo { position: static; display: inline-flex; align-items: center; max-width: 100%; }
+.card-titulo { font-size: 1.1rem; line-height: 1.4; min-height: 0; margin: 0 0 .5rem; overflow-wrap: anywhere; }
+.card-corpo { min-width: 0; padding: 1.3rem 1.2rem 1rem; }
+.card .conta--selo { margin: 1rem 0 .4rem; }
+.conta--selo > span { display: block; font-size: .8rem; color: var(--tinta-suave); }
+.conta--selo strong { display: block; font-family: var(--display); font-size: 1.6rem; font-weight: 800; color: var(--laranja-fundo); }
+.conta--selo small { font: 400 .85rem var(--sans); color: var(--tinta-suave); margin-left: .2rem; }
+.card .conta-nota { font-size: .8rem; color: var(--tinta-suave); line-height: 1.6; margin: 0 0 .65rem; }
+.card-preco.card-preco--base { font-family: var(--sans); font-size: .9rem; font-weight: 600; color: var(--tinta); margin-bottom: .8rem; }
+.sobre-grade--sem-foto { grid-template-columns: minmax(0, 1fr); }
+.sobre-bio { max-width: 66ch; line-height: 1.8; }
+.sobre-texto .credenciais-grade { margin: 2rem 0 1rem; }
+.sobre-texto .credencial h3 { margin-top: 0; }
+.card-foto img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+
+/* Sem fotos, cartões equilibrados evitam uma área vazia de duas linhas. */
+.grade-cards--vitrine:not(:has(.card-foto)) { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: none; }
+.grade-cards--vitrine:not(:has(.card-foto)) .card:first-child { grid-row: auto; }
+@media (max-width: 900px) {
+  .grade-cards--vitrine:not(:has(.card-foto)) { grid-template-columns: minmax(0, 1fr); }
+}
