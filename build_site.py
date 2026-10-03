@@ -47,7 +47,7 @@ COORDENADAS_BAIRRO = {
 OBRIGATORIOS = ("slug", "titulo", "operacao", "finalidade", "tipo", "bairro", "cidade", "preco")
 NUMERICOS = ("area", "area_terreno", "quartos", "suites", "vagas",
              "preco", "condominio", "iptu")
-BOOLEANOS = ("destaque", "demo")
+BOOLEANOS = ("destaque", "demo", "rascunho")
 ALIASES = {"aluguel": "preco", "valor_aluguel": "preco", "taxa_condominio": "condominio"}
 DATAS = ("disponivel_a_partir",)
 LISTAS = ("garantias", "contas_inclusas")
@@ -170,12 +170,15 @@ def _paragrafos(bruto: str) -> list[str]:
             for bloco in bruto.strip().split("\n\n") if bloco.strip()]
 
 
-def ler_imoveis() -> list[dict]:
+def ler_imoveis(incluir_rascunhos: bool = False) -> list[dict]:
     pasta = DADOS / "imoveis"
     if not pasta.is_dir():
         return []
     imoveis = [ler_ficha(f / "ficha.md")
-               for f in sorted(pasta.iterdir()) if (f / "ficha.md").is_file()]
+               for f in sorted(pasta.iterdir())
+               if not f.name.startswith("_") and (f / "ficha.md").is_file()]
+    if not incluir_rascunhos:
+        imoveis = [i for i in imoveis if not i.get("rascunho")]
     imoveis.sort(key=lambda i: (i.get("operacao") != "locacao",
                                i.get("preco", 0) if i.get("operacao") == "locacao"
                                else -i.get("preco", 0)))
@@ -1224,6 +1227,8 @@ def pendencias(corretor: dict, imoveis: list[dict]) -> list[str]:
                       f"que a grafia \"{corretor['creci']}\" bate com a carteirinha)")
     for imovel in imoveis:
         ficha = f"{imovel['_arquivo'].parent.name}/ficha.md"
+        if imovel.get("rascunho"):
+            faltas.append(f"{ficha} → rascunho — falta revisar ficha")
         for campo, valores in ENUMS.items():
             if imovel.get(campo) and imovel[campo] not in valores:
                 faltas.append(f"{ficha} → {campo} inválido: {imovel[campo]!r}")
@@ -1255,7 +1260,7 @@ def main(argv: list[str]) -> int:
     publicar = "--publicar" in argv
 
     corretor = ler_corretor()
-    imoveis = ler_imoveis()
+    imoveis = ler_imoveis(incluir_rascunhos=checar)
     if not imoveis:
         print("ERRO: nenhum imóvel em dados/imoveis/", file=sys.stderr)
         return 1
@@ -1285,6 +1290,27 @@ def main(argv: list[str]) -> int:
                      or corretor.get('email') in (None, '', PENDENTE)):
         print('RECUSADO: B3/B5 — revisão de privacidade e e-mail são necessários para ativar o formulário.', file=sys.stderr)
         return 2
+
+    if publicar:
+        retrato_path = corretor.get("foto")
+        retrato_ok = False
+        if retrato_path not in (None, "", PENDENTE):
+            foto = (ROOT / retrato_path).resolve()
+            retrato_ok = foto.is_relative_to(ASSETS.resolve()) and foto.is_file()
+        liberados = [i for i in imoveis if not i.get("demo") and not i.get("rascunho")]
+        bloqueios = []
+        if corretor.get("creci_confirmado_por_igor") is not True:
+            bloqueios.append("CRECI ainda não confirmado por Igor")
+        if corretor.get("regime") in (None, "", PENDENTE):
+            bloqueios.append("regime profissional pendente")
+        if not retrato_ok:
+            bloqueios.append("retrato válido ausente em assets/")
+        if not liberados:
+            bloqueios.append("nenhum imóvel real fora de rascunho")
+        if bloqueios:
+            print("RECUSADO: preparação do lançamento incompleta — " + "; ".join(bloqueios) + ".",
+                  file=sys.stderr)
+            return 2
 
     if SAIDA.exists():
         if SAIDA.resolve() != (ROOT / 'publico').resolve():
