@@ -18,7 +18,9 @@ import build_site as b
 class SiteTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.corretor = b.ler_corretor()
+        # Os testes não devem depender dos dados pessoais atuais do perfil local.
+        cls.corretor = dict(b.ler_corretor(), foto=b.PENDENTE,
+                            creci_confirmado_por_igor=False, regime=b.PENDENTE)
         cls.imoveis = b.ler_imoveis()
 
     def ficha(self, pasta, texto):
@@ -214,7 +216,9 @@ class SiteTests(unittest.TestCase):
             for caminho in (raiz / 'dados' / 'imoveis').glob('*/ficha.md'):
                 caminho.write_text(caminho.read_text(encoding='utf-8').replace('demo: true', 'demo: false'), encoding='utf-8')
             corretor = json.loads((raiz / 'dados' / 'corretor.json').read_text(encoding='utf-8'))
-            corretor.update(privacidade_revisada=True, email='teste@example.invalid')
+            corretor.update(privacidade_revisada=True, email='teste@example.invalid',
+                            creci_confirmado_por_igor=False, regime=b.PENDENTE,
+                            foto=b.PENDENTE)
             (raiz / 'dados' / 'corretor.json').write_text(json.dumps(corretor), encoding='utf-8')
             resultado = subprocess.run([sys.executable, str(raiz / 'build_site.py'), '--publicar'],
                                        capture_output=True, text=True, encoding='utf-8')

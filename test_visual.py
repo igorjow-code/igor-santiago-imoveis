@@ -8,7 +8,7 @@ import build_site as b
 class VisualTests(unittest.TestCase):
     def setUp(self):
         self.imovel = dict(b.ler_imoveis()[0])
-        self.corretor = b.ler_corretor()
+        self.corretor = dict(b.ler_corretor(), foto=b.PENDENTE)
 
     def test_sem_foto_nao_reserva_bloco(self):
         self.imovel.pop('_arquivo', None)
