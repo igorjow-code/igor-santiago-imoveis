@@ -87,6 +87,31 @@ class SiteTests(unittest.TestCase):
         imovel = dict(self.imoveis[0], finalidade='comercial', quartos=3, suites=1)
         self.assertFalse({'Quartos', 'Suítes'} & {rotulo for rotulo, _ in b.specs(imovel)})
 
+    def test_rascunhos_fora_do_build_e_listados_no_check(self):
+        with tempfile.TemporaryDirectory() as pasta:
+            raiz = Path(pasta)
+            shutil.copytree(b.DADOS, raiz / 'dados')
+            ficha = raiz / 'dados' / 'imoveis' / 'novo-imovel' / 'ficha.md'
+            ficha.parent.mkdir()
+            shutil.copy2(b.DADOS / '_modelo' / 'ficha.md', ficha)
+            shutil.copy2(b.ROOT / 'build_site.py', raiz / 'build_site.py')
+            imoveis = b.ler_imoveis()
+            self.assertNotIn('novo-imovel', [i['slug'] for i in imoveis])
+            check = subprocess.run([sys.executable, str(raiz / 'build_site.py'), '--check'],
+                                   capture_output=True, text=True, encoding='utf-8')
+            self.assertEqual(check.returncode, 0, check.stderr)
+            self.assertIn('novo-imovel/ficha.md → rascunho — falta revisar ficha', check.stdout)
+            # A leitura do modo --check inclui o rascunho para explicar o bloqueio.
+            orig_dados = b.DADOS
+            try:
+                b.DADOS = raiz / 'dados'
+                lidos = b.ler_imoveis(incluir_rascunhos=True)
+                self.assertNotIn('__modelo__', [i['slug'] for i in lidos])
+                self.assertTrue(any('rascunho — falta revisar ficha' in p
+                                    for p in b.pendencias(self.corretor, lidos)))
+            finally:
+                b.DADOS = orig_dados
+
     def test_formulario_exige_tres_gates(self):
         for publicar in (False, True):
             for revisada in (False, True, 'true'):
@@ -155,8 +180,13 @@ class SiteTests(unittest.TestCase):
             self.assertEqual(recusado.returncode, 2)
             self.assertIn('B3/B5', recusado.stderr)
             self.assertEqual(hashes(), antes)
-            corretor = dict(self.corretor, privacidade_revisada=True, email='teste@example.invalid')
+            corretor = dict(self.corretor, privacidade_revisada=True, email='teste@example.invalid',
+                            creci_confirmado_por_igor=True, regime='autônomo', foto='assets/retrato.jpg')
             (raiz / 'dados' / 'corretor.json').write_text(json.dumps(corretor), encoding='utf-8')
+            (raiz / 'assets' / 'retrato.jpg').write_bytes(b'retrato de teste')
+            # A publicação só passa quando existe ao menos uma ficha real revisada.
+            ficha_real = next((raiz / 'dados' / 'imoveis').glob('*/ficha.md'))
+            ficha_real.write_text(ficha_real.read_text(encoding='utf-8').replace('demo: true', 'demo: false'), encoding='utf-8')
             resultado = executar('--publicar')
             self.assertEqual(resultado.returncode, 0, resultado.stderr)
             for p in saida.rglob('*.html'):
@@ -174,6 +204,25 @@ class SiteTests(unittest.TestCase):
             paginas = {p.relative_to(saida).as_posix() for p in saida.rglob('*.html') if p.name not in {'404.html', 'obrigado.html'}}
             self.assertEqual(urls, paginas)
             self.assertEqual(len(sitemap.findall('.//s:lastmod', ns)), len(paginas))
+
+    def test_gate_adicional_de_lancamento(self):
+        with tempfile.TemporaryDirectory() as pasta:
+            raiz = Path(pasta)
+            shutil.copy2(b.ROOT / 'build_site.py', raiz)
+            shutil.copytree(b.DADOS, raiz / 'dados')
+            shutil.copytree(b.ASSETS, raiz / 'assets')
+            for caminho in (raiz / 'dados' / 'imoveis').glob('*/ficha.md'):
+                caminho.write_text(caminho.read_text(encoding='utf-8').replace('demo: true', 'demo: false'), encoding='utf-8')
+            corretor = json.loads((raiz / 'dados' / 'corretor.json').read_text(encoding='utf-8'))
+            corretor.update(privacidade_revisada=True, email='teste@example.invalid')
+            (raiz / 'dados' / 'corretor.json').write_text(json.dumps(corretor), encoding='utf-8')
+            resultado = subprocess.run([sys.executable, str(raiz / 'build_site.py'), '--publicar'],
+                                       capture_output=True, text=True, encoding='utf-8')
+            self.assertEqual(resultado.returncode, 2)
+            self.assertIn('preparação do lançamento incompleta', resultado.stderr)
+            self.assertIn('CRECI ainda não confirmado', resultado.stderr)
+            self.assertIn('regime profissional pendente', resultado.stderr)
+            self.assertIn('retrato válido ausente', resultado.stderr)
 
 
 if __name__ == '__main__':
