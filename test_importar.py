@@ -77,7 +77,7 @@ class ImportarTests(unittest.TestCase):
                 self.gerar_jpg_gps(arquivo, cor)
                 origem = arquivo.read_bytes()
                 self.assertIn(b'Exif\0\0', origem)
-                pacote.writestr(nome, origem)
+                pacote.writestr(f'Fotos com espaço /{nome}', origem)
 
         self.assertEqual(imp.importar(zip_path, 'sala-centro-30m2'), 0)
         saida = imp.DADOS / 'imoveis' / 'sala-centro-30m2' / 'fotos-tratadas'

@@ -53,9 +53,19 @@ def coletar_entradas(origem: Path, temporario: Path) -> list[tuple[str, Path]]:
         validar_zip(origem)
         destino = temporario / "extraido"
         destino.mkdir()
+        arquivos = []
         with zipfile.ZipFile(origem) as arquivo:
-            arquivo.extractall(destino)
-        raiz = destino
+            for item in arquivo.infolist():
+                relativo = PurePosixPath(item.filename.replace("\\", "/"))
+                if item.is_dir() or relativo.suffix.lower() not in IMAGENS:
+                    continue
+                # Nomes temporários simples evitam caracteres e pastas do ZIP
+                # incompatíveis com Windows (espaço/ponto final, nomes reservados).
+                copia = destino / f"{len(arquivos):08d}{relativo.suffix.lower()}"
+                with arquivo.open(item) as entrada, copia.open("wb") as saida:
+                    shutil.copyfileobj(entrada, saida)
+                arquivos.append((item.filename, copia))
+        return sorted(arquivos, key=lambda item: (item[0].casefold(), item[0]))
     elif origem.is_dir():
         raiz = origem
     else:
