@@ -126,6 +126,10 @@ def importar(origem: Path, slug: str, substituir: bool = False, dry_run: bool = 
     if not destino_imovel.resolve().is_relative_to(pasta_imoveis.resolve()):
         raise ImportErrorFotos("destino fora de dados/imoveis")
     saida = destino_imovel / "fotos-tratadas"
+    if saida.is_symlink() or (saida.exists() and not saida.is_dir()):
+        raise ImportErrorFotos("fotos-tratadas precisa ser uma pasta real dentro do imóvel")
+    if saida.exists() and not saida.resolve().is_relative_to(destino_imovel.resolve()):
+        raise ImportErrorFotos("fotos-tratadas aponta para fora da pasta do imóvel")
     if saida.exists() and any(saida.iterdir()) and not substituir:
         raise ImportErrorFotos(f"{saida} já contém arquivos; use --substituir para trocar as fotos")
 
