@@ -18,9 +18,15 @@ assets/           CSS, JS, favicon
 publico/          saída gerada (não versionada — Netlify gera a cada deploy)
 ```
 
-Fotos reais: exportar JPG, PNG ou WebP para `dados/imoveis/<pasta>/fotos-tratadas/`,
-em ordem pelo nome do arquivo (ex.: `01-fachada.webp`). O build copia as fotos para
-`publico/assets/imoveis/<slug>/`. Sem arquivos, não há bloco de foto nem carrossel.
+Fotos reais: use `importar_fotos.py` para converter um ZIP ou pasta exportados do Google
+Fotos. O script reduz as imagens, remove metadados e grava em
+`dados/imoveis/<slug>/fotos-tratadas/`, em ordem pelo nome original. Para uma pasta/ZIP:
+`python importar_fotos.py caminho/para/album.zip --imovel <slug>`; para processar tudo em
+`entrada-fotos/`, use `python importar_fotos.py --entrada`. Originais em
+`entrada-fotos/` são ignorados pelo Git. O build mantém o contrato de leitura existente e
+copia as fotos para `publico/assets/imoveis/<slug>/`. Sem arquivos, não há bloco de foto
+nem carrossel. Sem `ficha.md`, o importador cria uma ficha rascunho a partir de
+`dados/_modelo/ficha.md`.
 O retrato usa o caminho local em `corretor.json` → `foto`, dentro de `assets/`.
 Não inserir imagens de demonstração para preencher espaços vazios.
 
