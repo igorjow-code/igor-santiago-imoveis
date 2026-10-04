@@ -5,7 +5,7 @@ titulo: Sala comercial de 33 m² em Feira de Santana
 operacao: locacao
 finalidade: comercial
 tipo: Sala comercial
-bairro:
+bairro: Getúlio Vargas
 cidade: Feira de Santana
 preco: 2400
 area: 33
@@ -18,7 +18,7 @@ iptu:
 garantias:
 mobiliado:
 aceita_pet:
-contas_inclusas:
+contas_inclusas: condominio, iptu
 disponivel_a_partir:
 situacao: disponivel
 destaque: false
@@ -27,11 +27,11 @@ rascunho: true
 ---
 
 ## Descrição
-<!-- O nome do ZIP informa R$ 2.400 e "tudo incluso". Confirmar se o valor é mensal e quais despesas estão incluídas antes de publicar. -->
+Aluguel de R$ 2.400 por mês, com taxa de condomínio e IPTU inclusos.
 
 ## Destaques
-- Sala comercial, 33 m² (informações do nome do ZIP; confirmar antes de publicar)
-- Valor informado no nome do ZIP: R$ 2.400 (periodicidade e inclusões pendentes de confirmação)
+- Sala comercial com 33 m².
+- Aluguel mensal de R$ 2.400, incluindo taxa de condomínio e IPTU.
 
 ## Dúvidas comuns
-<!-- Confirmar bairro, disponibilidade, garantias locatícias e discriminação do que está incluso. -->
+<!-- Confirmar garantia: a mensagem "1 + 2 no ato" quer dizer 1 aluguel + 2 meses de caução pagos na assinatura? Confirmar também se está disponível para entrada imediata. -->

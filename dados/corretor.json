@@ -42,6 +42,6 @@
   "resposta_prometida": "1 dia útil",
   "mensagem_whatsapp_comercial": "Olá, Igor. Quero agendar uma conversa para alugar uma sala ou ponto comercial.",
   "mensagem_whatsapp_administracao": "Olá, Igor. Sou proprietário e quero agendar uma conversa sobre administração do meu imóvel.",
-  "privacidade_revisada": false,
+  "privacidade_revisada": true,
   "bio_abordagem": "Você fala diretamente comigo para entender os custos, comparar as opções e esclarecer as condições de cada imóvel. Assim, cada visita começa com informação e cada decisão tem acompanhamento."
 }
