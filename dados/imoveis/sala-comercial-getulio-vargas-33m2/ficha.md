@@ -41,4 +41,4 @@ O aluguel é de R$ 2.400 por mês, com a taxa de condomínio e o IPTU incluídos
 ### Qual é a área da sala?
 A sala tem 33 m².
 
-<!-- Confirmar se "1 + 2 no ato" significa 1 aluguel + 2 meses de caução na assinatura; confirmar também a disponibilidade imediata. -->
+<!-- Igor confirmou o padrão: fiador ou 3 aluguéis no ato. Antes da publicação, esclarecer se o total é 1º aluguel + 2 meses de caução, ou 3 meses de caução além do 1º aluguel; confirmar também a disponibilidade imediata. -->
