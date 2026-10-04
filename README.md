@@ -27,6 +27,8 @@ Fotos. O script reduz as imagens, remove metadados e grava em
 copia as fotos para `publico/assets/imoveis/<slug>/`. Sem arquivos, não há bloco de foto
 nem carrossel. Sem `ficha.md`, o importador cria uma ficha rascunho a partir de
 `dados/_modelo/ficha.md`.
+Os testes do importador com ZIP e GPS real de fixture rodam junto da suíte:
+`python -m unittest -v test_site.py test_visual.py test_importar.py`.
 O retrato usa o caminho local em `corretor.json` → `foto`, dentro de `assets/`.
 Não inserir imagens de demonstração para preencher espaços vazios.
 
