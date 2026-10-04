@@ -15,7 +15,7 @@ suites:
 vagas:
 condominio:
 iptu:
-garantias:
+garantias: fiador, caucao
 mobiliado:
 aceita_pet:
 contas_inclusas: condominio, iptu
@@ -23,7 +23,7 @@ disponivel_a_partir:
 situacao: disponivel
 destaque: false
 demo: false
-rascunho: true
+rascunho: false
 ---
 
 ## Descrição
@@ -32,6 +32,7 @@ Aluguel de R$ 2.400 por mês, com taxa de condomínio e IPTU inclusos.
 ## Destaques
 - Sala comercial com 33 m².
 - Aluguel mensal de R$ 2.400, incluindo taxa de condomínio e IPTU.
+- Disponível para entrada imediata.
 
 ## Dúvidas comuns
 
@@ -41,4 +42,5 @@ O aluguel é de R$ 2.400 por mês, com a taxa de condomínio e o IPTU incluídos
 ### Qual é a área da sala?
 A sala tem 33 m².
 
-<!-- Igor confirmou o padrão: fiador ou 3 aluguéis no ato. Antes da publicação, esclarecer se o total é 1º aluguel + 2 meses de caução, ou 3 meses de caução além do 1º aluguel; confirmar também a disponibilidade imediata. -->
+### Quais são as opções de garantia e pagamento inicial?
+Você pode utilizar fiador. A alternativa é pagar, no ato da assinatura, o primeiro aluguel mais dois aluguéis de caução — três valores de aluguel ao todo.
