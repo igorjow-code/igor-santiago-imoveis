@@ -34,4 +34,11 @@ Aluguel de R$ 2.400 por mês, com taxa de condomínio e IPTU inclusos.
 - Aluguel mensal de R$ 2.400, incluindo taxa de condomínio e IPTU.
 
 ## Dúvidas comuns
-<!-- Confirmar garantia: a mensagem "1 + 2 no ato" quer dizer 1 aluguel + 2 meses de caução pagos na assinatura? Confirmar também se está disponível para entrada imediata. -->
+
+### Quais despesas estão incluídas no valor?
+O aluguel é de R$ 2.400 por mês, com a taxa de condomínio e o IPTU incluídos.
+
+### Qual é a área da sala?
+A sala tem 33 m².
+
+<!-- Confirmar se "1 + 2 no ato" significa 1 aluguel + 2 meses de caução na assinatura; confirmar também a disponibilidade imediata. -->
