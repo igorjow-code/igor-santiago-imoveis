@@ -1,5 +1,5 @@
 [build]
-  command = "python3 build_site.py"
+  command = "python3 build_site.py --publicar"
   publish = "publico"
 
 [[headers]]

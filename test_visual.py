@@ -7,7 +7,8 @@ import build_site as b
 
 class VisualTests(unittest.TestCase):
     def setUp(self):
-        self.imovel = dict(b.ler_imoveis()[0])
+        ficha_demo = sorted((b.ROOT / 'tests' / 'fixtures' / 'imoveis').glob('*/ficha.md'))[0]
+        self.imovel = dict(b.ler_ficha(ficha_demo))
         self.corretor = dict(b.ler_corretor(), foto=b.PENDENTE)
 
     def test_sem_foto_nao_reserva_bloco(self):
