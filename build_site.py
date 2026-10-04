@@ -1260,10 +1260,7 @@ def main(argv: list[str]) -> int:
     publicar = "--publicar" in argv
 
     corretor = ler_corretor()
-    imoveis = ler_imoveis(incluir_rascunhos=checar)
-    if not imoveis:
-        print("ERRO: nenhum imóvel em dados/imoveis/", file=sys.stderr)
-        return 1
+    imoveis = ler_imoveis(incluir_rascunhos=checar or publicar)
 
     demos = [i["slug"] for i in imoveis if i.get("demo")]
 
@@ -1311,6 +1308,9 @@ def main(argv: list[str]) -> int:
             print("RECUSADO: preparação do lançamento incompleta — " + "; ".join(bloqueios) + ".",
                   file=sys.stderr)
             return 2
+        # Rascunhos são lidos para que o gate possa explicar o bloqueio,
+        # mas nunca entram na saída publicável.
+        imoveis = [i for i in imoveis if not i.get("rascunho")]
 
     if SAIDA.exists():
         if SAIDA.resolve() != (ROOT / 'publico').resolve():

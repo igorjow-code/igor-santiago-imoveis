@@ -14,6 +14,29 @@ from xml.etree import ElementTree
 
 import build_site as b
 
+FIXTURE_IMOVEIS = b.ROOT / 'tests' / 'fixtures' / 'imoveis'
+
+
+def copiar_dados_teste(destino):
+    destino = Path(destino)
+    destino.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(b.DADOS / '_modelo', destino / '_modelo')
+    corretor = b.ler_corretor()
+    corretor.update(privacidade_revisada=False, email=b.PENDENTE,
+                    creci_confirmado_por_igor=False, regime=b.PENDENTE,
+                    foto=b.PENDENTE)
+    (destino / 'corretor.json').write_text(
+        json.dumps(corretor, ensure_ascii=False, indent=2), encoding='utf-8')
+    shutil.copytree(FIXTURE_IMOVEIS, destino / 'imoveis')
+
+
+def ler_imoveis_fixture():
+    imoveis = [b.ler_ficha(p) for p in sorted(FIXTURE_IMOVEIS.glob('*/ficha.md'))]
+    imoveis.sort(key=lambda i: (i.get('operacao') != 'locacao',
+                                i.get('preco', 0) if i.get('operacao') == 'locacao'
+                                else -i.get('preco', 0)))
+    return imoveis
+
 
 class SiteTests(unittest.TestCase):
     @classmethod
@@ -21,7 +44,7 @@ class SiteTests(unittest.TestCase):
         # Os testes não devem depender dos dados pessoais atuais do perfil local.
         cls.corretor = dict(b.ler_corretor(), foto=b.PENDENTE,
                             creci_confirmado_por_igor=False, regime=b.PENDENTE)
-        cls.imoveis = b.ler_imoveis()
+        cls.imoveis = ler_imoveis_fixture()
 
     def ficha(self, pasta, texto):
         caminho = Path(pasta) / 'caso' / 'ficha.md'
@@ -92,7 +115,7 @@ class SiteTests(unittest.TestCase):
     def test_rascunhos_fora_do_build_e_listados_no_check(self):
         with tempfile.TemporaryDirectory() as pasta:
             raiz = Path(pasta)
-            shutil.copytree(b.DADOS, raiz / 'dados')
+            copiar_dados_teste(raiz / 'dados')
             ficha = raiz / 'dados' / 'imoveis' / 'novo-imovel' / 'ficha.md'
             ficha.parent.mkdir()
             shutil.copy2(b.DADOS / '_modelo' / 'ficha.md', ficha)
@@ -113,6 +136,27 @@ class SiteTests(unittest.TestCase):
                                     for p in b.pendencias(self.corretor, lidos)))
             finally:
                 b.DADOS = orig_dados
+
+    def test_previa_compila_sem_imoveis_publicaveis(self):
+        with tempfile.TemporaryDirectory() as pasta:
+            raiz = Path(pasta)
+            shutil.copy2(b.ROOT / 'build_site.py', raiz / 'build_site.py')
+            shutil.copytree(b.ASSETS, raiz / 'assets')
+            (raiz / 'dados' / '_modelo').mkdir(parents=True)
+            shutil.copy2(b.DADOS / '_modelo' / 'ficha.md', raiz / 'dados' / '_modelo' / 'ficha.md')
+            shutil.copy2(b.DADOS / 'corretor.json', raiz / 'dados' / 'corretor.json')
+            ficha = raiz / 'dados' / 'imoveis' / 'unico-rascunho' / 'ficha.md'
+            ficha.parent.mkdir(parents=True)
+            ficha.write_text(
+                (raiz / 'dados' / '_modelo' / 'ficha.md').read_text(encoding='utf-8')
+                .replace('slug: __PREENCHER__', 'slug: unico-rascunho'),
+                encoding='utf-8')
+
+            resultado = subprocess.run([sys.executable, str(raiz / 'build_site.py')],
+                                       capture_output=True, text=True, encoding='utf-8')
+            self.assertEqual(resultado.returncode, 0, resultado.stderr)
+            self.assertTrue((raiz / 'publico' / 'index.html').is_file())
+            self.assertFalse((raiz / 'publico' / 'imovel' / 'unico-rascunho.html').exists())
 
     def test_formulario_exige_tres_gates(self):
         for publicar in (False, True):
@@ -150,8 +194,13 @@ class SiteTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as pasta:
             raiz = Path(pasta)
             shutil.copy2(b.ROOT / 'build_site.py', raiz)
-            shutil.copytree(b.DADOS, raiz / 'dados')
+            copiar_dados_teste(raiz / 'dados')
             shutil.copytree(b.ASSETS, raiz / 'assets')
+            rascunho = raiz / 'dados' / 'imoveis' / 'rascunho-interno' / 'ficha.md'
+            rascunho.parent.mkdir()
+            shutil.copy2(raiz / 'dados' / '_modelo' / 'ficha.md', rascunho)
+            rascunho.write_text(rascunho.read_text(encoding='utf-8').replace(
+                'slug: __PREENCHER__', 'slug: rascunho-interno'), encoding='utf-8')
 
             def executar(*args):
                 return subprocess.run([sys.executable, str(raiz / 'build_site.py'), *args], capture_output=True, text=True, encoding='utf-8')
@@ -205,13 +254,14 @@ class SiteTests(unittest.TestCase):
             urls = {n.text.removeprefix(base) for n in sitemap.findall('.//s:loc', ns)}
             paginas = {p.relative_to(saida).as_posix() for p in saida.rglob('*.html') if p.name not in {'404.html', 'obrigado.html'}}
             self.assertEqual(urls, paginas)
+            self.assertNotIn('imovel/rascunho-interno/index.html', paginas)
             self.assertEqual(len(sitemap.findall('.//s:lastmod', ns)), len(paginas))
 
     def test_gate_adicional_de_lancamento(self):
         with tempfile.TemporaryDirectory() as pasta:
             raiz = Path(pasta)
             shutil.copy2(b.ROOT / 'build_site.py', raiz)
-            shutil.copytree(b.DADOS, raiz / 'dados')
+            copiar_dados_teste(raiz / 'dados')
             shutil.copytree(b.ASSETS, raiz / 'assets')
             for caminho in (raiz / 'dados' / 'imoveis').glob('*/ficha.md'):
                 caminho.write_text(caminho.read_text(encoding='utf-8').replace('demo: true', 'demo: false'), encoding='utf-8')
