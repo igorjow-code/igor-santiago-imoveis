@@ -2,3 +2,5 @@ publico/
 __pycache__/
 *.pyc
 entrada-fotos/
+# Originais recebidos nesta pasta; publicar somente fotos-tratadas sem metadados.
+dados/imoveis/Magnifique Premium - Santa Monica/
