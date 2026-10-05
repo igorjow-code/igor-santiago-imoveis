@@ -190,6 +190,17 @@ class SiteTests(unittest.TestCase):
             self.assertEqual('Nesta prévia ele está desativado' in documento, not publicar)
             self.assertEqual('Rascunho — aguarda revisão jurídica' in documento, not publicar)
 
+    def test_consentimento_alerta_privado_e_versao_registrada(self):
+        c = dict(self.corretor, privacidade_revisada=True, email='qa@example.invalid')
+        documento = b.formulario_lead(c, publicar=True)
+        self.assertIn('name="privacidade-versao" value="2026-10-05-telegram-v1"', documento)
+        self.assertIn('name="consentimento" required', documento)
+        self.assertIn('alerta privado de atendimento no Telegram', documento)
+        policy = b.pagina_privacidade(c, self.imoveis, publicar=True)
+        self.assertIn('GitHub Actions', policy)
+        self.assertIn('mensagens do Telegram', policy)
+        self.assertIn('O alerta não contém o e-mail bruto, IP', policy)
+
     def test_builds_isolados_gates_seo_e_sitemap(self):
         with tempfile.TemporaryDirectory() as pasta:
             raiz = Path(pasta)

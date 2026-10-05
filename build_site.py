@@ -670,12 +670,13 @@ def formulario_lead(corretor: dict, publicar: bool) -> str:
     return f'''<section class="secao" id="quero-alugar"><div class="wrap">
 <h2>Conte o que você quer alugar</h2>{abertura}
 <input type="hidden" name="form-name" value="quero-alugar"{disabled}>
+<input type="hidden" name="privacidade-versao" value="2026-10-05-telegram-v1"{disabled}>
 <p class="escondido" aria-hidden="true"><label>Deixe este campo vazio<input name="bot-field" tabindex="-1" autocomplete="off"{disabled}></label></p>
 <div class="form-campo"><label for="lead-nome">Nome</label><input id="lead-nome" name="nome" type="text" required autocomplete="name"{disabled}></div>
 <div class="form-campo"><label for="lead-whatsapp">WhatsApp</label><input id="lead-whatsapp" name="whatsapp" type="tel" required inputmode="tel" autocomplete="tel" pattern="[+0-9\\(\\) .\\-]{{8,25}}"{disabled}></div>
 <div class="form-campo"><label for="lead-procura">O que procura?</label><select id="lead-procura" name="procura" required{disabled}><option value="">Selecione</option>{options}</select></div>
 <div class="consentimento"><input id="lead-consentimento" type="checkbox" name="consentimento" required{disabled}>
-<label for="lead-consentimento">Autorizo Igor Santiago a me contatar por WhatsApp sobre imóveis para alugar. Meus dados não são repassados a terceiros para publicidade e posso pedir exclusão a qualquer momento.</label>
+<label for="lead-consentimento">Autorizo Igor Santiago a usar os dados deste formulário para me atender por WhatsApp sobre imóveis para alugar, inclusive em um alerta privado de atendimento no Telegram, conforme o aviso de privacidade. Não há repasse para publicidade de terceiros e posso revogar o consentimento ou pedir exclusão.</label>
 <a href="privacidade.html">Como meus dados são tratados</a></div>
 <p>Resposta em até {e(corretor['resposta_prometida'])}, por mim mesmo.</p>
 <button class="btn btn-principal" type="{'submit' if ativo else 'button'}"{disabled}>Quero falar com Igor</button>
@@ -1092,11 +1093,16 @@ def pagina_privacidade(corretor: dict, imoveis: list[dict], publicar: bool = Fal
        sujeita à revisão jurídica deste aviso.</p>
 
     <h2>Compartilhamento</h2>
-    <p>Quando ativado, o Netlify Forms processará e armazenará os envios como operador
-       do formulário, com filtragem de spam. A notificação será enviada ao e-mail
-       configurado de Igor, que registrará manualmente o contato no CRM de atendimento.
-       O processamento pode ocorrer fora do Brasil; condições, suboperadores e transferência
-       internacional precisam ser validados na revisão jurídica antes da ativação.</p>
+    <p>O Netlify Forms processa e armazena os envios, com filtragem de spam, e envia
+       uma notificação ao e-mail de Igor. Para organizar o atendimento, uma automação
+       executada no GitHub Actions consulta os envios verificados e encaminha ao chat
+       privado de Igor no Telegram apenas nome, WhatsApp, tipo/faixa procurada, data e
+       hora e registro do consentimento. O alerta não contém o e-mail bruto, IP ou
+       outros metadados técnicos. O contato com você é feito manualmente por Igor;
+       o cadastro no CRM de atendimento também é manual.
+       Netlify, GitHub e Telegram podem processar dados fora do Brasil. Condições,
+       papéis desses serviços e mecanismo de transferência internacional devem ser
+       validados na revisão jurídica desta atualização antes de ativar a automação.</p>
     <p>Seus dados são compartilhados apenas com quem for necessário para a negociação que
        você mesmo pediu: proprietário do imóvel, cartório, banco ou administradora de
        condomínio. Não há venda de dados, não há repasse para lista de terceiros e não há
@@ -1104,7 +1110,7 @@ def pagina_privacidade(corretor: dict, imoveis: list[dict], publicar: bool = Fal
 
     <h2>Por quanto tempo</h2>
     <p>Prazo proposto para contato que não avança: até 12 meses, sujeito à revisão jurídica.
-       A exclusão deve abranger formulário, e-mail e CRM, salvo obrigação de conservação.
+       A exclusão deve abranger formulário, e-mail, mensagens do Telegram e CRM, salvo obrigação de conservação.
        Dados de negociação concluída são mantidos pelo prazo legal aplicável ao contrato.</p>
 
     <h2>Seus direitos</h2>
