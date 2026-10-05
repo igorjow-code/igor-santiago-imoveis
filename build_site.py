@@ -261,10 +261,16 @@ def specs(imovel: dict) -> list[tuple[str, str]]:
     for chave, rotulo in (("mobiliado", "Mobiliado"), ("aceita_pet", "Aceita pet")):
         if imovel.get(chave):
             itens.append((rotulo, rotulos.get(imovel[chave], imovel[chave])))
-    nomes = {"seguro-fianca": "seguro-fiança", "caucao": "caução", "agua": "água"}
-    for chave, rotulo in (("garantias", "Garantias a consultar"), ("contas_inclusas", "Contas inclusas")):
-        if imovel.get(chave):
-            itens.append((rotulo, ", ".join(nomes.get(v, v) for v in imovel[chave])))
+    if imovel.get("garantia_detalhe"):
+        itens.append(("Garantia", imovel["garantia_detalhe"]))
+    elif imovel.get("garantias"):
+        nomes = {"seguro-fianca": "seguro-fiança", "caucao": "caução", "agua": "água"}
+        itens.append(("Garantias aceitas", ", ".join(
+            nomes.get(v, v) for v in imovel["garantias"])))
+    if imovel.get("contas_inclusas"):
+        nomes = {"seguro-fianca": "seguro-fiança", "caucao": "caução", "agua": "água"}
+        itens.append(("Contas inclusas", ", ".join(
+            nomes.get(v, v) for v in imovel["contas_inclusas"])))
     return itens
 
 

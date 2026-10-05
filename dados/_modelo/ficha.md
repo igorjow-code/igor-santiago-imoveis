@@ -16,6 +16,8 @@ vagas:
 condominio:
 iptu:
 garantias:
+# Opcional: descreva os valores ou etapas específicos da garantia acordada.
+garantia_detalhe:
 mobiliado:
 aceita_pet:
 contas_inclusas:

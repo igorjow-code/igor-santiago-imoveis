@@ -49,6 +49,14 @@ class VisualTests(unittest.TestCase):
         self.assertIn('quando%20liberar', b.wa_imovel(self.corretor, self.imovel))
         self.assertIn('quando%20liberar', b.wa_fixo(self.corretor, '', self.imovel))
 
+    def test_garantia_detalhada_mostra_condicao_confirmada(self):
+        detalhe = 'Fiador ou primeiro aluguel + dois meses de caução no ato (3 valores de aluguel no total).'
+        self.imovel['garantias'] = ['fiador', 'caucao']
+        self.imovel['garantia_detalhe'] = detalhe
+        specs = b.specs(self.imovel)
+        self.assertIn(('Garantia', detalhe), specs)
+        self.assertNotIn(('Garantias aceitas', 'fiador, caução'), specs)
+
 
 if __name__ == '__main__':
     unittest.main()

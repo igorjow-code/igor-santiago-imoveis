@@ -16,6 +16,7 @@ vagas:
 condominio:
 iptu:
 garantias: fiador, caucao
+garantia_detalhe: Fiador ou primeiro aluguel + dois meses de caução no ato (3 valores de aluguel no total).
 mobiliado:
 aceita_pet:
 contas_inclusas: condominio, iptu
