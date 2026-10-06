@@ -561,8 +561,8 @@ def conta(imovel: dict, variante: str = 'cena', atraso_base: int = 0) -> str:
 <p class="conta-imovel">{e(imovel['tipo'])} · {e(imovel['bairro'])}</p>
 <dl class="conta-linhas">{itens}</dl>
 <div class="conta-regua" aria-hidden="true" {animar(390)}></div>
-<p class="conta-total" aria-label="{e(acessivel)}" {animar(520)}><span class="conta-legenda">{legenda}</span><strong>{moeda(total)}</strong></p>
-<p class="conta-nota">{nota}</p><span class="conta-carimbo">conta detalhada</span></div>'''
+<p class="conta-total" aria-label="{e(acessivel)}" {animar(520)}><span class="conta-legenda">{legenda}:</span> <strong>{moeda(total)}</strong></p>
+<p class="conta-nota">{nota}</p></div>'''
 
 
 def recibo_ficha(corretor: dict, imovel: dict) -> str:

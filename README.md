@@ -49,5 +49,9 @@ Netlify, ligado a este repositório GitHub. Toda vez que a branch principal
 recebe um push, o Netlify roda `python3 build_site.py` e publica `publico/`.
 Configuração em `netlify.toml`.
 
+Padrão aprovado para os cartões: mostrar “Você paga por mês: R$ X” com espaço
+entre o rótulo e o preço; não repetir “conta detalhada” abaixo das parcelas. O selo
+“Powered by Netlify” fica desativado nas configurações do projeto Netlify.
+
 **Enquanto o catálogo tiver imóvel com `demo: true`**, toda página carrega uma barra
 vermelha de aviso e leva `noindex`. Isso é intencional — nenhum destes imóveis existe.

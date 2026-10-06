@@ -36,6 +36,9 @@ class VisualTests(unittest.TestCase):
         self.imovel.update(preco=1700, condominio=240, iptu=840, contas_inclusas=[])
         conta = b.conta(self.imovel)
         self.assertIn('Você paga por mês: dois mil e dez reais', conta)
+        self.assertIn('<span class="conta-legenda">Você paga por mês:</span> <strong>R$ 2.010</strong>', conta)
+        self.assertNotIn('conta detalhada', conta)
+        self.assertNotIn('conta-carimbo', conta)
         self.assertIn('<dt>IPTU ÷ 12</dt><dd>R$ 70</dd>', conta)
         self.imovel['contas_inclusas'] = ['condominio', 'iptu']
         self.assertIn('mil e setecentos reais', b.conta(self.imovel))
