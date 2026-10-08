@@ -55,10 +55,9 @@
     var finalidade = valor("finalidade");
     var faixaCampo = form.elements.faixa;
     if (faixaCampo) {
-      faixaCampo.disabled = operacao !== "locacao";
+      faixaCampo.disabled = false;
       var avisoFaixa = form.querySelector(".faixa-aviso");
-      if (avisoFaixa) avisoFaixa.hidden = !faixaCampo.disabled;
-      if (faixaCampo.disabled) faixaCampo.value = "";
+      if (avisoFaixa) avisoFaixa.hidden = true;
     }
     var faixa = valor("faixa").split("-");
     var minimo = parseInt(faixa[0], 10) || 0;

@@ -111,6 +111,22 @@ class SiteTests(unittest.TestCase):
         self.assertEqual([i['preco'] for i in vendas], sorted((i['preco'] for i in vendas), reverse=True))
         imovel = dict(self.imoveis[0], finalidade='comercial', quartos=3, suites=1)
         self.assertFalse({'Quartos', 'Suítes'} & {rotulo for rotulo, _ in b.specs(imovel)})
+        self.assertIn('1 suíte', b.resumo(dict(self.imoveis[0], suites=1, finalidade='residencial')))
+
+    def test_catalogo_publico_e_apenas_de_alugueis(self):
+        documento = b.pagina_catalogo(self.corretor, self.imoveis, publicar=True)
+        self.assertIn('Imóveis para alugar em Feira de Santana', documento)
+        self.assertNotIn('venda', documento.lower())
+        self.assertNotIn('data-operacao="venda"', documento)
+        self.assertNotIn('Venda de imóveis', b.jsonld(self.corretor, self.imoveis, 'imoveis.html', []))
+
+    def test_metadata_social_e_canonical_da_home(self):
+        home = b.pagina_home(self.corretor, self.imoveis, publicar=True)
+        self.assertIn('<link rel="canonical" href="https://igorsantiagoimoveis.com.br/" />', home)
+        self.assertIn('<meta property="og:url" content="https://igorsantiagoimoveis.com.br/" />', home)
+        self.assertIn('<meta name="twitter:card" content="summary_large_image" />', home)
+        self.assertIn('Apartamento ou casa acima de R$ 3.000', b.formulario_lead(
+            dict(self.corretor, privacidade_revisada=True, email='qa@example.invalid'), True))
 
     def test_rascunhos_fora_do_build_e_listados_no_check(self):
         with tempfile.TemporaryDirectory() as pasta:
@@ -256,6 +272,13 @@ class SiteTests(unittest.TestCase):
                 self.assertIn('noindex, nofollow' if p.name in {'404.html', 'obrigado.html'} else 'content="index, follow"', documento, str(p))
                 self.assertIn('<link rel="canonical"', documento)
             self.assertIn('data-netlify="true"', (saida / 'index.html').read_text(encoding='utf-8'))
+            home = (saida / 'index.html').read_text(encoding='utf-8')
+            self.assertIn('<link rel="canonical" href="https://igorsantiagoimoveis.com.br/" />', home)
+            self.assertIn('<meta property="og:image"', home)
+            catalogo = (saida / 'imoveis.html').read_text(encoding='utf-8')
+            self.assertIn('Imóveis para alugar em Feira de Santana', catalogo)
+            self.assertNotIn('Vender meu imóvel', catalogo)
+            self.assertFalse((saida / 'vender.html').exists())
             robots = (saida / 'robots.txt').read_text()
             for agente in ('*', 'GPTBot', 'OAI-SearchBot', 'ClaudeBot', 'PerplexityBot', 'Google-Extended'):
                 self.assertIn(f'User-agent: {agente}\nAllow: /', robots)
@@ -263,7 +286,8 @@ class SiteTests(unittest.TestCase):
             ns = {'s': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
             base = corretor['site_url'].rstrip('/') + '/'
             urls = {n.text.removeprefix(base) for n in sitemap.findall('.//s:loc', ns)}
-            paginas = {p.relative_to(saida).as_posix() for p in saida.rglob('*.html') if p.name not in {'404.html', 'obrigado.html'}}
+            paginas = {'' if p.name == 'index.html' else p.relative_to(saida).as_posix()
+                       for p in saida.rglob('*.html') if p.name not in {'404.html', 'obrigado.html'}}
             self.assertEqual(urls, paginas)
             self.assertNotIn('imovel/rascunho-interno/index.html', paginas)
             self.assertEqual(len(sitemap.findall('.//s:lastmod', ns)), len(paginas))

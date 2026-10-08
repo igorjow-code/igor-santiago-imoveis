@@ -279,9 +279,11 @@ def resumo(imovel: dict) -> str:
     if imovel.get("area"):
         partes.append(f"{imovel['area']} m²")
     if imovel.get("quartos") and imovel.get("finalidade") != "comercial":
-        partes.append(f"{imovel['quartos']} quartos")
+        quartos = imovel["quartos"]
+        partes.append(f"{quartos} {'quarto' if quartos == 1 else 'quartos'}")
     if imovel.get("suites") and imovel.get("finalidade") != "comercial":
-        partes.append(f"{imovel['suites']} suítes")
+        suites = imovel["suites"]
+        partes.append(f"{suites} {'suíte' if suites == 1 else 'suítes'}")
     if imovel.get("vagas"):
         partes.append(f"{imovel['vagas']} {'vaga' if imovel['vagas'] == 1 else 'vagas'}")
     return " · ".join(partes)
@@ -378,7 +380,6 @@ def rodape(corretor: dict, prefixo: str) -> str:
       <a href="{prefixo}alugar-residencial.html">Aluguel residencial</a>
       <a href="{prefixo}administracao.html">Administração</a>
       <a href="{prefixo}sobre.html">Sobre o corretor</a>
-      <a href="{prefixo}vender.html">Vender meu imóvel</a>
       <a href="{prefixo}privacidade.html">Privacidade</a>
     </nav>
     <div class="rodape-contato">
@@ -421,7 +422,16 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
     mensagem_wa = mensagem_wa or corretor["mensagem_whatsapp_geral"]
     no_pagina = no_pagina or ativo or "404.html"
     indexar = publicar and no_pagina not in {"obrigado.html", "404.html"}
-    canonical = corretor["site_url"].rstrip("/") + "/" + no_pagina
+    base = corretor["site_url"].rstrip("/")
+    caminho_canonico = "" if no_pagina == "index.html" else no_pagina
+    canonical = base + "/" + caminho_canonico
+    imagem = base + "/assets/simbolo.png"
+    imagem_alt = corretor["nome_marca"]
+    if imovel:
+        fotos = fotos_imovel(imovel)
+        if fotos:
+            imagem = base + "/" + foto_url(imovel, fotos[0])
+            imagem_alt = f"{imovel['tipo']} em {imovel['bairro']}, {imovel['cidade']}"
     return f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -432,6 +442,18 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
 <meta name="theme-color" content="#0a0a0a" />
 <meta name="robots" content="{'index, follow' if indexar else 'noindex, nofollow'}" />
 <link rel="canonical" href="{e(canonical)}" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="{e(corretor['nome_marca'])}" />
+<meta property="og:locale" content="pt_BR" />
+<meta property="og:title" content="{e(titulo)}" />
+<meta property="og:description" content="{e(descricao)}" />
+<meta property="og:url" content="{e(canonical)}" />
+<meta property="og:image" content="{e(imagem)}" />
+<meta property="og:image:alt" content="{e(imagem_alt)}" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="{e(titulo)}" />
+<meta name="twitter:description" content="{e(descricao)}" />
+<meta name="twitter:image" content="{e(imagem)}" />
 {jsonld}
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -665,7 +687,9 @@ def formulario_lead(corretor: dict, publicar: bool) -> str:
     fim = '</form>' if ativo else '</div>'
     disabled = '' if ativo else ' disabled'
     opcoes = ['Sala comercial até R$ 2.000', 'Sala comercial R$ 2.000–3.000',
-              'Apartamento ou casa até R$ 2.000', 'Apartamento ou casa R$ 2.000–3.000', 'Outro']
+              'Sala comercial acima de R$ 3.000', 'Apartamento ou casa até R$ 2.000',
+              'Apartamento ou casa R$ 2.000–3.000',
+              'Apartamento ou casa acima de R$ 3.000', 'Outro']
     options = ''.join(f'<option>{e(o)}</option>' for o in opcoes)
     return f'''<section class="secao" id="quero-alugar"><div class="wrap">
 <h2>Conte o que você quer alugar</h2>{abertura}
@@ -693,8 +717,9 @@ def pagina_obrigado(corretor: dict, imoveis: list[dict], publicar: bool = False)
 def pagina_segmento(corretor: dict, imoveis: list[dict], finalidade: str, publicar: bool = False) -> str:
     comercial = finalidade == 'comercial'
     nome = 'alugar-sala-comercial.html' if comercial else 'alugar-residencial.html'
-    titulo = 'Sala ou ponto comercial para seu negócio' if comercial else 'Apartamento ou casa para morar'
-    texto = ('Seu negócio precisa de um endereço que faça sentido. Compare localização, metragem e custo mensal; depois, conferimos juntos as condições para a atividade que você pretende exercer.' if comercial else 'Uma casa nova começa por uma escolha bem informada. Compare bairros, custo mensal e características como mobília e espaço para seu pet antes de marcar a visita.')
+    titulo = ('Salas comerciais para alugar em Feira de Santana' if comercial
+              else 'Aluguel residencial em Feira de Santana')
+    texto = ('Encontre uma sala comercial para alugar em Feira de Santana. Compare localização, metragem e custo mensal; depois, conferimos juntos as condições para a atividade que você pretende exercer.' if comercial else 'Procura apartamento ou casa para alugar em Feira de Santana? Compare bairros, custo mensal e características como mobília e espaço para seu pet antes de marcar a visita.')
     mensagem = corretor['mensagem_whatsapp_comercial'] if comercial else 'Olá, Igor. Quero agendar uma conversa para alugar um apartamento ou casa.'
     lista = [i for i in imoveis if i['operacao'] == 'locacao' and i['finalidade'] == finalidade and i.get('situacao') not in {'alugado', 'vendido'}]
     cards = ''.join(card(i, corretor) for i in lista)
@@ -728,7 +753,7 @@ def pagina_home(corretor: dict, imoveis: list[dict], publicar: bool = False) -> 
     <div class="percurso-pontos" aria-hidden="true"><span class="ativo"></span><span></span><span></span><span></span></div>
     <p class="sobrelinha" {reveal(0)}>Aluguel em Feira de Santana</p>
     <h1 {reveal(1)}>Da primeira mensagem à <span class="acento">chave na mão</span></h1>
-    <p class="hero-sub" {reveal(2)}>Um endereço para morar ou fazer seu negócio crescer, em Feira de Santana. Aluguéis na faixa de R$ 1.500 a R$ 3.000, com os encargos apresentados antes da visita.</p>
+    <p class="hero-sub" {reveal(2)}>Aluguel residencial e comercial em Feira de Santana, com opções para diferentes orçamentos e os encargos apresentados antes da visita.</p>
     <div class="hero-botoes" {reveal(3)}>
       <a class="btn btn-principal" target="_blank" rel="noopener" href="{e(wa_link(corretor, corretor['mensagem_whatsapp_geral']))}">Falar com Igor</a>
       <a class="btn btn-contorno" href="imoveis.html">Ver imóveis para alugar</a>
@@ -805,11 +830,13 @@ def secao_mapa_bairros(imoveis: list[dict]) -> str:
 
 
 def pagina_catalogo(corretor: dict, imoveis: list[dict], publicar: bool = False) -> str:
+    locacoes = [i for i in imoveis if i['operacao'] == 'locacao'
+                and i.get('situacao') not in {'alugado', 'vendido'}]
     cards = "".join(card(i, corretor, numero=n, atraso=min(n - 1, 5) * 70)
-                    for n, i in enumerate(imoveis, 1))
+                    for n, i in enumerate(locacoes, 1))
 
     def opcoes(chave: str) -> str:
-        vistos = sorted({str(i[chave]) for i in imoveis})
+        vistos = sorted({str(i[chave]) for i in locacoes})
         return "".join(f'<option value="{e(v)}">{e(v)}</option>' for v in vistos)
 
     corpo = f"""
@@ -817,20 +844,13 @@ def pagina_catalogo(corretor: dict, imoveis: list[dict], publicar: bool = False)
   <div class="wrap">
     <h1>Imóveis para alugar</h1>
     <p>Compare bairro, metragem e custo mensal antes de marcar uma visita.
-       Procura um imóvel para comprar? Selecione Venda nos filtros.</p>
+       Veja opções residenciais e comerciais e confira as condições de cada aluguel.</p>
   </div>
 </section>
 {secao_mapa_bairros(imoveis)}
 <section class="secao">
   <div class="wrap">
     <form class="filtros" id="filtros" aria-label="Filtrar imóveis">
-      <label>Operação
-        <select name="operacao">
-          <option value="">Todas</option>
-          <option value="venda">Venda</option>
-          <option value="locacao" selected>Locação</option>
-        </select>
-      </label>
       <label>Tipo
         <select name="tipo"><option value="">Todos</option>{opcoes('tipo')}</select>
       </label>
@@ -862,8 +882,8 @@ def pagina_catalogo(corretor: dict, imoveis: list[dict], publicar: bool = False)
 </section>
 """
     return pagina(
-        titulo="Imóveis à venda e para locação — Igor Santiago Imóveis",
-        descricao="Aluguel residencial e comercial em Feira de Santana, com custo mensal visível.",
+        titulo="Imóveis para alugar em Feira de Santana | Igor Santiago Imóveis",
+        descricao="Aluguel residencial e comercial em Feira de Santana. Compare bairros, custos mensais e condições; fale direto com Igor Santiago, CRECI-BA 28.140.",
         corpo=corpo, publicar=publicar, jsonld=jsonld(corretor, imoveis, "imoveis.html", []), corretor=corretor, imoveis=imoveis,
         ativo="imoveis.html")
 
@@ -906,7 +926,7 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
 </nav>
 
 <section class="imovel-topo">
-  <div class="wrap"><h1 class="imovel-titulo">{e(imovel['titulo'])}</h1><p class="imovel-local">{e(imovel['bairro'])} · {e(imovel['cidade'])}</p></div>
+  <div class="wrap"><h1 class="imovel-titulo">{e(imovel['titulo'])}</h1><p class="imovel-local">Para alugar · {e(imovel['bairro'])} · {e(imovel['cidade'])}</p></div>
   <div class="wrap imovel-grade{' imovel-grade--sem-foto' if not carrossel else ''}">
     {carrossel}
     <div class="conta-mobile">{conta(imovel, 'painel')}</div>
@@ -1160,7 +1180,7 @@ def pagina_404(corretor: dict, imoveis: list[dict], publicar: bool = False) -> s
 def jsonld(corretor: dict, imoveis: list[dict], no_pagina: str, faq: list[dict]) -> str:
     base = corretor['site_url'].rstrip('/')
     agente, pessoa, site = base + '/#agente', base + '/#pessoa', base + '/#site'
-    url = base + '/' + no_pagina
+    url = base + '/' + ('' if no_pagina == 'index.html' else no_pagina)
     grafo = [
         {'@type': 'RealEstateAgent', '@id': agente, 'name': corretor['nome_marca'],
          'url': base + '/', 'telephone': '+' + corretor['whatsapp_e164'],
@@ -1174,7 +1194,6 @@ def jsonld(corretor: dict, imoveis: list[dict], no_pagina: str, faq: list[dict])
          'isPartOf': {'@id': site}, 'about': {'@id': agente}},
     ]
     for slug, nome, pagina_servico in [('locacao', 'Locação residencial e comercial', 'imoveis.html'),
-                                      ('venda', 'Venda de imóveis', 'vender.html'),
                                       ('administracao', 'Administração de imóveis', 'administracao.html')]:
         grafo.append({'@type': 'Service', '@id': base + '/#' + slug, 'name': nome,
                       'serviceType': nome, 'provider': {'@id': agente},
@@ -1209,12 +1228,13 @@ def escrever_auxiliares(corretor: dict, imoveis: list[dict], publicar: bool) -> 
         robots = "User-agent: *\nDisallow: /\n"
     (SAIDA / "robots.txt").write_text(robots, encoding="utf-8")
 
-    urls = sorted(p.relative_to(SAIDA).as_posix() for p in SAIDA.rglob('*.html')
-                  if p.name not in {'404.html', 'obrigado.html'})
+    arquivos = sorted(p.relative_to(SAIDA).as_posix() for p in SAIDA.rglob('*.html')
+                      if p.name not in {'404.html', 'obrigado.html'})
+    urls = ['' if u == 'index.html' else u for u in arquivos]
     # Timestamp real do artefato gerado, em vez de uma data inventada fixa.
     corpo = ''.join(f'  <url><loc>{e(base + "/" + u)}</loc><lastmod>'
-                    f'{datetime.fromtimestamp((SAIDA / u).stat().st_mtime, timezone.utc).isoformat(timespec="seconds")}'
-                    '</lastmod></url>\n' for u in urls)
+                    f'{datetime.fromtimestamp((SAIDA / arquivo).stat().st_mtime, timezone.utc).isoformat(timespec="seconds")}'
+                    '</lastmod></url>\n' for u, arquivo in zip(urls, arquivos))
     escrever_llms_txt(corretor, urls, publicar)
     (SAIDA / "sitemap.xml").write_text(
         '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -1342,7 +1362,7 @@ def main(argv: list[str]) -> int:
                 shutil.copy2(foto, destino / foto.name)
 
     paginas = {'index.html': pagina_home, 'imoveis.html': pagina_catalogo,
-               'sobre.html': pagina_sobre, 'vender.html': pagina_vender,
+               'sobre.html': pagina_sobre,
                'privacidade.html': pagina_privacidade, '404.html': pagina_404,
                'obrigado.html': pagina_obrigado, 'administracao.html': pagina_administracao}
     for nome, render in paginas.items():
