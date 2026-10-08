@@ -125,6 +125,19 @@ def converter(ffmpeg: str, origem: Path, destino: Path, formato: str) -> None:
         raise ImportErrorFotos(resultado.stderr.strip() or "ffmpeg não conseguiu converter a imagem")
 
 
+def converter_miniatura(ffmpeg: str, origem: Path, destino: Path) -> None:
+    """Capa para cartões; preserva a foto integral na galeria do imóvel."""
+    filtro = "scale=w='min(800,iw)':h='min(800,ih)':force_original_aspect_ratio=decrease"
+    resultado = subprocess.run([
+        ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", str(origem),
+        "-filter_complex", filtro + "[capa]", "-map", "[capa]", "-map_metadata", "-1",
+        "-frames:v", "1", "-c:v", "libwebp", "-quality", "78",
+        "-compression_level", "6", str(destino),
+    ], capture_output=True, text=True)
+    if resultado.returncode:
+        raise ImportErrorFotos("não foi possível preparar a miniatura do cartão")
+
+
 def importar(origem: Path, slug: str, substituir: bool = False, dry_run: bool = False) -> int:
     validar_slug(slug)
     ffmpeg, ffprobe = shutil.which("ffmpeg"), shutil.which("ffprobe")
@@ -184,6 +197,18 @@ def importar(origem: Path, slug: str, substituir: bool = False, dry_run: bool = 
         saida.mkdir(parents=True, exist_ok=True)
         for caminho in concluidas:
             shutil.move(str(caminho), str(saida / caminho.name))
+
+        if webp:
+            temporaria_capa = temporario / "capa.webp"
+            try:
+                converter_miniatura(ffmpeg, saida / concluidas[0].name, temporaria_capa)
+                verificar_sem_metadados(ffprobe, temporaria_capa)
+                miniaturas = saida / "_miniaturas"
+                miniaturas.mkdir(exist_ok=True)
+                shutil.move(str(temporaria_capa), str(miniaturas / "capa.webp"))
+                print(f"Miniatura otimizada para cartões: {(miniaturas / 'capa.webp').stat().st_size // 1024} KB.")
+            except ImportErrorFotos as erro:
+                print(f"AVISO: miniatura não preparada ({erro}); o site usará a foto integral.")
 
         ficha = destino_imovel / "ficha.md"
         if not ficha.exists():

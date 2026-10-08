@@ -128,6 +128,34 @@ class SiteTests(unittest.TestCase):
         self.assertIn('Apartamento ou casa acima de R$ 3.000', b.formulario_lead(
             dict(self.corretor, privacidade_revisada=True, email='qa@example.invalid'), True))
 
+    def test_dimensoes_png_jpeg_webp_e_reserva_de_layout(self):
+        with tempfile.TemporaryDirectory() as pasta:
+            raiz = Path(pasta)
+            png = raiz / 'foto.png'
+            png.write_bytes(b'\x89PNG\r\n\x1a\n\x00\x00\x00\x0dIHDR'
+                            + (565).to_bytes(4, 'big') + (640).to_bytes(4, 'big'))
+            jpeg = raiz / 'foto.jpg'
+            jpeg.write_bytes(b'\xff\xd8\xff\xc0\x00\x07\x08\x02\x58\x03\x20')
+            webp = raiz / 'foto.webp'
+            webp.write_bytes(b'RIFF\x00\x00\x00\x00WEBPVP8X\x0a\x00\x00\x00'
+                             + b'\x00\x00\x00\x00' + (799).to_bytes(3, 'little')
+                             + (599).to_bytes(3, 'little'))
+            self.assertEqual(b.dimensoes_imagem(png), (565, 640))
+            self.assertEqual(b.dimensoes_imagem(jpeg), (800, 600))
+            self.assertEqual(b.dimensoes_imagem(webp), (800, 600))
+
+            pasta_fotos = raiz / 'imovel' / 'fotos-tratadas'
+            pasta_fotos.mkdir(parents=True)
+            shutil.copy2(png, pasta_fotos / '01-capa.png')
+            ficha = dict(self.imoveis[0], _arquivo=pasta_fotos.parent / 'ficha.md')
+            html = b.card(ficha, self.corretor)
+            self.assertIn('width="565" height="640"', html)
+            miniaturas = pasta_fotos / '_miniaturas'
+            miniaturas.mkdir()
+            (miniaturas / 'capa.webp').write_bytes(b'capa otimizada')
+            html = b.card(ficha, self.corretor)
+            self.assertIn('assets/imoveis/' + ficha['slug'] + '/capa.webp', html)
+
     def test_rascunhos_fora_do_build_e_listados_no_check(self):
         with tempfile.TemporaryDirectory() as pasta:
             raiz = Path(pasta)

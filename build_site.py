@@ -313,8 +313,75 @@ def fotos_imovel(imovel: dict) -> list[Path]:
             and f.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"}]
 
 
+def dimensoes_imagem(arquivo: Path) -> tuple[int, int] | None:
+    """Lê dimensões PNG/JPEG/WebP sem pacote de imagem no build do Netlify."""
+    try:
+        with arquivo.open("rb") as imagem:
+            inicio = imagem.read(32)
+            if inicio.startswith(b"\x89PNG\r\n\x1a\n") and len(inicio) >= 24:
+                import struct
+                return struct.unpack(">II", inicio[16:24])
+            if inicio[:4] == b"RIFF" and inicio[8:12] == b"WEBP":
+                import struct
+                tipo, tamanho = inicio[12:16], int.from_bytes(inicio[16:20], "little")
+                dados = inicio[20:20 + min(tamanho, 10)]
+                if tipo == b"VP8X" and len(dados) >= 10:
+                    largura = 1 + int.from_bytes(dados[4:7], "little")
+                    altura = 1 + int.from_bytes(dados[7:10], "little")
+                    return largura, altura
+                if tipo == b"VP8L" and len(dados) >= 5 and dados[0] == 0x2F:
+                    bits = int.from_bytes(dados[1:5], "little")
+                    return 1 + (bits & 0x3FFF), 1 + ((bits >> 14) & 0x3FFF)
+                if tipo == b"VP8 " and len(dados) >= 10 and dados[3:6] == b"\x9d\x01\x2a":
+                    largura = int.from_bytes(dados[6:8], "little") & 0x3FFF
+                    altura = int.from_bytes(dados[8:10], "little") & 0x3FFF
+                    return largura, altura
+                return None
+            if inicio[:2] != b"\xff\xd8":
+                return None
+            marcadores_sof = {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6,
+                              0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}
+            imagem.seek(2)
+            while True:
+                byte = imagem.read(1)
+                if not byte:
+                    return None
+                if byte != b"\xff":
+                    continue
+                while byte == b"\xff":
+                    byte = imagem.read(1)
+                if not byte:
+                    return None
+                marcador = byte[0]
+                if marcador in {0xD8, 0xD9}:
+                    continue
+                tamanho_bytes = imagem.read(2)
+                if len(tamanho_bytes) != 2:
+                    return None
+                tamanho = int.from_bytes(tamanho_bytes, "big")
+                if marcador in marcadores_sof:
+                    dados = imagem.read(5)
+                    if len(dados) != 5:
+                        return None
+                    altura = int.from_bytes(dados[1:3], "big")
+                    largura = int.from_bytes(dados[3:5], "big")
+                    return (largura, altura) if largura and altura else None
+                if marcador == 0xDA:
+                    return None
+                imagem.seek(tamanho - 2, 1)
+    except OSError:
+        return None
+
+
 def foto_url(imovel: dict, foto: Path, prefixo: str = "") -> str:
     return prefixo + "assets/imoveis/" + quote(imovel["slug"], safe="") + "/" + quote(foto.name)
+
+
+def foto_card_url(imovel: dict, foto: Path, prefixo: str = "") -> str:
+    miniatura = foto.parent / "_miniaturas" / "capa.webp"
+    if miniatura.is_file():
+        return prefixo + "assets/imoveis/" + quote(imovel["slug"], safe="") + "/capa.webp"
+    return foto_url(imovel, foto, prefixo)
 
 
 def retrato(corretor: dict, classe: str = "sobre-retrato") -> str:
@@ -325,7 +392,10 @@ def retrato(corretor: dict, classe: str = "sobre-retrato") -> str:
     if not arquivo.is_relative_to(ASSETS.resolve()) or not arquivo.is_file():
         return ""
     url = quote(arquivo.relative_to(ROOT).as_posix(), safe="/")
-    return (f'<img class="{classe}" src="{e(url)}" '
+    dimensoes = dimensoes_imagem(arquivo)
+    tamanho_html = (f'width="{dimensoes[0]}" height="{dimensoes[1]}" '
+                    if dimensoes else "")
+    return (f'<img class="{classe}" src="{e(url)}" {tamanho_html}'
             'alt="Igor Santiago, corretor de imóveis" loading="lazy" />')
 
 
@@ -461,7 +531,7 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@800;900&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="{prefixo}assets/styles.css?v=20261002-copy2" />
+<link rel="stylesheet" href="{prefixo}assets/styles.css?v=20261008-speed1" />
 <link rel="icon" href="{prefixo}assets/favicon.png" type="image/png" />
 <link rel="apple-touch-icon" href="{prefixo}assets/favicon-512.png" />
 <script>
@@ -496,9 +566,12 @@ def card(imovel: dict, corretor: dict, prefixo: str = "",
     valor_venda = f'<p class="card-venda">Também à venda: <strong>{moeda(imovel["preco_venda"])}</strong></p>' if venda else ''
     lote = f'<span class="card-lote">{numero:02d}</span>' if numero else ""
     fotos = fotos_imovel(imovel)
-    foto = (f'<div class="card-foto"><img src="{e(foto_url(imovel, fotos[0], prefixo))}" '
+    dimensoes = dimensoes_imagem(fotos[0]) if fotos else None
+    tamanho_html = (f'width="{dimensoes[0]}" height="{dimensoes[1]}" '
+                    if dimensoes else "")
+    foto = (f'<div class="card-foto"><img src="{e(foto_card_url(imovel, fotos[0], prefixo))}" '
             f'alt="{e(imovel["tipo"])} em {e(imovel["bairro"])}, foto 1 de {len(fotos)}" '
-            'loading="lazy" /></div>') if fotos else ''
+            f'{tamanho_html}loading="lazy" decoding="async" /></div>') if fotos else ''
     custo = conta(imovel, 'selo') if imovel['operacao'] == 'locacao' else ''
     quando = disponibilidade(imovel)
     quando = f'<p class="disponivel-em">{e(quando)}</p>' if quando else ''
@@ -761,7 +834,7 @@ def pagina_home(corretor: dict, imoveis: list[dict], publicar: bool = False) -> 
                     for n, i in enumerate(destaques, 1))
     corpo = f"""
 <section class="hero">
-  <img class="hero-marca-agua" src="assets/simbolo.png" alt="" aria-hidden="true" loading="lazy" />
+  <img class="hero-marca-agua" src="assets/simbolo-leve.webp" alt="" aria-hidden="true" width="400" height="453" decoding="async" />
   <div class="wrap hero-texto">
     <div class="percurso-pontos" aria-hidden="true"><span class="ativo"></span><span></span><span></span><span></span></div>
     <p class="sobrelinha" {reveal(0)}>Aluguel em Feira de Santana</p>
@@ -909,7 +982,10 @@ def galeria_carrossel(imovel: dict) -> str:
     partes = []
     for n, foto in enumerate(fotos, 1):
         carga = 'fetchpriority="high"' if n == 1 else 'loading="lazy"'
-        partes.append(f'<div class="carrossel-slide"><img src="{e(foto_url(imovel, foto, "../"))}" alt="{e(imovel["tipo"])} em {e(imovel["bairro"])}, foto {n} de {total}" {carga} /></div>')
+        dimensoes = dimensoes_imagem(foto)
+        tamanho_html = (f'width="{dimensoes[0]}" height="{dimensoes[1]}" '
+                        if dimensoes else "")
+        partes.append(f'<div class="carrossel-slide"><img src="{e(foto_url(imovel, foto, "../"))}" alt="{e(imovel["tipo"])} em {e(imovel["bairro"])}, foto {n} de {total}" {tamanho_html}{carga} decoding="async" /></div>')
     slides = ''.join(partes)
     pontos_lista = []
     for n in range(total):
@@ -1412,6 +1488,9 @@ def main(argv: list[str]) -> int:
             destino.mkdir(parents=True, exist_ok=True)
             for foto in fotos:
                 shutil.copy2(foto, destino / foto.name)
+            miniatura = fotos[0].parent / "_miniaturas" / "capa.webp"
+            if miniatura.is_file():
+                shutil.copy2(miniatura, destino / "capa.webp")
         videos = videos_imovel(imovel)
         if videos:
             destino_video = SAIDA / 'assets/imoveis' / imovel['slug'] / 'videos'

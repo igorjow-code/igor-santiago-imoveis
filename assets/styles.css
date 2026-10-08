@@ -68,8 +68,8 @@ h3 { font-size: 1.05rem; }
 p { margin: 0 0 1rem; }
 img { max-width: 100%; }
 
-a { color: var(--laranja); text-decoration-color: var(--linha); text-underline-offset: 3px; }
-a:hover { text-decoration-color: var(--laranja); }
+a { color: var(--laranja-fundo); text-decoration-color: var(--linha); text-underline-offset: 3px; }
+a:hover { color: var(--laranja-fundo); text-decoration-color: var(--laranja-fundo); }
 
 .wrap { width: min(100% - 2.5rem, var(--wrap)); margin-inline: auto; }
 .mini { font-size: .8rem; color: var(--tinta-suave); line-height: 1.5; }
@@ -115,7 +115,7 @@ a:hover { text-decoration-color: var(--laranja); }
 .btn-largo { width: 100%; }
 .btn-limpar { background: transparent; color: var(--tinta-suave); border-color: var(--linha); }
 .link-botao { background: none; border: 0; color: var(--laranja); font: 700 inherit; cursor: pointer; text-decoration: underline; padding: 0; }
-.link-seta { font-size: .9rem; font-weight: 700; text-decoration: none; white-space: nowrap; color: var(--laranja); }
+.link-seta { font-size: .9rem; font-weight: 700; text-decoration: none; white-space: nowrap; color: var(--laranja-fundo); }
 .link-seta::after { content: " \2192"; }
 
 /* --- topo (sempre escuro, em toda página) -------------------------------- */

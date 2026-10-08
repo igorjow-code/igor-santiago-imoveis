@@ -81,7 +81,7 @@ class ImportarTests(unittest.TestCase):
 
         self.assertEqual(imp.importar(zip_path, 'sala-centro-30m2'), 0)
         saida = imp.DADOS / 'imoveis' / 'sala-centro-30m2' / 'fotos-tratadas'
-        fotos = sorted(saida.iterdir())
+        fotos = sorted(p for p in saida.iterdir() if p.is_file())
         self.assertEqual([p.name for p in fotos], [
             '01-fachada.webp', '02-quarto.webp', '03-sala.webp',
         ])
@@ -89,6 +89,14 @@ class ImportarTests(unittest.TestCase):
             self.assertLess(foto.stat().st_size, 500 * 1024)
             self.assertNotIn(b'Exif\0\0', foto.read_bytes())
             imp.verificar_sem_metadados(shutil.which('ffprobe'), foto)
+        miniatura = saida / '_miniaturas' / 'capa.webp'
+        self.assertTrue(miniatura.is_file())
+        imp.verificar_sem_metadados(shutil.which('ffprobe'), miniatura)
+        dados_capa = json.loads(subprocess.run([
+            shutil.which('ffprobe'), '-v', 'error', '-show_streams', '-of', 'json',
+            str(miniatura)], capture_output=True, text=True, check=True).stdout)
+        self.assertLessEqual(max(dados_capa['streams'][0]['width'],
+                                 dados_capa['streams'][0]['height']), 800)
         ficha = (saida.parent / 'ficha.md').read_text(encoding='utf-8')
         self.assertIn('rascunho: true', ficha)
 
