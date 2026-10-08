@@ -336,6 +336,22 @@ a:hover { text-decoration-color: var(--laranja); }
 
 /* carrossel de fotos (mecanismo Field Team — foto cheia, sem card dividido) */
 .imovel-grade > * { min-width: 0; }
+.skip-link { position: absolute; left: -9999px; top: 0; z-index: 100; }
+.skip-link:focus { left: 1rem; padding: .7rem; background: var(--superficie); }
+.recibo-ficha h2 { font-size: 1.4rem; margin: 0 0 1rem; }
+.recibo-ficha .conta-linhas { margin: 1rem 0; }
+.recibo-ficha .conta-linha { display: flex; justify-content: space-between; gap: 1rem; padding: .7rem 0; border-bottom: 1px solid var(--linha); }
+.recibo-ficha .conta-linha dd { margin: 0; text-align: right; font-weight: 600; }
+.recibo-ficha .conta-total { display: flex; flex-wrap: wrap; gap: .4rem; align-items: baseline; }
+.recibo-ficha .conta-total strong { font-size: 1.5rem; }
+.recibo-ficha .conta-nota { font-size: .85rem; color: var(--tinta-suave); }
+.barra-mobile { display: none; }
+@media (max-width: 760px) {
+  .barra-mobile { display: flex; align-items: center; justify-content: space-between; gap: .7rem; position: fixed; bottom: 0; left: 0; right: 0; z-index: 55; padding: .7rem 1rem; background: var(--superficie); border-top: 1px solid var(--linha); }
+  .barra-mobile-custo { display: flex; flex-direction: column; min-width: 0; }
+  .barra-mobile-custo span { font-size: .7rem; }
+  .barra-mobile .btn { flex-shrink: 0; }
+}
 .imovel-carrossel { position: relative; overflow: hidden; border-radius: var(--r); }
 .carrossel-trilho {
   display: flex; border-radius: var(--r);

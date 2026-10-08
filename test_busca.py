@@ -40,6 +40,8 @@ class BuscaTests(unittest.TestCase):
             self.assertIn('controls playsinline preload="none"', documento)
             self.assertNotIn('autoplay', documento)
             self.assertIn('Conversar sobre a compra', documento)
+            self.assertNotIn('conta-mobile', documento)
+            self.assertEqual(documento.count('<dt>Aluguel</dt>'), 1)
             catalogo = b.pagina_catalogo(corretor, [imovel])
             self.assertEqual(catalogo.count('<article class="card'), 1)
 

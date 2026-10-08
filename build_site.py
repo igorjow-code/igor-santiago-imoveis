@@ -965,7 +965,6 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
   <div class="wrap"><div class="card-selos">{selos}</div><h1 class="imovel-titulo">{e(imovel['titulo'])}</h1><p class="imovel-local">Para alugar{' ou comprar' if imovel.get('preco_venda') else ''} · {e(imovel['bairro'])} · {e(imovel['cidade'])}</p></div>
   <div class="wrap imovel-grade{' imovel-grade--sem-foto' if not carrossel else ''}">
     {carrossel}
-    <div class="conta-mobile">{conta(imovel, 'painel')}</div>
     {recibo_ficha(corretor, imovel)}
   </div>
 </section>
