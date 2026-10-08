@@ -46,7 +46,7 @@ COORDENADAS_BAIRRO = {
 # Campos que toda ficha precisa ter para virar pagina.
 OBRIGATORIOS = ("slug", "titulo", "operacao", "finalidade", "tipo", "bairro", "cidade", "preco")
 NUMERICOS = ("area", "area_terreno", "quartos", "suites", "vagas",
-             "preco", "condominio", "iptu")
+             "preco", "preco_venda", "condominio", "iptu")
 BOOLEANOS = ("destaque", "demo", "rascunho")
 ALIASES = {"aluguel": "preco", "valor_aluguel": "preco", "taxa_condominio": "condominio"}
 DATAS = ("disponivel_a_partir",)
@@ -245,6 +245,8 @@ def specs(imovel: dict) -> list[tuple[str, str]]:
     itens: list[tuple[str, str]] = []
     if imovel.get("area"):
         itens.append(("Área construída", f"{imovel['area']} m²"))
+    elif imovel.get('area_referencia'):
+        itens.append(('Área da planta padrão', imovel['area_referencia']))
     if imovel.get("area_terreno"):
         itens.append(("Terreno", f"{imovel['area_terreno']} m²"))
     if imovel.get("quartos") and imovel.get("finalidade") != "comercial":
@@ -441,6 +443,7 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
 <meta name="description" content="{e(descricao)}" />
 <meta name="theme-color" content="#0a0a0a" />
 <meta name="robots" content="{'index, follow' if indexar else 'noindex, nofollow'}" />
+{verificacao_busca() if publicar else ''}
 <link rel="canonical" href="{e(canonical)}" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="{e(corretor['nome_marca'])}" />
@@ -488,7 +491,9 @@ def card(imovel: dict, corretor: dict, prefixo: str = "",
          numero: int | None = None, atraso: int = 0) -> str:
     marca_reservado = ('<span class="selo selo-reservado">Reservado</span>'
                        if imovel.get("situacao") == "reservado" else "")
-    operacao = "Locação" if imovel["operacao"] == "locacao" else "Venda"
+    operacao = "Aluguel" if imovel["operacao"] == "locacao" else "Venda"
+    venda = '<span class="selo selo-venda">Venda</span>' if imovel.get('preco_venda') else ''
+    valor_venda = f'<p class="card-venda">Também à venda: <strong>{moeda(imovel["preco_venda"])}</strong></p>' if venda else ''
     lote = f'<span class="card-lote">{numero:02d}</span>' if numero else ""
     fotos = fotos_imovel(imovel)
     foto = (f'<div class="card-foto"><img src="{e(foto_url(imovel, fotos[0], prefixo))}" '
@@ -504,11 +509,12 @@ def card(imovel: dict, corretor: dict, prefixo: str = "",
   <a class="card-link" href="{prefixo}imovel/{e(imovel['slug'])}.html">
     {foto}
     <div class="card-corpo">
-      <div class="card-selos"><span class="selo selo-op">{operacao}</span>{marca_reservado}</div>
+      <div class="card-selos"><span class="selo selo-op">{operacao}</span>{venda}{marca_reservado}</div>
       <h3 class="card-titulo">{e(imovel['titulo'])}</h3>
       <p class="card-local">{e(imovel['bairro'])} · {e(imovel['cidade'])}</p>
       {custo}
       <p class="card-preco{' card-preco--base' if imovel['operacao'] == 'locacao' else ''}">{preco_rotulo(imovel)}</p>
+      {valor_venda}
       {quando}
       <p class="card-specs">{e(resumo(imovel))}</p>
     </div>
@@ -571,6 +577,8 @@ def conta(imovel: dict, variante: str = 'cena', atraso_base: int = 0) -> str:
     for chave, rotulo, divisor in [('condominio', 'Condomínio', 1), ('iptu', 'IPTU ÷ 12', 12)]:
         valor = ('Incluso no aluguel' if locacao and chave in inclusas else
                  moeda(imovel[chave] // divisor) if chave in imovel else 'Consultar')
+        if chave == 'iptu' and imovel.get('iptu_nao_incluido') == 'sim' and chave not in imovel:
+            rotulo, valor = 'IPTU', 'Não incluído'
         linhas.append((rotulo, valor))
     def animar(atraso):
         return f'data-reveal style="--atraso:{atraso_base + atraso}ms"' if variante == 'cena' else ''
@@ -590,9 +598,14 @@ def conta(imovel: dict, variante: str = 'cena', atraso_base: int = 0) -> str:
 def recibo_ficha(corretor: dict, imovel: dict) -> str:
     reservado = imovel.get('situacao') == 'reservado'
     aviso = '<p class="aviso-reservado">Proposta em análise — posso registrar seu interesse como segunda opção.</p>' if reservado else ''
+    venda = ''
+    if imovel.get('preco_venda'):
+        mensagem = f'Olá, Igor. Tenho interesse na compra do imóvel "{imovel["titulo"]}", anunciado por {moeda(imovel["preco_venda"])}. Podemos conversar?'
+        venda = f'<div class="opcao-venda"><h3>Também disponível para compra</h3><p class="valor-venda">{moeda(imovel["preco_venda"])}</p><a class="btn btn-largo" href="{e(wa_link(corretor, mensagem))}" target="_blank" rel="noopener">Conversar sobre a compra</a></div>'
     return f'''<aside class="recibo-ficha"><h2>Conta do imóvel</h2>
 {conta(imovel, 'painel')}{aviso}
 <a class="btn btn-wa btn-largo" target="_blank" rel="noopener" href="{e(wa_imovel(corretor, imovel))}">{'Avisar quando liberar' if reservado else 'Falar sobre este imóvel'}</a>
+{venda}
 <p class="painel-creci">{e(corretor['nome_pessoa'])} · {e(corretor['titulo_profissional'])} · <strong>{e(corretor['creci'])}</strong></p></aside>'''
 
 
@@ -641,7 +654,7 @@ def secao_percurso(passos: list[tuple[str, str]] | None = None, conta_de: dict |
 
 def faq_global(corretor: dict) -> list[dict]:
     return [
-        {"pergunta": "Preciso de fiador?", "resposta": "Depende do imóvel. A ficha apresenta as alternativas informadas, como fiador, seguro-fiança ou caução. Confirmamos a garantia e seu custo antes da proposta."},
+        {"pergunta": "Qual é a condição de entrada no aluguel?", "resposta": "Primeiro aluguel mais dois meses de caução no ato: três valores de aluguel no total. Confirmamos os documentos e as condições do contrato antes da proposta."},
         {"pergunta": "É meu primeiro aluguel e não tenho comprovação tradicional. Posso conversar?", "resposta": "Sim. Vamos entender sua situação e conferir os documentos aceitos pelo imóvel de seu interesse. A aprovação depende da análise cadastral e da garantia escolhida."},
         {"pergunta": "Posso levar meu pet?", "resposta": "Consulte o campo de pet da ficha. Quando estiver como consultar, verifico as condições do imóvel antes da visita."},
         {"pergunta": "Posso procurar uma sala sem ter CNPJ ainda?", "resposta": "Sim. Podemos agendar uma conversa sobre o espaço e a atividade pretendida. A viabilidade do uso e os documentos precisam ser conferidos antes da contratação."},
@@ -908,6 +921,24 @@ def galeria_carrossel(imovel: dict) -> str:
 <button class="carrossel-seta carrossel-proxima" type="button" aria-label="Próxima foto" data-proxima>&#8250;</button><div class="carrossel-pontos">{pontos}</div></div>'''
 
 
+def videos_imovel(imovel: dict) -> list[Path]:
+    pasta = imovel['_arquivo'].parent / 'videos-tratados'
+    return sorted(pasta.glob('*.mp4')) if pasta.is_dir() else []
+
+
+def galeria_videos(imovel: dict) -> str:
+    videos = videos_imovel(imovel)
+    if not videos:
+        return ''
+    itens = []
+    for n, video in enumerate(videos, 1):
+        caminho = f'../assets/imoveis/{imovel["slug"]}/videos/{video.name}'
+        poster = video.with_suffix('.webp')
+        poster_attr = f' poster="{e(caminho[:-4] + ".webp")}"' if poster.exists() else ''
+        itens.append(f'<figure><video controls playsinline preload="none"{poster_attr} aria-label="Vídeo {n} do imóvel"><source src="{e(caminho)}" type="video/mp4" />Seu navegador não suporta este vídeo. <a href="{e(caminho)}">Abrir vídeo {n}</a></video><figcaption>Vídeo {n} · {e(imovel["tipo"])} em {e(imovel["bairro"])}</figcaption></figure>')
+    return '<section class="secao secao-videos"><div class="wrap"><h2>Conheça o imóvel em vídeo</h2><p class="sub">Toque para assistir aos ambientes antes da visita.</p><div class="videos-grade">' + ''.join(itens) + '</div></div></section>'
+
+
 def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: bool = False) -> str:
     carrossel = galeria_carrossel(imovel)
     linhas_spec = "".join(
@@ -918,6 +949,11 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
         f'<details class="duvida"><summary>{e(d["pergunta"])}</summary>'
         f'<p>{e(d["resposta"])}</p></details>' for d in imovel["duvidas"])
     mapa = mapa_bairro(imovel)
+    selos = '<span class="selo selo-op">Aluguel</span>'
+    if imovel.get('preco_venda'):
+        selos += '<span class="selo selo-venda">Venda</span>'
+    videos = galeria_videos(imovel)
+    meta_venda = f' Também à venda por {moeda(imovel["preco_venda"])}.' if imovel.get('preco_venda') else ''
 
     corpo = f"""
 <nav class="migalha wrap" aria-label="Você está em">
@@ -926,13 +962,15 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
 </nav>
 
 <section class="imovel-topo">
-  <div class="wrap"><h1 class="imovel-titulo">{e(imovel['titulo'])}</h1><p class="imovel-local">Para alugar · {e(imovel['bairro'])} · {e(imovel['cidade'])}</p></div>
+  <div class="wrap"><div class="card-selos">{selos}</div><h1 class="imovel-titulo">{e(imovel['titulo'])}</h1><p class="imovel-local">Para alugar{' ou comprar' if imovel.get('preco_venda') else ''} · {e(imovel['bairro'])} · {e(imovel['cidade'])}</p></div>
   <div class="wrap imovel-grade{' imovel-grade--sem-foto' if not carrossel else ''}">
     {carrossel}
     <div class="conta-mobile">{conta(imovel, 'painel')}</div>
     {recibo_ficha(corretor, imovel)}
   </div>
 </section>
+
+{videos}
 
 <section class="secao">
   <div class="wrap imovel-conteudo">
@@ -969,7 +1007,7 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
     return pagina(
         titulo=f"{imovel['titulo']} — {preco_texto(imovel)} | Igor Santiago Imóveis",
         descricao=(f"{imovel['titulo']}. {resumo(imovel)}. {preco_texto(imovel)}. "
-                   f"{corretor['creci']}."),
+                   f"{corretor['creci']}.{meta_venda}"),
         corpo=corpo, corretor=corretor, imoveis=imoveis,
         ativo="imoveis.html", prefixo="../", publicar=publicar, imovel=imovel,
         no_pagina=f"imovel/{imovel['slug']}.html",
@@ -1216,8 +1254,23 @@ def escrever_llms_txt(corretor: dict, urls: list[str], publicar: bool) -> None:
     (SAIDA / 'llms.txt').write_text('\n'.join(linhas) + '\n', encoding='utf-8')
 
 
+def verificacao_busca() -> str:
+    caminho = DADOS / 'busca.json'
+    config = json.loads(caminho.read_text(encoding='utf-8')) if caminho.exists() else {}
+    return '\n'.join(f'<meta name="{nome}" content="{e(config[campo])}" />'
+                     for campo, nome in [('google', 'google-site-verification'),
+                                         ('bing', 'msvalidate.01')] if config.get(campo))
+
+
 def escrever_auxiliares(corretor: dict, imoveis: list[dict], publicar: bool) -> None:
     base = corretor["site_url"].rstrip("/")
+    busca = DADOS / 'busca.json'
+    if publicar and busca.exists():
+        chave = json.loads(busca.read_text(encoding='utf-8')).get('indexnow', '')
+        if chave:
+            if not re.fullmatch(r'[a-zA-Z0-9-]{8,128}', chave):
+                raise ValueError('Chave pública IndexNow inválida')
+            (SAIDA / f'{chave}.txt').write_text(chave, encoding='utf-8')
 
     # Enquanto houver demo, robots.txt proibe tudo. So o build --publicar libera.
     if publicar:
@@ -1360,6 +1413,17 @@ def main(argv: list[str]) -> int:
             destino.mkdir(parents=True, exist_ok=True)
             for foto in fotos:
                 shutil.copy2(foto, destino / foto.name)
+        videos = videos_imovel(imovel)
+        if videos:
+            destino_video = SAIDA / 'assets/imoveis' / imovel['slug'] / 'videos'
+            if not destino_video.resolve().is_relative_to((SAIDA / 'assets/imoveis').resolve()):
+                raise ValueError('Slug inválido para vídeos')
+            destino_video.mkdir(parents=True, exist_ok=True)
+            for video in videos:
+                shutil.copy2(video, destino_video / video.name)
+                poster = video.with_suffix('.webp')
+                if poster.exists():
+                    shutil.copy2(poster, destino_video / poster.name)
 
     paginas = {'index.html': pagina_home, 'imoveis.html': pagina_catalogo,
                'sobre.html': pagina_sobre,

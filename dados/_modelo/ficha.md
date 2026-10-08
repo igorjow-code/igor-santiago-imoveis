@@ -15,9 +15,9 @@ suites:
 vagas:
 condominio:
 iptu:
-garantias:
+garantias: caucao
 # Opcional: descreva os valores ou etapas específicos da garantia acordada.
-garantia_detalhe:
+garantia_detalhe: Primeiro aluguel + dois meses de caução no ato (3 valores de aluguel no total).
 mobiliado:
 aceita_pet:
 contas_inclusas:

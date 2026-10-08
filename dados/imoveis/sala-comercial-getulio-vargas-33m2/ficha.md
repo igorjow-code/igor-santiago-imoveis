@@ -15,8 +15,8 @@ suites:
 vagas:
 condominio:
 iptu:
-garantias: fiador, caucao
-garantia_detalhe: Fiador ou primeiro aluguel + dois meses de caução no ato (3 valores de aluguel no total).
+garantias: caucao
+garantia_detalhe: Primeiro aluguel + dois meses de caução no ato (3 valores de aluguel no total).
 mobiliado:
 aceita_pet:
 contas_inclusas: condominio, iptu
@@ -44,4 +44,4 @@ O aluguel é de R$ 2.400 por mês, com a taxa de condomínio e o IPTU incluídos
 A sala tem 33 m².
 
 ### Quais são as opções de garantia e pagamento inicial?
-Você pode utilizar fiador. A alternativa é pagar, no ato da assinatura, o primeiro aluguel mais dois aluguéis de caução — três valores de aluguel ao todo.
+No ato da assinatura, primeiro aluguel mais dois aluguéis de caução — três valores de aluguel ao todo.

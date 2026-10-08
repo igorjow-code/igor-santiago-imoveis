@@ -542,6 +542,14 @@ a:hover { text-decoration-color: var(--laranja); }
 
 /* Refinamento 02/10/2026: selos no fluxo, leitura do custo e apresentação. */
 .card-selos { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .9rem; }
+.card-selos .selo-venda { background: var(--preto); color: var(--marfim); border: 1px solid currentColor; }
+.card-venda { font-size: .9rem; margin: .5rem 0; }
+.opcao-venda { border-top: 1px solid var(--linha); margin-top: 1.5rem; padding-top: 1.5rem; }
+.valor-venda { font-size: 1.5rem; font-weight: 700; margin: .7rem 0; }
+.videos-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 1.5rem; }
+.videos-grade figure { margin: 0; }
+.videos-grade video { display: block; width: 100%; max-height: 480px; aspect-ratio: 9/16; object-fit: contain; background: #0a0a0a; border-radius: .75rem; }
+.videos-grade figcaption { font-size: .85rem; margin-top: .5rem; }
 .card-selos .selo { position: static; display: inline-flex; align-items: center; max-width: 100%; }
 .card-titulo { font-size: 1.1rem; line-height: 1.4; min-height: 0; margin: 0 0 .5rem; overflow-wrap: anywhere; }
 .card-corpo { min-width: 0; padding: 1.3rem 1.2rem 1rem; }

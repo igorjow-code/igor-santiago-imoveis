@@ -111,7 +111,10 @@ def verificar_sem_metadados(ffprobe: str, caminho: Path) -> None:
 def converter(ffmpeg: str, origem: Path, destino: Path, formato: str) -> None:
     filtro = "scale=w='min(1600,iw)':h='min(1600,ih)':force_original_aspect_ratio=decrease"
     comando = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", str(origem),
-               "-map_metadata", "-1", "-vf", filtro, "-frames:v", "1"]
+               # HEIC em mosaico já usa um grafo interno no ffmpeg. O filtro
+               # complexo preserva a imagem completa montada pelo decodificador.
+               "-filter_complex", filtro + "[foto]", "-map", "[foto]",
+               "-map_metadata", "-1", "-frames:v", "1"]
     if formato == "webp":
         comando += ["-c:v", "libwebp", "-quality", "80", "-compression_level", "6"]
     else:
