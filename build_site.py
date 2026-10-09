@@ -14,6 +14,7 @@ Uso:
 from __future__ import annotations
 
 import html
+import hashlib
 import json
 import re
 import shutil
@@ -26,6 +27,7 @@ ROOT = Path(__file__).resolve().parent
 DADOS = ROOT / "dados"
 ASSETS = ROOT / "assets"
 SAIDA = ROOT / "publico"
+SITEMAP_STATE = DADOS / "sitemap-state.json"
 
 PENDENTE = "__PENDENTE_IGOR__"
 
@@ -1399,10 +1401,23 @@ def escrever_auxiliares(corretor: dict, imoveis: list[dict], publicar: bool) -> 
     arquivos = sorted(p.relative_to(SAIDA).as_posix() for p in SAIDA.rglob('*.html')
                       if p.name not in {'404.html', 'obrigado.html'})
     urls = ['' if u == 'index.html' else u for u in arquivos]
-    # Timestamp real do artefato gerado, em vez de uma data inventada fixa.
-    corpo = ''.join(f'  <url><loc>{e(base + "/" + u)}</loc><lastmod>'
-                    f'{datetime.fromtimestamp((SAIDA / arquivo).stat().st_mtime, timezone.utc).isoformat(timespec="seconds")}'
-                    '</lastmod></url>\n' for u, arquivo in zip(urls, arquivos))
+    try:
+        estado_anterior = json.loads(SITEMAP_STATE.read_text(encoding='utf-8'))
+    except (OSError, json.JSONDecodeError):
+        estado_anterior = {}
+    estado_atual = {}
+    hoje = datetime.now(timezone.utc).date().isoformat()
+    registros = []
+    for url, arquivo in zip(urls, arquivos):
+        conteudo_hash = hashlib.sha256((SAIDA / arquivo).read_bytes()).hexdigest()
+        anterior = estado_anterior.get(arquivo, {})
+        lastmod = (anterior.get('lastmod') if anterior.get('sha256') == conteudo_hash
+                   else hoje)
+        estado_atual[arquivo] = {'sha256': conteudo_hash, 'lastmod': lastmod}
+        registros.append(f'  <url><loc>{e(base + "/" + url)}</loc><lastmod>{lastmod}</lastmod></url>\n')
+    SITEMAP_STATE.write_text(json.dumps(estado_atual, ensure_ascii=False, indent=2) + '\n',
+                             encoding='utf-8')
+    corpo = ''.join(registros)
     escrever_llms_txt(corretor, urls, publicar)
     (SAIDA / "sitemap.xml").write_text(
         '<?xml version="1.0" encoding="UTF-8"?>\n'
