@@ -506,6 +506,8 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
         if fotos:
             imagem = base + "/" + foto_url(imovel, fotos[0])
             imagem_alt = f"{imovel['tipo']} em {imovel['bairro']}, {imovel['cidade']}"
+    preload_imagem = (f'<link rel="preload" as="image" href="{e(imagem)}" fetchpriority="high" />'
+                      if imovel else '')
     return f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -530,10 +532,10 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
 <meta name="twitter:description" content="{e(descricao)}" />
 <meta name="twitter:image" content="{e(imagem)}" />
 {jsonld}
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@800;900&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="{prefixo}assets/styles.css?v=20261008-speed1" />
+{preload_imagem}
+<link rel="preload" href="{prefixo}assets/fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="{prefixo}assets/fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="{prefixo}assets/styles.css?v=20261009-local-fonts" />
 <link rel="icon" href="{prefixo}assets/favicon.png" type="image/png" />
 <link rel="apple-touch-icon" href="{prefixo}assets/favicon-512.png" />
 <script>
@@ -1270,7 +1272,7 @@ def pagina_privacidade(corretor: dict, imoveis: list[dict], publicar: bool = Fal
        — o pedido é atendido sem que você precise justificar.</p>
     <p><a href="{e(wa_link(corretor, 'Olá, Igor. Quero solicitar acesso, correção ou exclusão dos meus dados.'))}">Solicitar acesso, correção ou exclusão pelo WhatsApp</a></p>
     <h2>Serviços carregados no navegador</h2>
-    <p>Fontes do Google e mapas do OpenStreetMap podem receber dados técnicos da conexão,
+    <p>Mapas do OpenStreetMap podem receber dados técnicos da conexão,
        como endereço IP. WhatsApp e Instagram têm políticas próprias quando você abre
        seus links. Esses fluxos também integram a revisão de privacidade.</p>
 
