@@ -125,6 +125,7 @@ class SiteTests(unittest.TestCase):
         self.assertIn('<link rel="canonical" href="https://igorsantiagoimoveis.com.br/" />', home)
         self.assertIn('<meta property="og:url" content="https://igorsantiagoimoveis.com.br/" />', home)
         self.assertIn('<meta name="twitter:card" content="summary_large_image" />', home)
+        self.assertNotIn('fonts.googleapis.com', home)
         self.assertIn('Apartamento ou casa acima de R$ 3.000', b.formulario_lead(
             dict(self.corretor, privacidade_revisada=True, email='qa@example.invalid'), True))
 
@@ -299,6 +300,7 @@ class SiteTests(unittest.TestCase):
                 documento = p.read_text(encoding='utf-8')
                 self.assertIn('noindex, nofollow' if p.name in {'404.html', 'obrigado.html'} else 'content="index, follow"', documento, str(p))
                 self.assertIn('<link rel="canonical"', documento)
+                self.assertNotIn('fonts.googleapis.com', documento)
             self.assertIn('data-netlify="true"', (saida / 'index.html').read_text(encoding='utf-8'))
             home = (saida / 'index.html').read_text(encoding='utf-8')
             self.assertIn('<link rel="canonical" href="https://igorsantiagoimoveis.com.br/" />', home)
@@ -319,6 +321,66 @@ class SiteTests(unittest.TestCase):
             self.assertEqual(urls, paginas)
             self.assertNotIn('imovel/rascunho-interno/index.html', paginas)
             self.assertEqual(len(sitemap.findall('.//s:lastmod', ns)), len(paginas))
+            lastmods = {url.find('s:loc', ns).text: url.find('s:lastmod', ns).text
+                        for url in sitemap.findall('.//s:url', ns)}
+            for p in (saida / 'imovel').glob('*.html'):
+                documento = p.read_text(encoding='utf-8')
+                dados_jsonld = [json.loads(bloco) for bloco in re.findall(
+                    r'<script type="application/ld\+json">(.*?)</script>', documento, re.S)]
+                grafo = [obj for dados in dados_jsonld for obj in dados['@graph']]
+                anuncio = next(obj for obj in grafo if obj.get('@type') == 'RealEstateListing')
+                self.assertEqual(anuncio['offers']['@type'], 'Offer')
+                self.assertEqual(anuncio['offers']['priceCurrency'], 'BRL')
+                self.assertEqual(anuncio['offers']['itemOffered']['address']['addressLocality'], 'Feira de Santana')
+                self.assertNotIn('streetAddress', json.dumps(anuncio, ensure_ascii=False))
+                self.assertTrue(any(obj.get('@type') == 'BreadcrumbList' for obj in grafo))
+            repetido = executar()
+            self.assertEqual(repetido.returncode, 0, repetido.stderr)
+            sitemap_repetido = ElementTree.parse(saida / 'sitemap.xml')
+            lastmods_repetidos = {url.find('s:loc', ns).text: url.find('s:lastmod', ns).text
+                                  for url in sitemap_repetido.findall('.//s:url', ns)}
+            self.assertEqual(lastmods_repetidos, lastmods)
+
+    def test_jsonld_agent_area_sameas_listing_sem_area_referencial(self):
+        imovel = dict(self.imoveis[0], slug='santana-flex', titulo='Apartamento no Santana Flex',
+                      bairro='Capuchinhos', cidade='Feira de Santana', area=None,
+                      area_referencia='48,98 m² de planta padrão', quartos=1, vagas=1,
+                      _arquivo=Path('ficha.md'))
+        dados = json.loads(re.search(r'<script type="application/ld\+json">(.*?)</script>',
+                                    b.jsonld(self.corretor, [imovel], 'imovel/santana-flex.html', []), re.S).group(1))
+        agente = next(item for item in dados['@graph'] if item['@type'] == 'RealEstateAgent')
+        self.assertEqual(agente['areaServed'], self.corretor['atuacao'])
+        self.assertIn('https://www.instagram.com/igorsantiagoimoveis/', agente['sameAs'])
+        anuncio = next(item for item in dados['@graph'] if item['@type'] == 'RealEstateListing')
+        self.assertNotIn('floorSize', anuncio['mainEntity'])
+        self.assertNotIn('streetAddress', json.dumps(dados, ensure_ascii=False))
+        self.assertIn('logo', agente)
+        self.assertIn('image', agente)
+
+    def test_titulo_ficha_usa_predio_bairro_cidade_e_preco(self):
+        imovel = dict(self.imoveis[0], tipo='Apartamento',
+                      titulo='Apartamento mobiliado de 1 quarto no Santana Flex, Capuchinhos',
+                      bairro='Capuchinhos', cidade='Feira de Santana', preco=3100,
+                      slug='santana-flex', _arquivo=Path('ficha.md'))
+        html = b.pagina_imovel(self.corretor, imovel, [imovel])
+        self.assertIn('<title>Aluguel Apartamento Santana Flex – Capuchinhos, Feira de Santana | R$ 3.100</title>', html)
+
+    def test_fontes_locais_e_preload_da_capa(self):
+        css = (b.ASSETS / 'styles.css').read_text(encoding='utf-8')
+        self.assertIn('url("fonts/manrope-latin.woff2")', css)
+        self.assertIn('url("fonts/archivo-latin.woff2")', css)
+        with tempfile.TemporaryDirectory() as pasta:
+            ficha = Path(pasta) / 'apartamento' / 'ficha.md'
+            fotos = ficha.parent / 'fotos-tratadas'
+            fotos.mkdir(parents=True)
+            (fotos / '01-capa.webp').write_bytes(b'capa')
+            imovel = dict(self.imoveis[0], slug='santana-flex', _arquivo=ficha)
+            documento = b.pagina('Teste', 'Descrição', '', self.corretor, [imovel],
+                                 ativo='imoveis.html', imovel=imovel,
+                                 no_pagina='imovel/santana-flex.html')
+            self.assertIn('rel="preload" as="image"', documento)
+            self.assertIn('assets/fonts/manrope-latin.woff2', documento)
+            self.assertIn('assets/fonts/archivo-latin.woff2', documento)
 
     def test_gate_adicional_de_lancamento(self):
         with tempfile.TemporaryDirectory() as pasta:
