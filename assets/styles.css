@@ -66,7 +66,7 @@ h1 { font-size: clamp(2.2rem, 5vw, 3.7rem); font-weight: 900; }
 h2 { font-size: clamp(1.6rem, 2.8vw, 2.3rem); }
 h3 { font-size: 1.05rem; }
 p { margin: 0 0 1rem; }
-img { max-width: 100%; }
+img { max-width: 100%; height: auto; }
 
 a { color: var(--laranja-fundo); text-decoration-color: var(--linha); text-underline-offset: 3px; }
 a:hover { color: var(--laranja-fundo); text-decoration-color: var(--laranja-fundo); }
@@ -158,8 +158,13 @@ a:hover { color: var(--laranja-fundo); text-decoration-color: var(--laranja-fund
 .hero h1 .acento { color: var(--laranja); }
 .hero-sub { font-size: 1.08rem; color: var(--marfim-suave); max-width: 48ch; margin-top: 1.3rem; }
 .hero-assinatura {
+  display: flex; align-items: center; gap: .9rem;
   margin: 1.8rem 0; padding-left: 1.1rem; border-left: 3px solid var(--laranja);
   font-size: .9rem; color: var(--marfim-suave); line-height: 1.65;
+}
+.hero-retrato {
+  display: block; flex: 0 0 64px; width: 64px; height: 64px;
+  border-radius: 50%; object-fit: cover; object-position: center;
 }
 .hero-assinatura strong { display: block; color: var(--marfim); font-size: 1rem; }
 .hero-assinatura span { display: block; }
@@ -358,6 +363,7 @@ a:hover { color: var(--laranja-fundo); text-decoration-color: var(--laranja-fund
   transition: transform .45s cubic-bezier(.16,1,.3,1);
 }
 .carrossel-slide { flex: 0 0 100%; }
+.carrossel-slide > img { display: block; width: 100%; height: auto; }
 .carrossel-slide .foto { border-radius: 0; }
 .carrossel-seta {
   position: absolute; top: 50%; transform: translateY(-50%);
@@ -576,6 +582,7 @@ a:hover { color: var(--laranja-fundo); text-decoration-color: var(--laranja-fund
 .card .conta-nota { font-size: .8rem; color: var(--tinta-suave); line-height: 1.6; margin: 0 0 .65rem; }
 .card-preco.card-preco--base { font-family: var(--sans); font-size: .9rem; font-weight: 600; color: var(--tinta); margin-bottom: .8rem; }
 .sobre-grade--sem-foto { grid-template-columns: minmax(0, 1fr); }
+.sobre-retrato { display: block; width: 100%; max-width: 420px; height: auto; border-radius: var(--r); }
 .sobre-bio { max-width: 66ch; line-height: 1.8; }
 .sobre-texto .credenciais-grade { margin: 2rem 0 1rem; }
 .sobre-texto .credencial h3 { margin-top: 0; }
