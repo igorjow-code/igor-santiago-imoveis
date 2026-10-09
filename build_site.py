@@ -1294,10 +1294,17 @@ def jsonld(corretor: dict, imoveis: list[dict], no_pagina: str, faq: list[dict])
     base = corretor['site_url'].rstrip('/')
     agente, pessoa, site = base + '/#agente', base + '/#pessoa', base + '/#site'
     url = base + '/' + ('' if no_pagina == 'index.html' else no_pagina)
+    foto_corretor = corretor.get('foto')
+    imagem_corretor = base + '/' + foto_corretor if foto_corretor and foto_corretor != PENDENTE else base + '/assets/simbolo.png'
+    redes = [f"https://www.instagram.com/{corretor['instagram']}/"] if corretor.get('instagram') else []
+    perfil_google = corretor.get('perfil_google_url', '')
+    if isinstance(perfil_google, str) and perfil_google.startswith('https://'):
+        redes.append(perfil_google)
     grafo = [
         {'@type': 'RealEstateAgent', '@id': agente, 'name': corretor['nome_marca'],
          'url': base + '/', 'telephone': '+' + corretor['whatsapp_e164'],
-         'areaServed': ['Feira de Santana', 'Salvador'], 'founder': {'@id': pessoa}},
+         'logo': base + '/assets/simbolo.png', 'image': imagem_corretor,
+         'sameAs': redes, 'areaServed': corretor['atuacao'], 'founder': {'@id': pessoa}},
         {'@type': 'Person', '@id': pessoa, 'name': corretor['nome_pessoa'],
          'jobTitle': corretor['titulo_profissional'], 'identifier': corretor['creci'],
          'description': corretor['bio_longa']},
