@@ -1386,6 +1386,23 @@ def escrever_llms_txt(corretor: dict, urls: list[str], publicar: bool) -> None:
               '> ' + ('Site de corretagem.' if publicar else 'Prévia local: imóveis fictícios de demonstração. Não são ofertas reais.'),
               '', corretor['posicionamento'], corretor['creci'], '', '## Páginas', '']
     linhas.extend(f'- [{u}]({base}/{u})' for u in urls)
+    if publicar:
+        linhas.extend(['', '## Imóveis disponíveis', ''])
+        for imovel in ler_imoveis():
+            condicoes = imovel.get('garantia_detalhe') or 'Condições a confirmar com Igor.'
+            inclusas = imovel.get('contas_inclusas', [])
+            if inclusas:
+                condicoes += '; ' + ', '.join(inclusas) + ' incluído(s)'
+            if imovel.get('iptu_nao_incluido'):
+                condicoes += '; IPTU não incluído'
+            quartos = (f" {imovel['quartos']} quarto(s);" if imovel.get('quartos') else '')
+            vagas = (f" {imovel['vagas']} vaga(s);" if imovel.get('vagas') else '')
+            preco = f"Aluguel {moeda(imovel['preco'])}/mês"
+            if imovel.get('preco_venda'):
+                preco += f"; venda {moeda(imovel['preco_venda'])}"
+            linhas.append(f"- {imovel['tipo']} em {imovel['bairro']}, {imovel['cidade']}: "
+                          f"{preco}.{quartos}{vagas} Condições: {condicoes} "
+                          f"[Ficha]({base}/imovel/{imovel['slug']}.html)")
     (SAIDA / 'llms.txt').write_text('\n'.join(linhas) + '\n', encoding='utf-8')
 
 
