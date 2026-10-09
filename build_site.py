@@ -1017,6 +1017,15 @@ def galeria_videos(imovel: dict) -> str:
     return '<section class="secao secao-videos"><div class="wrap"><h2>Conheça o imóvel em vídeo</h2><p class="sub">Toque para assistir aos ambientes antes da visita.</p><div class="videos-grade">' + ''.join(itens) + '</div></div></section>'
 
 
+def nome_predio(imovel: dict) -> str:
+    if imovel.get('empreendimento'):
+        return str(imovel['empreendimento']).strip()
+    titulo = imovel.get('titulo', '')
+    achado = re.search(r'\bno\s+(.+?)(?:,\s*(?:Santa Mônica|Capuchinhos|Centro|Getúlio Vargas|Feira de Santana)\b|$)',
+                       titulo, flags=re.IGNORECASE)
+    return achado.group(1).strip() if achado else ''
+
+
 def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: bool = False) -> str:
     carrossel = galeria_carrossel(imovel)
     linhas_spec = "".join(
@@ -1081,10 +1090,17 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
   </div>
 </section>
 """
+    predio = nome_predio(imovel)
+    complemento_predio = f" {predio}" if predio else ""
+    titulo_seo = (f"Aluguel {imovel['tipo']}{complemento_predio} – {imovel['bairro']}, "
+                  f"{imovel['cidade']} | {moeda(imovel['preco'])}")
+    descricao_seo = (f"Aluguel de {imovel['tipo'].lower()}"
+                     + (f" no {predio}" if predio else "")
+                     + f" – {imovel['bairro']}, {imovel['cidade']}: {moeda(imovel['preco'])}/mês. "
+                     + f"{resumo(imovel)}. {corretor['creci']}.{meta_venda}")
     return pagina(
-        titulo=f"{imovel['titulo']} — {preco_texto(imovel)} | Igor Santiago Imóveis",
-        descricao=(f"{imovel['titulo']}. {resumo(imovel)}. {preco_texto(imovel)}. "
-                   f"{corretor['creci']}.{meta_venda}"),
+        titulo=titulo_seo,
+        descricao=descricao_seo,
         corpo=corpo, corretor=corretor, imoveis=imoveis,
         ativo="imoveis.html", prefixo="../", publicar=publicar, imovel=imovel,
         no_pagina=f"imovel/{imovel['slug']}.html",
