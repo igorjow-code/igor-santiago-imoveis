@@ -1322,6 +1322,39 @@ def jsonld(corretor: dict, imoveis: list[dict], no_pagina: str, faq: list[dict])
         grafo.append({'@type': 'FAQPage', '@id': url + '#faq', 'mainEntity': [
             {'@type': 'Question', 'name': d['pergunta'],
              'acceptedAnswer': {'@type': 'Answer', 'text': d['resposta']}} for d in faq]})
+    ficha = next((i for i in imoveis if no_pagina == f"imovel/{i['slug']}.html"), None)
+    if ficha:
+        fotos = fotos_imovel(ficha)
+        imagens = [base + '/' + foto_url(ficha, foto) for foto in fotos]
+        tipo_imovel = ('Apartment' if ficha.get('tipo') == 'Apartamento' else
+                       'House' if ficha.get('tipo') in {'Casa', 'Casa em condomínio'} else 'Place')
+        item = {'@type': tipo_imovel, 'name': ficha['titulo'],
+                'address': {'@type': 'PostalAddress', 'addressLocality': ficha['cidade'],
+                            'addressRegion': corretor.get('uf', 'BA'),
+                            'addressCountry': 'BR'},
+                'containedInPlace': {'@type': 'Place', 'name': ficha['bairro']}}
+        if imagens:
+            item['image'] = imagens
+        if ficha.get('finalidade') != 'comercial' and ficha.get('quartos'):
+            item['numberOfBedrooms'] = ficha['quartos']
+            item['numberOfRooms'] = ficha['quartos']
+        if ficha.get('vagas'):
+            item['numberOfParkingSpaces'] = ficha['vagas']
+        # area só existe no campo confirmado da ficha; area_referencia nunca vira metragem da unidade.
+        if ficha.get('area'):
+            item['floorSize'] = {'@type': 'QuantitativeValue', 'value': ficha['area'], 'unitCode': 'MTK'}
+        offer = {'@type': 'Offer', 'price': str(ficha['preco']), 'priceCurrency': 'BRL',
+                 'availability': 'https://schema.org/' + ('InStock' if ficha.get('situacao') == 'disponivel' else 'LimitedAvailability'),
+                 'url': url, 'itemOffered': item, 'seller': {'@id': agente}}
+        grafo.extend([
+            {'@type': 'RealEstateListing', '@id': url + '#anuncio', 'url': url,
+             'name': ficha['titulo'], 'description': ' '.join(ficha.get('descricao', [])),
+             'image': imagens, 'mainEntity': item, 'offers': offer},
+            {'@type': 'BreadcrumbList', '@id': url + '#breadcrumb', 'itemListElement': [
+                {'@type': 'ListItem', 'position': 1, 'name': 'Início', 'item': base + '/'},
+                {'@type': 'ListItem', 'position': 2, 'name': 'Imóveis', 'item': base + '/imoveis.html'},
+                {'@type': 'ListItem', 'position': 3, 'name': ficha['bairro'], 'item': url}]},
+        ])
     # Escape HTML delimiters without corrupting JSON; no demo Offer is emitted.
     texto = json.dumps({'@context': 'https://schema.org', '@graph': grafo}, ensure_ascii=False).replace('<', '\\u003c')
     return f'<script type="application/ld+json">{texto}</script>'
