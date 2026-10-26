@@ -4,20 +4,24 @@
     "lastmod": "2026-10-09"
   },
   "alugar-residencial.html": {
-    "sha256": "5a649d167f0e73fdc1f76d4ed208695d952b5446b1fc5d6a2c5124403a99d75a",
-    "lastmod": "2026-10-09"
+    "sha256": "a798b6b8e6532d1e7b909ad32c8e300f6ddcc37a76816a647da83dc97a76c5e7",
+    "lastmod": "2026-10-26"
   },
   "alugar-sala-comercial.html": {
     "sha256": "36a044d3fb749dd9477a8b6f678da2998023858a9fb0e35613561ba2683547e0",
     "lastmod": "2026-10-09"
   },
   "imoveis.html": {
-    "sha256": "467613b9c03eca216d97bfb78f17769a0171288c234b3bffd128e1c968fee9f2",
-    "lastmod": "2026-10-09"
+    "sha256": "64023d85b4d81fc1468527ae4edfd11700d89bc71e3de3aedca8e66b31f036f4",
+    "lastmod": "2026-10-26"
   },
   "imovel/apartamento-magnifique-premium-santa-monica.html": {
     "sha256": "8b6fbc2aed79a2261f2cc066054e1d779ab16f0afee48d2eb38d4edccfd89e35",
     "lastmod": "2026-10-09"
+  },
+  "imovel/apartamento-parque-fonte-das-aguas.html": {
+    "sha256": "01b1558d6ec8300838391fd844d497e283606c41394df3eb029053d26a320933",
+    "lastmod": "2026-10-26"
   },
   "imovel/apartamento-santana-flex-nascente.html": {
     "sha256": "7e38b58b8c898abc3df41211f93f49d8a2f75d735c6159a719685619abf9e890",
@@ -28,8 +32,8 @@
     "lastmod": "2026-10-09"
   },
   "index.html": {
-    "sha256": "6a64bb2cb5c67d3b1cb660456bce8352b1db93ee773783a17cb58f52fc9e0a57",
-    "lastmod": "2026-10-09"
+    "sha256": "64300cd718fbe410608eb963b5aea033aef6dd8c7340c4f8941f1525c66c4477",
+    "lastmod": "2026-10-26"
   },
   "privacidade.html": {
     "sha256": "e8d72adf829a794ab008d80ab10a8e213f1b79489bc91a55341be817f041f31b",

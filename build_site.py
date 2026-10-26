@@ -1096,10 +1096,16 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
     complemento_predio = f" {predio}" if predio else ""
     titulo_seo = (f"Aluguel {imovel['tipo']}{complemento_predio} – {imovel['bairro']}, "
                   f"{imovel['cidade']} | {moeda(imovel['preco'])}")
-    descricao_seo = (f"Aluguel de {imovel['tipo'].lower()}"
-                     + (f" no {predio}" if predio else "")
-                     + f" – {imovel['bairro']}, {imovel['cidade']}: {moeda(imovel['preco'])}/mês. "
-                     + f"{resumo(imovel)}. {corretor['creci']}.{meta_venda}")
+    descricao_partes = [f"Aluguel de {imovel['tipo'].lower()}"
+                        + (f" no {predio}" if predio else "")
+                        + f" – {imovel['bairro']}, {imovel['cidade']}: {moeda(imovel['preco'])}/mês."]
+    detalhes = resumo(imovel)
+    if detalhes:
+        descricao_partes.append(f"{detalhes}.")
+    descricao_partes.append(f"{corretor['creci']}.")
+    if meta_venda.strip():
+        descricao_partes.append(meta_venda.strip())
+    descricao_seo = " ".join(descricao_partes)
     return pagina(
         titulo=titulo_seo,
         descricao=descricao_seo,
