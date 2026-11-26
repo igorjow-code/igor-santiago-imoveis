@@ -264,7 +264,8 @@ class SiteTests(unittest.TestCase):
             # sem passeio: a ficha é o passo principal e a visita vai para o WhatsApp
             sem = b.cartaz_imovel(self.corretor, dict(casa, passeio_url=''))
             self.assertNotIn('vitrine', sem)
-            self.assertIn('>Ver a ficha</a><a class="bt bt-fino" href="https://wa.me/', sem)
+            self.assertIn('>Ver a ficha · 5 fotos</a><a class="bt bt-fino" href="https://wa.me/', sem)
+            self.assertNotIn('cartaz-legenda', sem)   # um caminho só para a ficha
             self.assertIn('>Agendar visita</a>', sem)
             pagina = b.pagina_comprar(self.corretor, [casa] + self.imoveis)
             self.assertIn('Onde há passeio', pagina)

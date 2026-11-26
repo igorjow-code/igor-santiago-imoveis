@@ -12,7 +12,7 @@ area_referencia: 48,98 m² — planta padrão divulgada pela construtora; área 
 quartos: 1
 vagas: 1
 mobiliado: sim
-chamada: Nascente, com sala e varanda. Totalmente mobiliado.
+chamada: Nascente, com sala e varanda. Mobiliado.
 aceita_pet: consultar
 contas_inclusas: condominio
 iptu_nao_incluido: sim

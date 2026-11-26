@@ -1272,21 +1272,22 @@ COMPRAR = {
     "apoio_vazio": ("Nenhum imóvel à venda publicado neste momento. "
                     "Diga o que procura: quem responde sou eu, em até {prazo}."),
     "fotos_na_ficha": "{n} fotos reais na ficha",
+    "ficha_com_fotos": "Ver a ficha · {n} fotos",
     "como_sobrelinha": "Como funciona",
     "como_titulo": ("Da conversa", "à escritura."),
-    "como_apoio": "Quem conduz a compra é uma pessoa só. Do primeiro contato à escritura, você fala comigo.",
+    "como_apoio": "Quem conduz a compra é uma pessoa\u00a0só. Você fala comigo em todas as etapas.",
     "etapas": [
-        ("Conversa", "Você me diz o que procura e a faixa de valor."),
+        ("Conversa", "Você me diz o que procura e quanto pretende investir."),
         ("Página do imóvel", "Preço, medidas e fotos reais, antes de sair de casa."),
         ("Visita", "Agendada pelo WhatsApp e acompanhada por mim. A localização exata é enviada no agendamento."),
-        ("Proposta", "Matrícula e certidões conferidas antes de a proposta ser apresentada. Acompanho você até a escritura."),
+        ("Proposta", "Matrícula e certidões conferidas antes da proposta. Sigo com você até a assinatura."),
     ],
     "rubrica_link": "Minha trajetória",
     "faq_sobrelinha": "Dúvidas",
     "faq_titulo": ("Antes de", "comprar."),
     "fecho_titulo": ("Outro imóvel?", "Me diga qual."),
-    "fecho_apoio": "Diga o bairro, o tamanho e a faixa de valor. Quem responde sou eu, em até {prazo}.",
-    "fecho_botao": "Dizer o que procuro",
+    "fecho_apoio": "Bairro, tamanho e faixa de valor. Quem responde sou eu, em até {prazo}.",
+    "fecho_botao": "Falar com Igor",
     "mensagem_procura": "Olá, Igor. Procuro um imóvel para comprar em Feira de Santana.",
 }
 
@@ -1330,7 +1331,7 @@ def medidas_venda(imovel: dict) -> list[tuple[str, str]]:
     if imovel.get("vagas"):
         itens.append(("Vagas", str(imovel["vagas"])))
     if imovel["operacao"] == "locacao" and imovel.get("preco_venda"):
-        itens.append(("Para alugar", moeda(imovel["preco"]) + "/mês"))
+        itens.append(("Ou aluguel", moeda(imovel["preco"]) + "/mês"))
     return itens
 
 
@@ -1379,10 +1380,8 @@ def cartaz_imovel(corretor: dict, imovel: dict, n: int = 0) -> str:
                 f'aria-label="Ver a ficha: {e(imovel["titulo"])}">'
                 f'{imagem_html(imovel, fotos[0], alt, primeira=n == 0)}</a>')
 
-    legenda = ""
-    if len(fotos) > 1:
-        legenda = (f'<p class="cartaz-legenda" data-reveal><a href="{ficha}">'
-                   f'{e(COMPRAR["fotos_na_ficha"].format(n=len(fotos)))}</a></p>')
+    legenda = (f'<p class="cartaz-legenda" data-reveal><a href="{ficha}">'
+               f'{e(COMPRAR["fotos_na_ficha"].format(n=len(fotos)))}</a></p>')
     trio = ""
     dentro = fotos_cartaz(imovel, fotos) if passeio else []
     if dentro:
@@ -1391,7 +1390,6 @@ def cartaz_imovel(corretor: dict, imovel: dict, n: int = 0) -> str:
             for k, f in enumerate(dentro))
         trio = (f'<div class="cartaz-trio"><a class="vitrine" href="{e(passeio)}" target="_blank" rel="noopener" '
                 f'aria-label="Passear pela casa: {e(nome)}">{quadros}</a>{legenda}</div>')
-        legenda = ""
 
     linhas = medidas_venda(imovel)
     medidas = "".join(
@@ -1409,7 +1407,9 @@ def cartaz_imovel(corretor: dict, imovel: dict, n: int = 0) -> str:
         acoes = (f'<a class="bt bt-cheio" href="{e(passeio)}" target="_blank" rel="noopener">'
                  f'Passear pela casa</a>{visita}')
     else:
-        acoes = f'<a class="bt bt-cheio" href="{ficha}">Ver a ficha</a>{visita}'
+        rotulo_ficha = (COMPRAR["ficha_com_fotos"].format(n=len(fotos)) if len(fotos) > 1
+                        else "Ver a ficha")
+        acoes = f'<a class="bt bt-cheio" href="{ficha}">{e(rotulo_ficha)}</a>{visita}'
     # a página já diz "à venda" no título: a etiqueta informa o tipo e o bairro
     etiqueta = " · ".join(p for p in (
         "Reservado" if reservado else "", imovel["tipo"],
@@ -1425,15 +1425,15 @@ def cartaz_imovel(corretor: dict, imovel: dict, n: int = 0) -> str:
     <p class="cartaz-preco" {entra(220)}>{moeda(valor_venda(imovel))}</p>
     {medidas}
     {chamada}
-    <div class="acoes" {entra(depois + 100)}>{acoes}</div>
-    {legenda}
+    <div class="acoes" data-reveal style="--atraso:300ms">{acoes}</div>
   </div>
   {trio}
 </article>"""
 
 
-def rubrica(corretor: dict, link: str = "", prefixo: str = "") -> str:
-    """Assinatura da página: retrato com corte de telhado, nome e CRECI."""
+def rubrica(corretor: dict, link: str = "", prefixo: str = "", wa: str = "") -> str:
+    """Assinatura da página: retrato com corte de telhado, nome e CRECI, conversa e trajetória.
+    `wa` já chega escapado."""
     foto = ""
     for campo in ("foto_capa", "foto"):
         valor = corretor.get(campo, PENDENTE)
@@ -1446,8 +1446,11 @@ def rubrica(corretor: dict, link: str = "", prefixo: str = "") -> str:
             foto = (f'<span class="rubrica-foto"><img src="{e(url)}" width="{largura}" height="{altura}" '
                     'alt="Igor Santiago, corretor de imóveis" loading="lazy" decoding="async" /></span>')
             break
-    botao = f'<a class="bt bt-fino" href="{prefixo}sobre.html">{e(link)}</a>' if link else ""
-    return (f'<div class="rubrica" data-reveal>{foto}<div class="rubrica-texto">'
+    botao = (f'<a class="bt bt-fino" href="{wa}" target="_blank" rel="noopener">Falar com Igor</a>'
+             if wa else "")
+    botao += f'<a class="rubrica-link" href="{prefixo}sobre.html">{e(link)}</a>' if link else ""
+    botao = f'<div class="rubrica-acoes">{botao}</div>' if botao else ""
+    return (f'<div class="rubrica" data-reveal style="--atraso:240ms">{foto}<div class="rubrica-texto">'
             f'<p class="rubrica-nome"><b>{e(corretor["nome_pessoa"])}</b>'
             f'<span class="assinatura"><span>{e(corretor["titulo_profissional"])}</span><i> · </i>'
             f'<span>{e(corretor["creci"])}</span></span></p>{botao}</div></div>')
@@ -1505,10 +1508,10 @@ def pagina_comprar(corretor: dict, imoveis: list[dict], publicar: bool = False) 
   <header class="bloco-cabeca">
     <div class="cabeca-titulo"><p class="sobre-linha" data-reveal>{e(COMPRAR['como_sobrelinha'])}</p>
     <h2 class="bloco-titulo bloco-titulo--menor" id="t-como" style="--larg:{larg(COMPRAR['como_titulo'])}" data-reveal>{titulo_linhas(COMPRAR['como_titulo'])}</h2></div>
-    <p class="bloco-apoio" {reveal(1, 120)}>{e(COMPRAR['como_apoio'])}</p>
+    <div class="como-quem"><p class="bloco-apoio" {reveal(1, 120)}>{e(COMPRAR['como_apoio'])}</p>
+    {rubrica(corretor, COMPRAR['rubrica_link'], wa=e(wa_link(corretor, corretor['mensagem_whatsapp_geral'])))}</div>
   </header>
   <ol class="etapas">{etapas}</ol>
-  {rubrica(corretor, COMPRAR['rubrica_link'])}
 </section>"""
 
     faq = faq_comprar(corretor, tem_passeio)
