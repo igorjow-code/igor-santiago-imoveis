@@ -34,7 +34,7 @@ class BuscaTests(unittest.TestCase):
             corretor = b.ler_corretor()
             documento = b.pagina_imovel(corretor, imovel, [imovel])
             self.assertEqual(b.custo_mensal(imovel), 3100)
-            self.assertIn('Aluguel</span><span class="selo selo-venda">Venda', documento)
+            self.assertIn('<span class="etiqueta">Aluguel ou venda</span>', documento)
             self.assertIn('R$ 370.000', documento)
             self.assertIn('Não incluído', documento)
             self.assertIn('controls playsinline preload="none"', documento)

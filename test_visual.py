@@ -13,7 +13,7 @@ class VisualTests(unittest.TestCase):
 
     def test_sem_foto_nao_reserva_bloco(self):
         self.imovel.pop('_arquivo', None)
-        self.assertEqual(b.galeria_carrossel(self.imovel), '')
+        self.assertEqual(b.tira_fotos(self.imovel), '')
         self.assertIn('card--sem-foto', b.card(self.imovel, self.corretor))
         self.assertNotIn('card-foto', b.card(self.imovel, self.corretor))
         self.assertEqual(b.retrato(self.corretor), '')
@@ -26,7 +26,7 @@ class VisualTests(unittest.TestCase):
                 (pasta / nome).write_bytes(b'fixture de caminho, sem imagem publicada')
             self.imovel['_arquivo'] = Path(temp) / 'ficha.md'
             self.assertEqual([p.name for p in b.fotos_imovel(self.imovel)], ['01.webp', '02.jpg'])
-            galeria = b.galeria_carrossel(self.imovel)
+            galeria = b.tira_fotos(self.imovel)
             self.assertEqual(galeria.count('fetchpriority="high"'), 1)
             self.assertEqual(galeria.count('loading="lazy"'), 1)
             self.assertIn('foto 1 de 2', galeria)

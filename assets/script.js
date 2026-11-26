@@ -189,33 +189,152 @@
   }).observe(sentinela);
 })();
 
-// --- carrossel de fotos (ficha de imovel) ---------------------------------
+// --- ficha: a rua de fotos que se arrasta de lado -----------------------------
+// A tira é rolagem nativa (funciona sem este script). Aqui entram a contagem, o fio
+// de progresso, as setas, o arraste com o mouse e o aceno que convida o dedo.
+// Só transform e scrollLeft; um único ouvinte passivo de rolagem por tira.
 (function () {
   "use strict";
-  var carrosseis = document.querySelectorAll("[data-carrossel]");
+  var tiras = document.querySelectorAll("[data-tira]");
+  if (!tiras.length) return;
+  var vivo = document.documentElement.classList.contains("js");
 
-  Array.prototype.forEach.call(carrosseis, function (raiz) {
-    var trilho = raiz.querySelector(".carrossel-trilho");
-    var slides = raiz.querySelectorAll(".carrossel-slide");
-    var pontos = raiz.querySelectorAll(".carrossel-ponto");
-    var atual = 0;
+  Array.prototype.forEach.call(tiras, function (raiz) {
+    var rolo = raiz.querySelector(".tira-rolo");
+    var trilho = raiz.querySelector(".tira-trilho");
+    var quadros = Array.prototype.slice.call(raiz.querySelectorAll(".tira-quadro"));
+    var conta = raiz.querySelector(".tira-conta");
+    var fio = raiz.querySelector(".tira-fio i");
+    var antes = raiz.querySelector("[data-anterior]");
+    var depois = raiz.querySelector("[data-proxima]");
+    if (!rolo || !trilho || !quadros.length) return;
+    var total = quadros.filter(function (q) { return !q.classList.contains("tira-fim"); }).length;
+    var atual = 0, quadro = 0, tocou = false;
+    raiz.classList.add("com-tira");
 
-    function irPara(indice) {
-      atual = (indice + slides.length) % slides.length;
-      trilho.style.transform = "translateX(-" + (atual * 100) + "%)";
-      Array.prototype.forEach.call(pontos, function (ponto, n) {
-        ponto.classList.toggle("ativo", n === atual);
-      });
+    function dois(n) { return (n < 10 ? "0" : "") + n; }
+    function maximo() { return Math.max(1, rolo.scrollWidth - rolo.clientWidth); }
+    function inicio(k) { return quadros[k].offsetLeft - quadros[0].offsetLeft; }
+    function indice() {                       // quadro que está na margem de leitura
+      var x = rolo.scrollLeft, melhor = 0, perto = Infinity;
+      for (var k = 0; k < quadros.length; k++) {
+        var d = Math.abs(inicio(k) - x);
+        if (d < perto) { perto = d; melhor = k; }
+      }
+      return x >= maximo() - 2 ? quadros.length - 1 : melhor;
     }
 
-    var anterior = raiz.querySelector("[data-anterior]");
-    var proxima = raiz.querySelector("[data-proxima]");
-    if (anterior) anterior.addEventListener("click", function () { irPara(atual - 1); });
-    if (proxima) proxima.addEventListener("click", function () { irPara(atual + 1); });
-    Array.prototype.forEach.call(pontos, function (ponto, n) {
-      ponto.addEventListener("click", function () { irPara(n); });
+    function pintar() {
+      quadro = 0;
+      var k = indice(), n = Math.min(k, total - 1) + 1;
+      if (n !== atual && conta) {
+        atual = n;
+        conta.innerHTML = "<b>" + dois(n) + "</b> / " + dois(total);
+      }
+      var passo = 1 / quadros.length;
+      if (fio) fio.style.setProperty("--p", (passo + (1 - passo) * Math.min(1, rolo.scrollLeft / maximo())).toFixed(4));
+      if (antes) antes.disabled = rolo.scrollLeft <= 2;
+      if (depois) depois.disabled = rolo.scrollLeft >= maximo() - 2;
+    }
+    function pedir() { if (!quadro) quadro = requestAnimationFrame(pintar); }
+
+    function ir(passo) {
+      var k = Math.max(0, Math.min(quadros.length - 1, indice() + passo));
+      tocou = true;
+      rolo.scrollTo({ left: Math.min(inicio(k), maximo()), behavior: vivo ? "smooth" : "auto" });
+    }
+    if (antes) antes.addEventListener("click", function () { ir(-1); });
+    if (depois) depois.addEventListener("click", function () { ir(1); });
+    rolo.addEventListener("scroll", function () {
+      if (rolo.scrollLeft > 6) tocou = true;
+      pedir();
+    }, { passive: true });
+    window.addEventListener("resize", pedir);
+
+    // arraste com o mouse (o dedo já arrasta sozinho: é rolagem nativa)
+    var arrasto = null, calar = false;
+    rolo.addEventListener("pointerdown", function (ev) {
+      if (ev.pointerType !== "mouse" || ev.button !== 0) return;
+      if (ev.target.closest && ev.target.closest("video")) return;   // controles do vídeo
+      arrasto = { x: ev.clientX, de: rolo.scrollLeft, andou: false };
     });
+    window.addEventListener("pointermove", function (ev) {
+      if (!arrasto) return;
+      var dx = ev.clientX - arrasto.x;
+      if (!arrasto.andou && Math.abs(dx) < 5) return;
+      if (!arrasto.andou) { arrasto.andou = true; tocou = true; rolo.classList.add("arrastando"); }
+      rolo.scrollLeft = arrasto.de - dx;
+    });
+    function soltar() {
+      if (!arrasto) return;
+      var andou = arrasto.andou;
+      arrasto = null;
+      if (!andou) return;
+      calar = true;                           // o clique que fecha o arraste não abre link
+      window.setTimeout(function () { calar = false; }, 0);
+      // encaixa no quadro mais próximo e só então religa o encaixe nativo
+      rolo.scrollTo({ left: Math.min(inicio(indice()), maximo()), behavior: vivo ? "smooth" : "auto" });
+      window.setTimeout(function () { rolo.classList.remove("arrastando"); }, vivo ? 520 : 0);
+    }
+    window.addEventListener("pointerup", soltar);
+    window.addEventListener("pointercancel", soltar);
+    rolo.addEventListener("click", function (ev) {
+      if (calar) { ev.preventDefault(); ev.stopPropagation(); }
+    }, true);
+
+    // aceno: enquanto ninguém arrasta, a rua anda um pouco e volta (até 3 vezes)
+    if (vivo && "IntersectionObserver" in window && rolo.scrollWidth > rolo.clientWidth + 40) {
+      var acenos = 0, relogio = 0;
+      var acenar = function () {
+        if (tocou || acenos >= 3 || document.hidden) return;
+        acenos++;
+        trilho.classList.add("acena");
+      };
+      trilho.addEventListener("animationend", function (ev) {
+        if (ev.animationName === "tira-acena") trilho.classList.remove("acena");
+      });
+      new IntersectionObserver(function (entradas) {
+        window.clearInterval(relogio);
+        if (!entradas[0].isIntersecting || tocou) return;
+        window.setTimeout(acenar, 1700);
+        relogio = window.setInterval(acenar, 5600);
+      }, { threshold: .55 }).observe(rolo);
+    }
+
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(pedir);
+    window.addEventListener("load", pedir);
+    pintar();
   });
+})();
+
+// --- ficha: a conta do mês soma até o total -----------------------------------
+// O texto que vem no HTML é o valor final. A contagem só começa quando a conta entra
+// na tela e sempre termina no texto original (um relógio garante, mesmo com a aba oculta).
+(function () {
+  "use strict";
+  if (!document.documentElement.classList.contains("js")) return;
+  if (!("IntersectionObserver" in window)) return;
+  var linha = document.querySelector(".folha .conta-total[data-total]");
+  var forte = linha && linha.querySelector("strong");
+  var fim = linha ? Number(linha.dataset.total) : 0;
+  if (!forte || !fim) return;
+  var texto = forte.textContent;
+  function moeda(n) { return "R$ " + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+  var olho = new IntersectionObserver(function (entradas) {
+    if (!entradas[0].isIntersecting) return;
+    olho.disconnect();
+    var espera = 520, dura = 1100, comeco = performance.now() + espera;
+    forte.textContent = moeda(0);
+    function passo(agora) {
+      var t = Math.min(1, Math.max(0, (agora - comeco) / dura));
+      if (t >= 1) { forte.textContent = texto; return; }
+      forte.textContent = moeda(fim * (1 - Math.pow(1 - t, 4)));
+      requestAnimationFrame(passo);
+    }
+    requestAnimationFrame(passo);
+    window.setTimeout(function () { forte.textContent = texto; }, espera + dura + 400);
+  }, { threshold: .15, rootMargin: "0px 0px -40px 0px" });
+  olho.observe(linha);
 })();
 
 // --- capa: os telhados da logo abrem e mostram a casa -------------------------
@@ -227,6 +346,9 @@
   var raiz = document.documentElement;
   var abre = document.querySelector(".abre");
   var pele = document.body.classList.contains("pagina-capa");
+  // na ficha a barra do celular leva o valor e a visita: ocupa a largura e só sai quando o
+  // preço do topo ou outro botão de conversa está na tela, no fecho e com o menu aberto
+  var ficha = document.body.classList.contains("pagina-ficha");
   if (!abre) raiz.classList.remove("na-abertura");
   if (!pele) return;
 
@@ -246,7 +368,7 @@
       });
       raiz.classList.toggle("cta-a-vista", aVista.length > 0);
     }, { threshold: .6 });
-    Array.prototype.forEach.call(document.querySelectorAll('main .bloco .bt[href*="wa.me"]'), function (b) {
+    Array.prototype.forEach.call(document.querySelectorAll(ficha ? 'main .bt[href*="wa.me"]' : 'main .bloco .bt[href*="wa.me"]'), function (b) {
       olhoBotoes.observe(b);
     });
     // ...e também enquanto as dúvidas, o fecho ou a rubrica estão na tela (ele cobria o "+" e o texto)
@@ -259,7 +381,7 @@
       });
       raiz.classList.toggle("sem-flutuante", blocosLivres.length > 0);
     }, { rootMargin: "0px 0px -18% 0px" });
-    Array.prototype.forEach.call(document.querySelectorAll("main .faq, main .fecho"), function (b) {
+    Array.prototype.forEach.call(document.querySelectorAll(ficha ? "main .fecho, main .ficha-valor" : "main .faq, main .fecho"), function (b) {
       olhoBlocos.observe(b);
     });
     // a tabela de medidas e a rubrica têm conteúdo no canto direito: basta encostarem na tela
@@ -271,7 +393,7 @@
       });
       raiz.classList.toggle("sem-flutuante", blocosLivres.length > 0);
     });
-    Array.prototype.forEach.call(document.querySelectorAll("main .medidas, main .rubrica"), function (b) {
+    Array.prototype.forEach.call(ficha ? [] : document.querySelectorAll("main .medidas, main .rubrica"), function (b) {
       olhoCanto.observe(b);
     });
   } else {

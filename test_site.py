@@ -181,7 +181,7 @@ class SiteTests(unittest.TestCase):
             self.assertEqual(capa.count('href="https://passeio.example.invalid/" target="_blank" rel="noopener"'), 3)
             pagina_ficha = b.pagina_imovel(self.corretor, casa, [casa])
             self.assertIn('href="https://passeio.example.invalid/"', pagina_ficha)
-            self.assertIn('<span class="selo selo-op">À venda</span>', pagina_ficha)
+            self.assertIn('<span class="etiqueta">À venda</span>', pagina_ficha)
             self.assertNotIn('Para alugar', pagina_ficha)
             self.assertRegex(pagina_ficha, r'<title>[^<]* à venda[^<]*</title>')
         css = (b.ASSETS / 'styles.css').read_text(encoding='utf-8')
@@ -282,6 +282,101 @@ class SiteTests(unittest.TestCase):
         self.assertNotIn('"ItemList"', vazia)
         self.assertNotIn('Onde há passeio', vazia)
         self.assertIn('class="bloco fecho"', vazia)
+
+    def test_ficha_com_a_pele_nova_tira_folha_e_passeio(self):
+        with tempfile.TemporaryDirectory() as pasta:
+            ficha = Path(pasta) / 'casa' / 'ficha.md'
+            fotos = ficha.parent / 'fotos-tratadas'
+            fotos.mkdir(parents=True)
+            for nome, (largura, altura) in (('01-fachada', (1210, 1600)), ('02-sala', (1448, 1086)),
+                                            ('03-cozinha', (900, 1600)), ('04-suite', (1200, 1600))):
+                (fotos / f'{nome}.webp').write_bytes(
+                    b'RIFF\x00\x00\x00\x00WEBPVP8X\x0a\x00\x00\x00' + b'\x00\x00\x00\x00'
+                    + (largura - 1).to_bytes(3, 'little') + (altura - 1).to_bytes(3, 'little'))
+            base = next(i for i in self.imoveis if i['operacao'] == 'venda')
+            casa = dict(base, slug='casa-teste', tipo='Casa', titulo='Casa de 4 suítes no Jardim Teste',
+                        nome_curto='Jardim Teste', passeio_url='https://passeio.example.invalid/',
+                        fotos_cartaz=['04', '03', '02'], _arquivo=ficha)
+            pagina = b.pagina_imovel(self.corretor, casa, [casa])
+            self.assertIn('class="pagina-capa pagina-interna pagina-ficha"', pagina)
+            for antiga in ('imovel-carrossel', 'recibo-ficha', 'class="selo', 'class="btn btn-principal"'):
+                self.assertNotIn(antiga, pagina)
+            # menu, trilha visível e trilha dos dados estruturados apontam para a mesma lista
+            self.assertIn('<a href="../comprar.html" class="ativo">Comprar</a>', pagina)
+            self.assertIn('<a href="../comprar.html">Comprar</a><i aria-hidden="true">/</i><span>Jardim Teste</span>', pagina)
+            grafo = json.loads(re.search(r'<script type="application/ld\+json">(.*?)</script>', pagina, re.S)[1])['@graph']
+            trilha = next(no for no in grafo if no['@type'] == 'BreadcrumbList')['itemListElement']
+            self.assertTrue(trilha[1]['item'].endswith('/comprar.html'))
+            self.assertEqual(trilha[2]['name'], 'Jardim Teste')
+            # o nome grande e o título inteiro moram no mesmo <h1>
+            h1 = re.search(r'<h1 class="ficha-h1"[^>]*>(.*?)</h1>', pagina, re.S)[1]
+            self.assertIn('Jardim Teste', h1)
+            self.assertIn('Casa de 4 suítes no Jardim Teste', h1)
+            self.assertEqual(pagina.count('<h1'), 1)
+            # a tira: cada foto na proporção em que foi tirada, a primeira com prioridade
+            tira = pagina.split('data-tira', 1)[1].split('class="tira-pe"', 1)[0]
+            self.assertEqual(re.findall(r'--r:([\d.]+)', tira), ['0.7562', '1.3333', '0.5625', '0.7500', '.75'])
+            self.assertEqual(tira.count('fetchpriority="high"'), 1)
+            self.assertEqual(tira.count('loading="lazy"'), 3)
+            self.assertIn('foto 4 de 4', tira)
+            self.assertIn('<link rel="preload" as="image" href="../assets/imoveis/casa-teste/01-fachada.webp" fetchpriority="high" />', pagina)
+            # o botão cheio é o passo mais rico (passeio); o fim da tira e o bloco levam ao mesmo lugar
+            self.assertIn('>Passear pela casa</a><a class="bt bt-fino" href="https://wa.me/', pagina)
+            self.assertEqual(pagina.count('href="https://passeio.example.invalid/" target="_blank" rel="noopener"'), 4)
+            self.assertIn('class="tira-quadro tira-fim"', tira)
+            self.assertEqual(pagina.count('class="vitrine-quadro"'), 3)
+            # venda: a folha mostra o valor, não uma conta de aluguel
+            self.assertIn('<p class="valor-rotulo" data-reveal>Valor de venda</p>', pagina)
+            self.assertNotIn('conta-linha', pagina)
+            self.assertIn(b.moeda(casa['preco']), pagina)
+            # dúvidas visíveis iguais às dos dados estruturados; CRECI além do rodapé
+            faq = next(no for no in grafo if no['@type'] == 'FAQPage')['mainEntity']
+            visiveis = re.findall(r'<details class="duvida"><summary>(.*?)</summary><p>(.*?)</p></details>', pagina, re.S)
+            self.assertEqual([(unescape(p), unescape(r)) for p, r in visiveis],
+                             [(p['name'], p['acceptedAnswer']['text']) for p in faq])
+            self.assertGreaterEqual(pagina.count(self.corretor['creci']), 3)
+            # sem passeio: a visita é o passo principal, no topo e no fim da tira
+            sem = b.pagina_imovel(self.corretor, dict(casa, passeio_url=''), [casa])
+            self.assertNotIn('passeio.example.invalid', sem)
+            self.assertNotIn('id="passeio"', sem)
+            self.assertIn('<div class="acoes ficha-acoes"><a class="bt bt-cheio" href="https://wa.me/', sem)
+            self.assertIn('Agora,<br />de perto.', sem)
+            # reservado: nenhum convite de visita; a conversa é para ser avisado
+            reservado = b.pagina_imovel(self.corretor, dict(casa, passeio_url='', situacao='reservado'), [casa])
+            self.assertIn('<span class="etiqueta">Reservado</span>', reservado)
+            self.assertNotIn('tira-fim', reservado)
+            self.assertNotIn('Agendar visita', reservado)
+            self.assertIn('quando%20liberar', reservado)
+        # aluguel: a conta soma até o custo mensal, e a barra do celular diz o que acontece
+        aluguel = dict(next(i for i in self.imoveis if i['operacao'] == 'locacao' and i['finalidade'] == 'residencial'),
+                       preco=1700, condominio=240, iptu=840, contas_inclusas=[], _arquivo=None)
+        pagina = b.pagina_imovel(self.corretor, aluguel, [aluguel])
+        self.assertIn('<span class="etiqueta">Aluguel</span>', pagina)
+        self.assertIn('<a href="../alugar-residencial.html" class="ativo">Alugar</a>', pagina)
+        self.assertIn('data-total="2010"', pagina)
+        self.assertIn('R$ 2.010/mês com os encargos informados', pagina)
+        self.assertIn('<a class="bt bt-fino" href="#conta">Ver a conta do mês</a>', pagina)
+        self.assertIn('>Agendar visita</a></div>', pagina.split('class="barra-mobile"', 1)[1])
+        # sem foto não existe tira nem imagem de imóvel reservada
+        self.assertIn('ficha-topo--sem-foto', pagina)
+        self.assertNotIn('data-tira', pagina)
+        comercial = dict(next(i for i in self.imoveis if i['finalidade'] == 'comercial'), _arquivo=None)
+        self.assertIn('<a href="../alugar-sala-comercial.html" class="ativo">Comercial</a>',
+                      b.pagina_imovel(self.corretor, comercial, [comercial]))
+        self.assertEqual(b.partir_nome('Parque Fonte das Águas'), ('Parque Fonte', 'das Águas'))
+        self.assertEqual(b.partir_nome('Terra Azul'), ('Terra Azul',))
+        # nada da ficha nasce invisível fora do modo .js (movimento reduzido não recebe .js)
+        css = (b.ASSETS / 'styles.css').read_text(encoding='utf-8')
+        ficha_css = re.sub(r'/\*.*?\*/', '', css.split('FICHA DO IMÓVEL', 1)[1], flags=re.S)
+        achadas = 0
+        for regra in re.findall(r'([^{}]+)\{([^{}]*(?:opacity:\s*0[;\s}]|scale[XY]\(0\))[^{}]*)\}', ficha_css):
+            seletores = [s.strip() for s in regra[0].split(',')]
+            if all(re.fullmatch(r'from|to|[\d.]+%', s) for s in seletores):
+                continue
+            achadas += 1
+            # fora do .js só o fundo laranja do último quadro (que enche no toque) começa recolhido
+            self.assertTrue(all(s.startswith('.js ') or s == '.tira-fim a::before' for s in seletores), regra[0])
+        self.assertGreater(achadas, 3)
 
     def test_metragem_com_virgula_e_valor_de_venda(self):
         with tempfile.TemporaryDirectory() as pasta:
