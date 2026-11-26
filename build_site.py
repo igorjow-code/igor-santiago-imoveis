@@ -446,7 +446,7 @@ def cabecalho(corretor: dict, ativo: str, prefixo: str) -> str:
     </a>
     <nav class="nav" id="menu-principal" aria-label="Principal">{links}</nav>
     <a class="btn btn-principal nav-wa" href="{e(wa_link(corretor, corretor['mensagem_whatsapp_geral']))}"
-       target="_blank" rel="noopener">WhatsApp</a>
+       target="_blank" rel="noopener">Falar com Igor</a>
     <button class="menu-btn" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu-principal">
       <span></span><span></span><span></span>
     </button>
@@ -869,7 +869,7 @@ CAPA = {
     # No celular o título quebra em 3 linhas a partir desta palavra (fica o maior da página).
     "titulo_quebra_celular": "assinatura.",
     "apoio": ("Casas e apartamentos em Feira de Santana. "
-              "Você conhece cada um por dentro antes da visita."),
+              "Você conhece a casa por dentro antes da visita."),
     "botao": "Falar com Igor",
     "convite": "Role e abra a casa",
     "venda_titulo": ("Imóveis", "à venda."),
@@ -881,11 +881,11 @@ CAPA = {
     "quem_apoio": ("Do primeiro contato à entrega das chaves, é uma única pessoa. "
                    "Seu contato não é repassado e a sua negociação não muda de mãos."),
     "fatos": [("{anos} anos", "de corretagem em Feira de Santana"),
-              ("2ª geração", "formado ao lado do pai, corretor há mais de 40 anos"),
-              ("1 corretor", "da visita ao contrato, na compra e no aluguel")],
+              ("2ª geração", "formado ao lado do pai, corretor há mais de 40 anos"),
+              ("1 corretor", "da visita ao contrato, na compra e no aluguel")],
     "quem_botao": "Agendar uma conversa",
     "dono_sobrelinha": "Para quem tem imóvel",
-    "dono_titulo": ("Seu imóvel não é", "mais um anúncio."),
+    "dono_titulo": ("Seu imóvel não é", "só mais um anúncio."),
     "dono_apoio": ("Em portal, ele divide a tela com dezenas de outros. Veja como a casa do "
                    "Terra Azul foi apresentada: página própria, passeio cômodo a cômodo e fotos "
                    "reais. Quem chega para a visita já conhece a casa."),
@@ -897,7 +897,7 @@ CAPA = {
     "faq_titulo": ("Antes de", "você perguntar."),
     "fecho_titulo": ("O próximo passo", "é uma conversa."),
     "fecho_apoio": "Diga o que procura, ou o que pretende vender. Quem responde sou eu, em até {prazo}.",
-    "fecho_botao": "Falar com Igor no WhatsApp",
+    "fecho_botao": "Falar com Igor",
     "mensagem_dono": "Olá, Igor. Tenho um imóvel e quero saber como você apresenta e anuncia.",
 }
 
@@ -981,11 +981,19 @@ def titulo_linhas(partes: tuple[str, str], acento: int | None = None, quebra: st
     return " ".join(saida)
 
 
-def linha_imovel(imovel: dict, prefixo: str = "", n: int = 0) -> str:
-    """Linha da lista: o gesto que substitui o card na direção Marca forte."""
+def linha_imovel(imovel: dict, prefixo: str = "", n: int = 0, cartaz: bool = False) -> str:
+    """Linha da lista: o gesto que substitui o card na direção Marca forte.
+    `cartaz`: no celular a foto ocupa a largura (imóvel em destaque) e usa a 2ª foto."""
     fotos = fotos_imovel(imovel)
     foto = ""
-    if fotos:
+    if fotos and cartaz and len(fotos) > 1:
+        dimensoes = dimensoes_imagem(fotos[1])
+        tamanho = f'width="{dimensoes[0]}" height="{dimensoes[1]}" ' if dimensoes else ""
+        foto = (f'<div class="linha-foto"><img src="{e(foto_url(imovel, fotos[1], prefixo))}" '
+                f'alt="{e(imovel["tipo"])} em {e(imovel["bairro"])}, {e(imovel["cidade"])}" {tamanho}'
+                'loading="lazy" decoding="async" /></div>')
+    elif fotos:
+        cartaz = False
         miniatura = fotos[0].parent / "_miniaturas" / "capa.webp"
         dimensoes = dimensoes_imagem(miniatura if miniatura.is_file() else fotos[0])
         tamanho = f'width="{dimensoes[0]}" height="{dimensoes[1]}" ' if dimensoes else ""
@@ -993,15 +1001,16 @@ def linha_imovel(imovel: dict, prefixo: str = "", n: int = 0) -> str:
         foto = (f'<div class="linha-foto"><img src="{e(foto_card_url(imovel, fotos[0], prefixo))}" '
                 f'alt="{e(imovel["tipo"])} em {e(imovel["bairro"])}, {e(imovel["cidade"])}" {tamanho}'
                 f'style="object-position:{foco}" loading="lazy" decoding="async" /></div>')
-    operacao = "À venda" if imovel["operacao"] == "venda" else "Venda ou aluguel"
     nome = nome_curto(imovel)
     local = imovel["cidade"] if imovel["bairro"] == nome else imovel["bairro"]
-    dados = " · ".join(p for p in (imovel["tipo"], local, resumo(imovel),
-                                   "mobiliado" if imovel.get("mobiliado") == "sim" else "") if p)
-    return f"""<a class="linha{'' if foto else ' linha--sem-foto'}" href="{prefixo}imovel/{e(imovel['slug'])}.html" {reveal(n, 110)}>
+    itens = [imovel["tipo"], local] + resumo(imovel).split(" · ") + (
+        ["mobiliado"] if imovel.get("mobiliado") == "sim" else [])
+    dados = " · ".join(f"<span>{e(p)}</span>" for p in itens if p)
+    classes = "linha" + ("" if foto else " linha--sem-foto") + (" linha--cartaz" if cartaz and foto else "")
+    return f"""<a class="{classes}" href="{prefixo}imovel/{e(imovel['slug'])}.html" {reveal(n, 110)}>
   {foto}
-  <div class="linha-texto"><span class="linha-tipo">{operacao}</span>
-    <h3>{e(nome)}</h3><span class="linha-dados">{e(dados)}</span></div>
+  <div class="linha-texto"><span class="linha-tipo">À venda</span>
+    <h3>{e(nome)}</h3><span class="linha-dados">{dados}</span></div>
   <div class="linha-preco">{moeda(valor_venda(imovel))}</div>
 </a>"""
 
@@ -1108,11 +1117,11 @@ def pagina_home(corretor: dict, imoveis: list[dict], publicar: bool = False) -> 
 
     secao_venda = ""
     if vendas:
-        linhas = "".join(linha_imovel(i, n=n) for n, i in enumerate(vendas))
+        linhas = "".join(linha_imovel(i, n=n, cartaz=i is destaque) for n, i in enumerate(vendas))
         secao_venda = f"""
 <section class="bloco" id="a-venda" aria-labelledby="t-venda">
   <header class="bloco-cabeca">
-    <h2 class="bloco-titulo" id="t-venda" style="--larg:{larg(CAPA['venda_titulo'])}" data-reveal>{titulo_linhas(CAPA['venda_titulo'])}</h2>
+    <div class="cabeca-titulo"><h2 class="bloco-titulo" id="t-venda" style="--larg:{larg(CAPA['venda_titulo'])}" data-reveal>{titulo_linhas(CAPA['venda_titulo'])}</h2></div>
     <p class="bloco-apoio" {reveal(1, 120)}>{e(CAPA['venda_apoio'])}</p>
   </header>
   <div class="linhas">{linhas}</div>
@@ -1136,8 +1145,8 @@ def pagina_home(corretor: dict, imoveis: list[dict], publicar: bool = False) -> 
         secao_aluguel = f"""
 <section class="bloco bloco--aluguel" id="alugar" aria-labelledby="t-aluguel">
   <header class="bloco-cabeca bloco-cabeca--lado">
-    <p class="sobre-linha" data-reveal>{e(CAPA['aluguel_sobrelinha'])}</p>
-    <h2 class="bloco-titulo bloco-titulo--menor" id="t-aluguel" style="--larg:{larg(CAPA['aluguel_titulo'])}" data-reveal>{titulo_linhas(CAPA['aluguel_titulo'])}</h2>
+    <div class="cabeca-titulo"><p class="sobre-linha" data-reveal>{e(CAPA['aluguel_sobrelinha'])}</p>
+    <h2 class="bloco-titulo bloco-titulo--menor" id="t-aluguel" style="--larg:{larg(CAPA['aluguel_titulo'])}" data-reveal>{titulo_linhas(CAPA['aluguel_titulo'])}</h2></div>
     <p class="bloco-apoio" {reveal(1, 120)}>{e(CAPA['aluguel_apoio'])}</p>
   </header>
   <div class="linhas">{''.join(portas)}</div>
@@ -1210,7 +1219,7 @@ def pagina_home(corretor: dict, imoveis: list[dict], publicar: bool = False) -> 
   <h2 class="bloco-titulo" id="t-fecho" style="--larg:{larg(CAPA['fecho_titulo'])}" data-reveal>{titulo_linhas(CAPA['fecho_titulo'], 1)}</h2>
   <p class="bloco-apoio" {reveal(1, 120)}>{e(CAPA['fecho_apoio'].format(prazo=corretor['resposta_prometida']))}</p>
   <div class="acoes" {reveal(2, 120)}><a class="bt bt-cheio bt-grande" href="{wa_geral}" target="_blank" rel="noopener">{e(CAPA['fecho_botao'])}</a></div>
-  <p class="fecho-assinatura"><span>{e(corretor['nome_pessoa'])}</span> · <span>{e(corretor['titulo_profissional'])}</span> · <span>{e(corretor['creci'])}</span></p>
+  <p class="fecho-assinatura"><span>{e(corretor['nome_pessoa'])}</span> <span>· {e(corretor['titulo_profissional'])}</span> <span>· {e(corretor['creci'])}</span></p>
   </div>
 </section>"""
 

@@ -264,6 +264,10 @@
   var imagem = svg.querySelector("image");
   var sombra = abre.querySelector(".abre-sombra");
   var destaque = abre.querySelector(".destaque");
+  var sobre = abre.querySelector(".capa-sobre");
+  // Depois da chegada coreografada as animações de entrada são desligadas: animação com
+  // "forwards" ganha de estilo em linha e impediria a sobrelinha de sair primeiro.
+  window.setTimeout(function () { abre.classList.add("chegou"); }, 2900);
   var fotoL = Number(abre.dataset.fotoL) || 0;
   var fotoA = Number(abre.dataset.fotoA) || 0;
   var foco = (abre.dataset.foco || "50% 50%").split(/\s+/).map(function (v) {
@@ -303,7 +307,7 @@
 
     // Três movimentos sobrepostos desde o primeiro pixel de rolagem (sem tempo morto):
     // os riscos engrossam, o conjunto desce ao centro e cresce, e o título sai.
-    var e = 1 - Math.pow(1 - lim(p / .56), 1.9);
+    var e = 1 - Math.pow(1 - lim(p / .5), 2.6);
     var c = suave(lim(p / .30));
     var escala = 1 + g.cresce * c;
     var sw = g.base * escala * Math.pow(g.fim / g.base, e);
@@ -345,12 +349,14 @@
       imagem.setAttribute("y", (topo + (rh - h) * foco[1]).toFixed(1));
     }
 
-    var sai = lim(p / .13);
+    var sai = lim(p / .18);
+    // a sobrelinha é a primeira a sair, antes de a janela passar por ela
+    if (sobre && abre.classList.contains("chegou")) sobre.style.opacity = (1 - lim(p / .04)).toFixed(3);
     capaDy = -34 * sai;
     capa.style.opacity = (1 - sai).toFixed(3);
     capa.style.transform = "translate3d(0," + capaDy.toFixed(1) + "px,0)";
     capa.style.visibility = sai >= 1 ? "hidden" : "visible";
-    var entra = suave(lim((p - .5) / .24));
+    var entra = suave(lim((p - .3) / .28));     // sem platô: a ficha entra logo depois de a casa abrir
     if (sombra) sombra.style.opacity = entra.toFixed(3);
     if (destaque) {
       destaque.style.opacity = entra.toFixed(3);
