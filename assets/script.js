@@ -226,12 +226,15 @@
   "use strict";
   var raiz = document.documentElement;
   var abre = document.querySelector(".abre");
-  if (!abre) { raiz.classList.remove("na-abertura"); return; }
+  var pele = document.body.classList.contains("pagina-capa");
+  if (!abre) raiz.classList.remove("na-abertura");
+  if (!pele) return;
 
   // A barra verde do celular só aparece quando não há outro botão de WhatsApp na tela:
   // some na abertura e sempre que um botão principal de conversa está visível.
+  // Vale para toda página com a pele nova, não só para a capa.
   if ("IntersectionObserver" in window) {
-    new IntersectionObserver(function (entradas) {
+    if (abre) new IntersectionObserver(function (entradas) {
       raiz.classList.toggle("na-abertura", entradas[0].isIntersecting);
     }, { rootMargin: "0px 0px -40% 0px" }).observe(abre);
     var aVista = [];
@@ -243,10 +246,10 @@
       });
       raiz.classList.toggle("cta-a-vista", aVista.length > 0);
     }, { threshold: .6 });
-    Array.prototype.forEach.call(document.querySelectorAll('main .bloco .bt-cheio[href*="wa.me"]'), function (b) {
+    Array.prototype.forEach.call(document.querySelectorAll('main .bloco .bt[href*="wa.me"]'), function (b) {
       olhoBotoes.observe(b);
     });
-    // ...e também enquanto as dúvidas ou o fecho estão na tela (ele cobria o "+" e o texto)
+    // ...e também enquanto as dúvidas, o fecho ou a rubrica estão na tela (ele cobria o "+" e o texto)
     var blocosLivres = [];
     var olhoBlocos = new IntersectionObserver(function (entradas) {
       entradas.forEach(function (entrada) {
@@ -259,9 +262,22 @@
     Array.prototype.forEach.call(document.querySelectorAll("main .faq, main .fecho"), function (b) {
       olhoBlocos.observe(b);
     });
+    // a tabela de medidas e a rubrica têm conteúdo no canto direito: basta encostarem na tela
+    var olhoCanto = new IntersectionObserver(function (entradas) {
+      entradas.forEach(function (entrada) {
+        var i = blocosLivres.indexOf(entrada.target);
+        if (entrada.isIntersecting && i < 0) blocosLivres.push(entrada.target);
+        if (!entrada.isIntersecting && i >= 0) blocosLivres.splice(i, 1);
+      });
+      raiz.classList.toggle("sem-flutuante", blocosLivres.length > 0);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("main .medidas, main .rubrica"), function (b) {
+      olhoCanto.observe(b);
+    });
   } else {
     raiz.classList.remove("na-abertura");
   }
+  if (!abre) return;
 
   var palco = abre.querySelector(".palco");
   var svg = abre.querySelector(".abre-svg");

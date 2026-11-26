@@ -196,6 +196,92 @@ class SiteTests(unittest.TestCase):
             self.assertTrue(all(s.startswith('.js ') or '.nav' in s or '.topo' in s for s in seletores), regra[0])
         self.assertGreater(achadas, 3)
 
+    def test_comprar_lista_so_o_que_esta_a_venda_com_a_pele_nova(self):
+        pagina = b.pagina_comprar(self.corretor, self.imoveis)
+        self.assertIn('class="pagina-capa pagina-interna pagina-comprar"', pagina)
+        self.assertNotIn('class="card', pagina)
+        self.assertIn('<a href="comprar.html" class="ativo">Comprar</a>', pagina)
+        vendas = b.a_venda(self.imoveis)
+        alugueis = [i for i in self.imoveis if i['operacao'] == 'locacao' and not i.get('preco_venda')]
+        self.assertTrue(vendas and alugueis)
+        for imovel in vendas:
+            self.assertIn(f'id="v-{imovel["slug"]}"', pagina)
+            self.assertIn(f'href="imovel/{imovel["slug"]}.html"', pagina)
+            self.assertIn(b.moeda(b.valor_venda(imovel)), pagina)
+        for imovel in alugueis:
+            self.assertNotIn(f'imovel/{imovel["slug"]}.html', pagina)
+        posicoes = [pagina.index(f'id="v-{i["slug"]}"') for i in vendas]
+        self.assertEqual(posicoes, sorted(posicoes))
+        # o menu e o rodapé de toda página apontam para a página nova
+        capa = b.pagina_home(self.corretor, self.imoveis)
+        self.assertIn('<a href="comprar.html">Comprar</a>', capa)
+        self.assertNotIn('index.html#a-venda', capa)
+        # dados estruturados: a lista e o serviço de venda moram em comprar.html
+        grafo = json.loads(re.search(r'<script type="application/ld\+json">(.*?)</script>', pagina, re.S)[1])['@graph']
+        lista = next(no for no in grafo if no['@type'] == 'ItemList')
+        self.assertEqual(lista['numberOfItems'], len(vendas))
+        self.assertEqual([i['url'].rsplit('/', 1)[1] for i in lista['itemListElement']],
+                         [f'{i["slug"]}.html' for i in vendas])
+        etapas = next(no for no in grafo if no['@type'] == 'HowTo')['step']
+        visiveis = re.findall(r'<li class="etapa"[^>]*><span class="etapa-n">\d\d</span><h3>(.*?)</h3><p>(.*?)</p></li>', pagina)
+        self.assertEqual([(unescape(n), unescape(x)) for n, x in visiveis], [(s['name'], s['text']) for s in etapas])
+        self.assertEqual(len(etapas), 4)
+        servico = next(no for no in grafo if no['@id'].endswith('/#venda'))
+        self.assertTrue(servico['url'].endswith('/comprar.html'))
+        # CRECI na página, além do rodapé
+        self.assertGreaterEqual(pagina.count(self.corretor['creci']), 3)
+
+    def test_comprar_cartaz_com_passeio_sem_passeio_e_pagina_vazia(self):
+        with tempfile.TemporaryDirectory() as pasta:
+            ficha = Path(pasta) / 'casa' / 'ficha.md'
+            fotos = ficha.parent / 'fotos-tratadas'
+            fotos.mkdir(parents=True)
+            for nome in ('01-fachada', '02-sala', '03-cozinha', '04-suite', '05-piscina'):
+                (fotos / f'{nome}.webp').write_bytes(
+                    b'RIFF\x00\x00\x00\x00WEBPVP8X\x0a\x00\x00\x00' + b'\x00\x00\x00\x00'
+                    + (1209).to_bytes(3, 'little') + (1599).to_bytes(3, 'little'))
+            base = next(i for i in self.imoveis if i['operacao'] == 'venda')
+            casa = dict(base, slug='casa-teste', destaque=True, area=236.91, area_terreno=200,
+                        passeio_url='https://passeio.example.invalid/', fotos_cartaz=['05', '03', '02'],
+                        _arquivo=ficha)
+            cartaz = b.cartaz_imovel(self.corretor, casa)
+            self.assertIn('cartaz--destaque', cartaz)
+            self.assertIn('cartaz--com-trio', cartaz)
+            self.assertEqual(cartaz.count('class="vitrine-quadro"'), 3)
+            # as três fotos de dentro saem na ordem pedida na ficha, e nunca repetem a fachada
+            ordem = re.findall(r'casa-teste/(\d\d)-', cartaz.split('class="vitrine"', 1)[1])
+            self.assertEqual(ordem, ['05', '03', '02'])
+            self.assertIn('5 fotos reais na ficha', cartaz)
+            self.assertEqual(cartaz.count('href="https://passeio.example.invalid/" target="_blank" rel="noopener"'), 2)
+            # o botão cheio é o passo mais rico (passeio); o de contorno é sempre a visita
+            self.assertIn('>Passear pela casa</a><a class="bt bt-fino" href="https://wa.me/', cartaz)
+            self.assertIn('>Agendar visita</a>', cartaz)
+            self.assertIn('<span class="etiqueta"', cartaz)
+            self.assertNotIn('À venda ·', cartaz)   # a página já diz "à venda" no título
+            self.assertIn('<dt>Área construída</dt><dd>236,91 m²</dd>', cartaz)
+            self.assertEqual(cartaz.count('fetchpriority="high"'), 1)
+            self.assertEqual(b.cartaz_imovel(self.corretor, casa, 1).count('fetchpriority="high"'), 0)
+            # sem passeio: a ficha é o passo principal e a visita vai para o WhatsApp
+            sem = b.cartaz_imovel(self.corretor, dict(casa, passeio_url=''))
+            self.assertNotIn('vitrine', sem)
+            self.assertIn('>Ver a ficha</a><a class="bt bt-fino" href="https://wa.me/', sem)
+            self.assertIn('>Agendar visita</a>', sem)
+            pagina = b.pagina_comprar(self.corretor, [casa] + self.imoveis)
+            self.assertIn('Onde há passeio', pagina)
+            self.assertIn('<link rel="preload" as="image" href="assets/imoveis/casa-teste/01-fachada.webp" fetchpriority="high" />', pagina)
+        # imóvel sem foto não reserva bloco de imagem
+        sem_foto = b.cartaz_imovel(self.corretor, dict(base, _arquivo=None))
+        self.assertIn('cartaz--sem-foto', sem_foto)
+        self.assertNotIn('<img', sem_foto)
+        # catálogo sem nada à venda: a página existe, diz isso e mantém o convite
+        alugueis = [i for i in self.imoveis if i['operacao'] == 'locacao' and not i.get('preco_venda')]
+        vazia = b.pagina_comprar(self.corretor, alugueis)
+        self.assertIn('Nenhum imóvel à venda publicado', vazia)
+        self.assertNotIn('class="cartaz', vazia)
+        self.assertNotIn('"ItemList"', vazia)
+        self.assertNotIn('Onde há passeio', vazia)
+        self.assertIn('class="bloco fecho"', vazia)
+
     def test_metragem_com_virgula_e_valor_de_venda(self):
         with tempfile.TemporaryDirectory() as pasta:
             ficha = b.ler_ficha(self.ficha(pasta, 'area: 236,91\narea_terreno: 200\npreco: 1600000\noperacao: venda\ntipo: Casa'))
@@ -308,7 +394,7 @@ class SiteTests(unittest.TestCase):
                         self.assertIn('action="/obrigado.html"', documento)
 
     def test_faq_visivel_igual_jsonld(self):
-        documentos = [b.pagina_home(self.corretor, self.imoveis)] + [b.pagina_segmento(self.corretor, self.imoveis, segmento) for segmento in ('comercial', 'residencial')]
+        documentos = [b.pagina_home(self.corretor, self.imoveis), b.pagina_comprar(self.corretor, self.imoveis)] + [b.pagina_segmento(self.corretor, self.imoveis, segmento) for segmento in ('comercial', 'residencial')]
         for documento in documentos:
             grafo = json.loads(re.search(r'<script type="application/ld\+json">(.*?)</script>', documento, re.S)[1])['@graph']
             faq = next(no for no in grafo if no['@type'] == 'FAQPage')['mainEntity']

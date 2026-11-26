@@ -54,7 +54,7 @@ DECIMAIS = ("area", "area_terreno")
 BOOLEANOS = ("destaque", "demo", "rascunho")
 ALIASES = {"aluguel": "preco", "valor_aluguel": "preco", "taxa_condominio": "condominio"}
 DATAS = ("disponivel_a_partir",)
-LISTAS = ("garantias", "contas_inclusas")
+LISTAS = ("garantias", "contas_inclusas", "fotos_cartaz")
 ENUMS = {"operacao": {"locacao", "venda"},
          "finalidade": {"residencial", "comercial"},
          "situacao": {"disponivel", "reservado", "alugado", "vendido"},
@@ -425,8 +425,7 @@ def marca_simbolo(prefixo: str = "") -> str:
 
 
 def cabecalho(corretor: dict, ativo: str, prefixo: str) -> str:
-    # "Comprar" aponta para a seção da capa até comprar.html existir (etapa seguinte).
-    itens = [("index.html#a-venda", "Comprar"), ("alugar-residencial.html", "Alugar"),
+    itens = [("comprar.html", "Comprar"), ("alugar-residencial.html", "Alugar"),
              ("alugar-sala-comercial.html", "Comercial"),
              ("administracao.html", "Anunciar imóvel"), ("sobre.html", "Sobre")]
     marcado = {"imoveis.html": "alugar-residencial.html"}.get(ativo, ativo)
@@ -436,7 +435,9 @@ def cabecalho(corretor: dict, ativo: str, prefixo: str) -> str:
         partes.append(f'<a href="{prefixo}{href}"{classe}>{rotulo}</a>')
     links = "".join(partes) + (
         f'<span class="nav-pe">{e(corretor["titulo_profissional"])} · {e(corretor["creci"])}<br />'
-        f'{e(corretor["whatsapp_exibicao"])}</span>')
+        f'{e(corretor["whatsapp_exibicao"])}</span>'
+        f'<a class="bt bt-cheio nav-falar" href="{e(wa_link(corretor, corretor["mensagem_whatsapp_geral"]))}" '
+        'target="_blank" rel="noopener">Falar com Igor</a>')
     classe = "topo" if ativo == "index.html" else "topo topo--fixado"
     return f"""<header class="{classe}">
   <div class="wrap topo-linha">
@@ -466,7 +467,7 @@ def rodape(corretor: dict, prefixo: str) -> str:
       <p class="rodape-pos">{e(corretor['posicionamento'])}</p>
     </div>
     <nav class="rodape-links" aria-label="Rodapé">
-      <a href="{prefixo}index.html#a-venda">Imóveis à venda</a>
+      <a href="{prefixo}comprar.html">Imóveis à venda</a>
       <a href="{prefixo}alugar-residencial.html">Aluguel residencial</a>
       <a href="{prefixo}alugar-sala-comercial.html">Aluguel comercial</a>
       <a href="{prefixo}administracao.html">Anunciar imóvel</a>
@@ -509,7 +510,9 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
            mensagem_wa: str | None = None, extra_js: str = "",
            publicar: bool = False, jsonld: str = "", no_pagina: str | None = None,
            imovel: dict | None = None, preload: str = "",
-           social: tuple[str, str] | None = None) -> str:
+           social: tuple[str, str] | None = None, pele: str = "") -> str:
+    """`pele`: nome da página que já usa a pele "Marca forte" (classe pagina-capa, que
+    nasceu na capa e hoje é a pele do site). Vazio = pele anterior, até a página ser refeita."""
     mensagem_wa = mensagem_wa or corretor["mensagem_whatsapp_geral"]
     no_pagina = no_pagina or ativo or "404.html"
     indexar = publicar and no_pagina not in {"obrigado.html", "404.html"}
@@ -556,7 +559,7 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
 {preload_imagem}
 <link rel="preload" href="{prefixo}assets/fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="{prefixo}assets/fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="stylesheet" href="{prefixo}assets/styles.css?v=20261126-capa" />
+<link rel="stylesheet" href="{prefixo}assets/styles.css?v=20261126-pele" />
 <link rel="icon" href="{prefixo}assets/favicon.png" type="image/png" />
 <link rel="apple-touch-icon" href="{prefixo}assets/favicon-512.png" />
 <script>
@@ -566,7 +569,7 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
   }}
 </script>
 </head>
-<body class="{'pagina-home pagina-capa' if ativo == 'index.html' else 'pagina-clara'}">
+<body class="{'pagina-home pagina-capa' if ativo == 'index.html' else f'pagina-capa pagina-interna pagina-{pele}' if pele else 'pagina-clara'}">
 <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
 <span class="topo-sentinela" aria-hidden="true"></span>
 {barra_demo(imoveis)}
@@ -576,7 +579,7 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
 </main>
 {rodape(corretor, prefixo)}
 {wa_fixo(corretor, mensagem_wa, imovel)}
-<script src="{prefixo}assets/script.js?v=20261126-capa"></script>
+<script src="{prefixo}assets/script.js?v=20261126-pele"></script>
 {extra_js}
 </body>
 </html>
@@ -1032,6 +1035,40 @@ def retrato_capa(corretor: dict) -> str:
     return ""
 
 
+def secao_duvidas(titulo: tuple[str, str], faq: list[dict], sobrelinha: str = "") -> str:
+    """Dúvidas visíveis, em forma de pergunta, iguais às do JSON-LD (checklist de GEO)."""
+    perguntas = "".join(
+        f'<details class="duvida"><summary>{e(d["pergunta"])}</summary><p>{e(d["resposta"])}</p></details>'
+        for d in faq)
+    sobre = f'<p class="sobre-linha" data-reveal>{e(sobrelinha)}</p>' if sobrelinha else ""
+    return f"""
+<section class="bloco faq" id="duvidas" aria-labelledby="t-faq">
+  <div class="faq-miolo">
+    <div class="faq-titulo">{sobre}<h2 class="bloco-titulo bloco-titulo--menor" id="t-faq" style="--larg:{larg(titulo)}" data-reveal>{titulo_linhas(titulo)}</h2></div>
+    <div class="duvidas" data-reveal>{perguntas}</div>
+  </div>
+</section>"""
+
+
+def bloco_fecho(corretor: dict, titulo: tuple[str, str], apoio: str, botao: str, wa: str,
+                assinatura: bool = True) -> str:
+    """Fecho centralizado: toda página termina num convite. A assinatura com CRECI sai
+    quando a página já foi assinada pela rubrica (o rodapé repete o CRECI logo abaixo).
+    `wa` já chega escapado."""
+    assina = (f'<p class="fecho-assinatura assinatura"><span>{e(corretor["nome_pessoa"])}</span><i> · </i>'
+              f'<span>{e(corretor["titulo_profissional"])}</span><i> · </i><span>{e(corretor["creci"])}</span></p>'
+              if assinatura else "")
+    return f"""
+<section class="bloco fecho" aria-labelledby="t-fecho">
+  <div class="fecho-miolo">
+  <h2 class="bloco-titulo" id="t-fecho" style="--larg:{larg(titulo)}" data-reveal>{titulo_linhas(titulo, 1)}</h2>
+  <p class="bloco-apoio" {reveal(1, 120)}>{e(apoio)}</p>
+  <div class="acoes" {reveal(2, 120)}><a class="bt bt-cheio bt-grande" href="{wa}" target="_blank" rel="noopener">{e(botao)}</a></div>
+  {assina}
+  </div>
+</section>"""
+
+
 def capa_abertura(corretor: dict, destaque: dict | None) -> tuple[str, str]:
     """Momento assinatura: os telhados da logo riscam, abrem e mostram a casa.
     Devolve (html, url da foto para preload)."""
@@ -1201,26 +1238,10 @@ def pagina_home(corretor: dict, imoveis: list[dict], publicar: bool = False) -> 
 </section>"""
 
     faq = faq_capa(corretor)
-    perguntas = "".join(
-        f'<details class="duvida"><summary>{e(d["pergunta"])}</summary><p>{e(d["resposta"])}</p></details>'
-        for d in faq)
-    secao_faq = f"""
-<section class="bloco faq" id="duvidas" aria-labelledby="t-faq">
-  <div class="faq-miolo">
-    <div class="faq-titulo"><h2 class="bloco-titulo bloco-titulo--menor" id="t-faq" style="--larg:{larg(CAPA['faq_titulo'])}" data-reveal>{titulo_linhas(CAPA['faq_titulo'])}</h2></div>
-    <div class="duvidas" data-reveal>{perguntas}</div>
-  </div>
-</section>"""
-
-    secao_fecho = f"""
-<section class="bloco fecho" aria-labelledby="t-fecho">
-  <div class="fecho-miolo">
-  <h2 class="bloco-titulo" id="t-fecho" style="--larg:{larg(CAPA['fecho_titulo'])}" data-reveal>{titulo_linhas(CAPA['fecho_titulo'], 1)}</h2>
-  <p class="bloco-apoio" {reveal(1, 120)}>{e(CAPA['fecho_apoio'].format(prazo=corretor['resposta_prometida']))}</p>
-  <div class="acoes" {reveal(2, 120)}><a class="bt bt-cheio bt-grande" href="{wa_geral}" target="_blank" rel="noopener">{e(CAPA['fecho_botao'])}</a></div>
-  <p class="fecho-assinatura assinatura"><span>{e(corretor['nome_pessoa'])}</span><i> · </i><span>{e(corretor['titulo_profissional'])}</span><i> · </i><span>{e(corretor['creci'])}</span></p>
-  </div>
-</section>"""
+    secao_faq = secao_duvidas(CAPA['faq_titulo'], faq)
+    secao_fecho = bloco_fecho(corretor, CAPA['fecho_titulo'],
+                              CAPA['fecho_apoio'].format(prazo=corretor['resposta_prometida']),
+                              CAPA['fecho_botao'], wa_geral)
 
     corpo = abertura + secao_venda + secao_aluguel + secao_quem + secao_dono + secao_faq + secao_fecho
     base = corretor["site_url"].rstrip("/")
@@ -1231,6 +1252,283 @@ def pagina_home(corretor: dict, imoveis: list[dict], publicar: bool = False) -> 
         corpo=corpo, corretor=corretor, imoveis=imoveis,
         ativo="index.html", publicar=publicar, preload=foto_capa, social=social,
         jsonld=jsonld(corretor, imoveis, "index.html", faq))
+
+
+# --------------------------------------------------------------------------
+# comprar.html — imóveis à venda, cada um como cartaz (pele "Marca forte")
+# --------------------------------------------------------------------------
+
+# Texto num lugar só. PROPOSTA: nada aqui foi aprovado por Igor ainda (IS-41).
+# Regras de copy em igris-os/clientes/is-imoveis/redesign-2026-11/content-plan.md.
+COMPRAR = {
+    "titulo_pagina": "Imóveis à venda em Feira de Santana | Igor Santiago Imóveis",
+    "descricao": ("Casas e apartamentos à venda em Feira de Santana, com o preço na página. "
+                  "Conheça cada imóvel por dentro antes da visita. Igor Santiago, CRECI-BA 28.140."),
+    "sobrelinha": "Comprar",
+    "titulo": ("À venda em", "Feira de Santana."),
+    "titulo_quebra_celular": "Santana.",
+    "apoio": "Poucos imóveis, cada um com o preço na página.",
+    "apoio_passeio": " Onde há passeio, você percorre a casa por dentro, antes de marcar a visita.",
+    "apoio_vazio": ("Nenhum imóvel à venda publicado neste momento. "
+                    "Diga o que procura: quem responde sou eu, em até {prazo}."),
+    "fotos_na_ficha": "{n} fotos reais na ficha",
+    "como_sobrelinha": "Como funciona",
+    "como_titulo": ("Da conversa", "à escritura."),
+    "como_apoio": "Quem conduz a compra é uma pessoa só. Do primeiro contato à escritura, você fala comigo.",
+    "etapas": [
+        ("Conversa", "Você me diz o que procura e a faixa de valor."),
+        ("Página do imóvel", "Preço, medidas e fotos reais, antes de sair de casa."),
+        ("Visita", "Agendada pelo WhatsApp e acompanhada por mim. A localização exata é enviada no agendamento."),
+        ("Proposta", "Matrícula e certidões conferidas antes de a proposta ser apresentada. Acompanho você até a escritura."),
+    ],
+    "rubrica_link": "Minha trajetória",
+    "faq_sobrelinha": "Dúvidas",
+    "faq_titulo": ("Antes de", "comprar."),
+    "fecho_titulo": ("Outro imóvel?", "Me diga qual."),
+    "fecho_apoio": "Diga o bairro, o tamanho e a faixa de valor. Quem responde sou eu, em até {prazo}.",
+    "fecho_botao": "Dizer o que procuro",
+    "mensagem_procura": "Olá, Igor. Procuro um imóvel para comprar em Feira de Santana.",
+}
+
+
+def faq_comprar(corretor: dict, tem_passeio: bool) -> list[dict]:
+    antes = ("Pela página do imóvel, com preço, medidas e fotos reais. "
+             + ("Onde há passeio, você percorre a casa cômodo a cômodo. " if tem_passeio else "")
+             + "A visita é agendada pelo WhatsApp e acompanhada por mim.")
+    return [
+        {"pergunta": "O preço que aparece é o valor de venda?",
+         "resposta": "Sim. O valor de venda de cada imóvel aparece na página. As condições de pagamento são tratadas diretamente comigo."},
+        {"pergunta": "Como conhecer o imóvel antes da visita?", "resposta": antes},
+        {"pergunta": "Os móveis das fotos fazem parte da venda?",
+         "resposta": "Depende do imóvel, e a ficha informa. Quando há móveis simulados por inteligência artificial, eles aparecem identificados."},
+        {"pergunta": "A documentação é conferida?",
+         "resposta": "Sim. Matrícula e certidões são conferidas antes de a proposta ser apresentada."},
+        {"pergunta": "Onde ficam os imóveis?",
+         "resposta": f"Em {corretor['cidade']}. O bairro aparece na página de cada imóvel; a localização exata é enviada ao agendar a visita."},
+        {"pergunta": "Posso financiar a compra?",
+         "resposta": "Depende do imóvel e da análise do banco. Me diga como pretende pagar e eu confirmo as condições antes da visita."},
+    ]
+
+
+def wa_compra(corretor: dict, imovel: dict) -> str:
+    return wa_link(corretor, f'Olá, Igor. Vi no seu site o imóvel "{imovel["titulo"]}", à venda por '
+                             f'{moeda(valor_venda(imovel))}, e gostaria de agendar uma visita.')
+
+
+def medidas_venda(imovel: dict) -> list[tuple[str, str]]:
+    """Ficha curta do cartaz: só o que está confirmado na ficha do imóvel."""
+    itens: list[tuple[str, str]] = []
+    if imovel.get("area"):
+        itens.append(("Área construída", f"{metragem(imovel['area'])} m²"))
+    if imovel.get("area_terreno"):
+        itens.append(("Terreno", f"{metragem(imovel['area_terreno'])} m²"))
+    if imovel.get("finalidade") != "comercial":
+        if imovel.get("quartos"):
+            itens.append(("Quartos", str(imovel["quartos"])))
+        if imovel.get("suites"):
+            itens.append(("Suítes", str(imovel["suites"])))
+    if imovel.get("vagas"):
+        itens.append(("Vagas", str(imovel["vagas"])))
+    if imovel["operacao"] == "locacao" and imovel.get("preco_venda"):
+        itens.append(("Para alugar", moeda(imovel["preco"]) + "/mês"))
+    return itens
+
+
+def fotos_cartaz(imovel: dict, fotos: list[Path]) -> list[Path]:
+    """Três fotos de dentro para o cartaz: as indicadas em `fotos_cartaz` na ficha
+    (início do nome do arquivo) ou, sem isso, três espalhadas pelo acervo."""
+    restantes = fotos[1:]
+    pedidas = [next((f for f in restantes if f.name.startswith(prefixo)), None)
+               for prefixo in imovel.get("fotos_cartaz", [])]
+    pedidas = [f for f in pedidas if f]
+    if len(pedidas) >= 3:
+        return pedidas[:3]
+    if len(restantes) < 3:
+        return []
+    passo = len(restantes) / 3
+    return [restantes[int(passo * n + passo / 2)] for n in range(3)]
+
+
+def imagem_html(imovel: dict, foto: Path, alt: str, prefixo: str = "", primeira: bool = False) -> str:
+    largura, altura = dimensoes_imagem(foto) or (900, 1200)
+    carga = 'fetchpriority="high"' if primeira else 'loading="lazy"'
+    return (f'<img src="{e(foto_url(imovel, foto, prefixo))}" alt="{e(alt)}" '
+            f'width="{largura}" height="{altura}" {carga} decoding="async" />')
+
+
+def cartaz_imovel(corretor: dict, imovel: dict, n: int = 0) -> str:
+    """Um imóvel à venda apresentado por inteiro: foto com corte de telhado, nome, preço,
+    medidas confirmadas e o caminho curto (passeio ou ficha, depois a visita).
+    Ordem de entrada: etiqueta, nome, preço, medidas uma a uma, frase, botões. O primeiro
+    cartaz espera o título da página terminar de subir."""
+    fotos = fotos_imovel(imovel)
+    ficha = f'imovel/{e(imovel["slug"])}.html'
+    nome = nome_curto(imovel)
+    alt = f"{imovel['tipo']} em {imovel['bairro']}, {imovel['cidade']}"
+    passeio = imovel.get("passeio_url", "")
+    reservado = imovel.get("situacao") == "reservado"
+    base = 600 if n == 0 else 0
+
+    def entra(ms: int) -> str:
+        return f'data-reveal style="--atraso:{base + ms}ms"'
+
+    foto = ""
+    if fotos:
+        foco = e(imovel.get("foco_capa", "50% 50%"))
+        foto = (f'<a class="cartaz-foto" href="{ficha}" style="--foco:{foco};--atraso:{base}ms" data-reveal '
+                f'aria-label="Ver a ficha: {e(imovel["titulo"])}">'
+                f'{imagem_html(imovel, fotos[0], alt, primeira=n == 0)}</a>')
+
+    legenda = ""
+    if len(fotos) > 1:
+        legenda = (f'<p class="cartaz-legenda" data-reveal><a href="{ficha}">'
+                   f'{e(COMPRAR["fotos_na_ficha"].format(n=len(fotos)))}</a></p>')
+    trio = ""
+    dentro = fotos_cartaz(imovel, fotos) if passeio else []
+    if dentro:
+        quadros = "".join(
+            f'<div class="vitrine-quadro" {reveal(k, 130)}>{imagem_html(imovel, f, "")}</div>'
+            for k, f in enumerate(dentro))
+        trio = (f'<div class="cartaz-trio"><a class="vitrine" href="{e(passeio)}" target="_blank" rel="noopener" '
+                f'aria-label="Passear pela casa: {e(nome)}">{quadros}</a>{legenda}</div>')
+        legenda = ""
+
+    linhas = medidas_venda(imovel)
+    medidas = "".join(
+        f'<div class="medida" {entra(350 + 100 * k)}><dt>{e(rotulo)}</dt><dd>{e(valor)}</dd></div>'
+        for k, (rotulo, valor) in enumerate(linhas))
+    medidas = f'<dl class="medidas">{medidas}</dl>' if medidas else ""
+    depois = 350 + 100 * len(linhas)
+    chamada = (f'<p class="cartaz-chamada" {entra(depois)}>{e(imovel["chamada"])}</p>'
+               if imovel.get("chamada") else "")
+    # o botão cheio é o passo mais rico que existe (passeio; sem ele, a ficha);
+    # o de contorno é sempre a visita, pelo WhatsApp
+    visita = (f'<a class="bt bt-fino" href="{e(wa_compra(corretor, imovel))}" target="_blank" rel="noopener">'
+              f'{"Avisar quando liberar" if reservado else "Agendar visita"}</a>')
+    if passeio:
+        acoes = (f'<a class="bt bt-cheio" href="{e(passeio)}" target="_blank" rel="noopener">'
+                 f'Passear pela casa</a>{visita}')
+    else:
+        acoes = f'<a class="bt bt-cheio" href="{ficha}">Ver a ficha</a>{visita}'
+    # a página já diz "à venda" no título: a etiqueta informa o tipo e o bairro
+    etiqueta = " · ".join(p for p in (
+        "Reservado" if reservado else "", imovel["tipo"],
+        imovel["bairro"] if imovel["bairro"] != nome else "") if p)
+    classes = ("cartaz" + (" cartaz--destaque" if imovel.get("destaque") else "")
+               + ("" if foto else " cartaz--sem-foto") + (" cartaz--com-trio" if trio else ""))
+    return f"""<article class="{classes}" id="v-{e(imovel['slug'])}" aria-labelledby="c-{e(imovel['slug'])}">
+  <span class="fio" data-reveal aria-hidden="true"></span>
+  {foto}
+  <div class="cartaz-texto">
+    <span class="etiqueta" {entra(0)}>{e(etiqueta)}</span>
+    <h2 class="bloco-titulo cartaz-nome" id="c-{e(imovel['slug'])}" {entra(80)}><a href="{ficha}">{titulo_linhas((nome,))}</a></h2>
+    <p class="cartaz-preco" {entra(220)}>{moeda(valor_venda(imovel))}</p>
+    {medidas}
+    {chamada}
+    <div class="acoes" {entra(depois + 100)}>{acoes}</div>
+    {legenda}
+  </div>
+  {trio}
+</article>"""
+
+
+def rubrica(corretor: dict, link: str = "", prefixo: str = "") -> str:
+    """Assinatura da página: retrato com corte de telhado, nome e CRECI."""
+    foto = ""
+    for campo in ("foto_capa", "foto"):
+        valor = corretor.get(campo, PENDENTE)
+        if not valor or valor == PENDENTE:
+            continue
+        arquivo = (ROOT / valor).resolve()
+        if arquivo.is_relative_to(ASSETS.resolve()) and arquivo.is_file():
+            largura, altura = dimensoes_imagem(arquivo) or (1068, 1600)
+            url = prefixo + quote(arquivo.relative_to(ROOT).as_posix(), safe="/")
+            foto = (f'<span class="rubrica-foto"><img src="{e(url)}" width="{largura}" height="{altura}" '
+                    'alt="Igor Santiago, corretor de imóveis" loading="lazy" decoding="async" /></span>')
+            break
+    botao = f'<a class="bt bt-fino" href="{prefixo}sobre.html">{e(link)}</a>' if link else ""
+    return (f'<div class="rubrica" data-reveal>{foto}<div class="rubrica-texto">'
+            f'<p class="rubrica-nome"><b>{e(corretor["nome_pessoa"])}</b>'
+            f'<span class="assinatura"><span>{e(corretor["titulo_profissional"])}</span><i> · </i>'
+            f'<span>{e(corretor["creci"])}</span></span></p>{botao}</div></div>')
+
+
+def pagina_comprar(corretor: dict, imoveis: list[dict], publicar: bool = False) -> str:
+    vendas = a_venda(imoveis)
+    prazo = corretor["resposta_prometida"]
+    tem_passeio = any(i.get("passeio_url") for i in vendas)
+    if vendas:
+        apoio = COMPRAR["apoio"] + (COMPRAR["apoio_passeio"] if tem_passeio else "")
+        contagem = "1 imóvel" if len(vendas) == 1 else f"{len(vendas)} imóveis"
+        sobrelinha = f"{COMPRAR['sobrelinha']} · {contagem}"
+    else:
+        apoio = COMPRAR["apoio_vazio"].format(prazo=prazo)
+        sobrelinha = COMPRAR["sobrelinha"]
+    quebra = COMPRAR["titulo_quebra_celular"]
+    partes_celular = tuple(parte for texto in COMPRAR["titulo"] for parte in (
+        (texto[:-len(quebra)].strip(), quebra) if quebra and texto.endswith(quebra) and texto != quebra
+        else (texto,)))
+    # índice com os preços: a página promete "o preço na página" e cumpre na primeira tela
+    indice = ""
+    if len(vendas) > 1:
+        indice = ('<nav class="cabeca-indice" aria-label="Imóveis à venda nesta página">' + "".join(
+            f'<a href="#v-{e(i["slug"])}"><span>{e(nome_curto(i))}</span><b>{moeda(valor_venda(i))}</b></a>'
+            for i in vendas) + '</nav>')
+    cabeca = f"""
+<section class="cabeca" aria-labelledby="t-pagina">
+  <div class="cabeca-miolo">
+    <p class="sobre-linha">{e(sobrelinha)}</p>
+    <h1 class="pagina-titulo" id="t-pagina" style="--larg:{larg(COMPRAR['titulo'])};--larg-c:{larg(partes_celular)}">{titulo_linhas(COMPRAR['titulo'], 1, quebra)}</h1>
+    <div class="cabeca-pe"><p class="bloco-apoio">{e(apoio)}</p>{indice}</div>
+  </div>
+</section>"""
+
+    lista = ""
+    if vendas:
+        lista = ('<section class="bloco bloco--cartazes" id="a-venda" aria-label="Imóveis à venda">'
+                 '<div class="cartazes">'
+                 + "".join(cartaz_imovel(corretor, i, n) for n, i in enumerate(vendas))
+                 + '</div></section>')
+
+    passos = list(COMPRAR["etapas"])
+    etapas = "".join(
+        f'<li class="etapa" {reveal(n, 140)}><span class="etapa-n">{n + 1:02d}</span>'
+        f'<h3>{e(nome)}</h3><p>{e(texto)}</p></li>'
+        for n, (nome, texto) in enumerate(passos))
+    # as mesmas etapas, visíveis na página, vão para os dados estruturados (checklist de GEO)
+    como_fazer = {'@type': 'HowTo', '@id': corretor["site_url"].rstrip("/") + '/comprar.html#como-funciona',
+                  'name': 'Como comprar um imóvel com ' + corretor['nome_pessoa'],
+                  'step': [{'@type': 'HowToStep', 'position': n, 'name': nome, 'text': texto}
+                           for n, (nome, texto) in enumerate(passos, 1)]}
+    como = f"""
+<section class="bloco como" id="como-funciona" aria-labelledby="t-como">
+  <header class="bloco-cabeca">
+    <div class="cabeca-titulo"><p class="sobre-linha" data-reveal>{e(COMPRAR['como_sobrelinha'])}</p>
+    <h2 class="bloco-titulo bloco-titulo--menor" id="t-como" style="--larg:{larg(COMPRAR['como_titulo'])}" data-reveal>{titulo_linhas(COMPRAR['como_titulo'])}</h2></div>
+    <p class="bloco-apoio" {reveal(1, 120)}>{e(COMPRAR['como_apoio'])}</p>
+  </header>
+  <ol class="etapas">{etapas}</ol>
+  {rubrica(corretor, COMPRAR['rubrica_link'])}
+</section>"""
+
+    faq = faq_comprar(corretor, tem_passeio)
+    wa = e(wa_link(corretor, COMPRAR["mensagem_procura"]))
+    fecho = bloco_fecho(corretor, COMPRAR["fecho_titulo"], COMPRAR["fecho_apoio"].format(prazo=prazo),
+                        COMPRAR["fecho_botao"], wa, assinatura=False)
+    corpo = (cabeca + lista + como
+             + secao_duvidas(COMPRAR["faq_titulo"], faq, COMPRAR["faq_sobrelinha"]) + fecho)
+
+    primeiro = next((i for i in vendas if fotos_imovel(i)), None)
+    foto_topo = foto_url(primeiro, fotos_imovel(primeiro)[0]) if primeiro else ""
+    base = corretor["site_url"].rstrip("/")
+    social = ((base + "/" + foto_topo, f"{primeiro['tipo']} em {primeiro['bairro']}, {primeiro['cidade']}")
+              if foto_topo else None)
+    return pagina(
+        titulo=COMPRAR["titulo_pagina"], descricao=COMPRAR["descricao"],
+        corpo=corpo, corretor=corretor, imoveis=imoveis, ativo="comprar.html",
+        mensagem_wa=COMPRAR["mensagem_procura"], publicar=publicar, preload=foto_topo,
+        social=social, pele="comprar",
+        jsonld=jsonld(corretor, imoveis, "comprar.html", faq, extra=[como_fazer]))
 
 
 def secao_mapa_bairros(imoveis: list[dict]) -> str:
@@ -1683,7 +1981,8 @@ def pagina_404(corretor: dict, imoveis: list[dict], publicar: bool = False) -> s
 # arquivos auxiliares
 # --------------------------------------------------------------------------
 
-def jsonld(corretor: dict, imoveis: list[dict], no_pagina: str, faq: list[dict]) -> str:
+def jsonld(corretor: dict, imoveis: list[dict], no_pagina: str, faq: list[dict],
+           extra: list[dict] | None = None) -> str:
     base = corretor['site_url'].rstrip('/')
     agente, pessoa, site = base + '/#agente', base + '/#pessoa', base + '/#site'
     url = base + '/' + ('' if no_pagina == 'index.html' else no_pagina)
@@ -1714,7 +2013,7 @@ def jsonld(corretor: dict, imoveis: list[dict], no_pagina: str, faq: list[dict])
         {'@type': 'WebPage', '@id': url + '#pagina', 'url': url, 'inLanguage': 'pt-BR',
          'isPartOf': {'@id': site}, 'about': {'@id': agente}},
     ]
-    for slug, nome, pagina_servico in [('venda', 'Compra e venda de imóveis', ''),
+    for slug, nome, pagina_servico in [('venda', 'Compra e venda de imóveis', 'comprar.html'),
                                       ('locacao', 'Locação residencial e comercial', 'imoveis.html'),
                                       ('administracao', 'Administração de imóveis', 'administracao.html')]:
         grafo.append({'@type': 'Service', '@id': base + '/#' + slug, 'name': nome,
@@ -1724,6 +2023,15 @@ def jsonld(corretor: dict, imoveis: list[dict], no_pagina: str, faq: list[dict])
         grafo.append({'@type': 'FAQPage', '@id': url + '#faq', 'mainEntity': [
             {'@type': 'Question', 'name': d['pergunta'],
              'acceptedAnswer': {'@type': 'Answer', 'text': d['resposta']}} for d in faq]})
+    grafo.extend(extra or [])
+    if no_pagina == 'comprar.html':
+        vendas = a_venda(imoveis)
+        if vendas:
+            grafo.append({'@type': 'ItemList', '@id': url + '#lista', 'name': 'Imóveis à venda',
+                          'numberOfItems': len(vendas), 'itemListElement': [
+                              {'@type': 'ListItem', 'position': n, 'name': i['titulo'],
+                               'url': f"{base}/imovel/{i['slug']}.html"}
+                              for n, i in enumerate(vendas, 1)]})
     ficha = next((i for i in imoveis if no_pagina == f"imovel/{i['slug']}.html"), None)
     if ficha:
         fotos = fotos_imovel(ficha)
@@ -1982,7 +2290,8 @@ def main(argv: list[str]) -> int:
                 if poster.exists():
                     shutil.copy2(poster, destino_video / poster.name)
 
-    paginas = {'index.html': pagina_home, 'imoveis.html': pagina_catalogo,
+    paginas = {'index.html': pagina_home, 'comprar.html': pagina_comprar,
+               'imoveis.html': pagina_catalogo,
                'sobre.html': pagina_sobre,
                'privacidade.html': pagina_privacidade, '404.html': pagina_404,
                'obrigado.html': pagina_obrigado, 'administracao.html': pagina_administracao}

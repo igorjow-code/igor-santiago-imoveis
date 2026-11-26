@@ -1,50 +1,54 @@
 {
   "administracao.html": {
-    "sha256": "a8d485d7104cae2ef72369e5e083444711ac1cb753b9ac3c5609539e5a67632a",
+    "sha256": "ffa157723f75e6eef4b82893dfa0b8a23542d1343724afd66127783f82dd35e8",
     "lastmod": "2026-11-26"
   },
   "alugar-residencial.html": {
-    "sha256": "92de416273a78b8dd9c720b36c05998b86228015b5f540dad6454b6b95653479",
+    "sha256": "fc3b09e1590586ffa21992062b9b0618a0c720150adbd148a41cac5bf8744d4b",
     "lastmod": "2026-11-26"
   },
   "alugar-sala-comercial.html": {
-    "sha256": "f5731a33a645a8828d26921559455945b1918fbccdaa18666e92a584b4c9e6d5",
+    "sha256": "30487b7e368886a22a49ba38e6a9eb4b746db167efd5e0e2829816ccdb4bba91",
+    "lastmod": "2026-11-26"
+  },
+  "comprar.html": {
+    "sha256": "316a337d2a0f268483811bb82f4b7414daf682419de8e87a1eb1fdfe73b922e9",
     "lastmod": "2026-11-26"
   },
   "imoveis.html": {
-    "sha256": "d0b21503b1b182edc47f83dc8d9292b08b80e1acee77efef5a2a15eb76eb3e20",
+    "sha256": "840594a741a682767d340faac4b94eb063294520be6f871bf9a6ff856c3d597f",
     "lastmod": "2026-11-26"
   },
   "imovel/apartamento-magnifique-premium-santa-monica.html": {
-    "sha256": "65bb5b151f9032e362ae95738a3a7ac4e4082cabeee511a137f8af86b4470957",
+    "sha256": "4c264a411a13539f2c77b9efdd2cab1f314bdae5134b1f0669cfdb4234c89fec",
     "lastmod": "2026-11-26"
   },
   "imovel/apartamento-parque-fonte-das-aguas.html": {
-    "sha256": "eeb9697fd1285c87a75f3ccb989203c17fe482773634ca6a152290b7cf28e18d",
+    "sha256": "9204a29dd59b0ffc4ff5ed11ef47103ff8d5d9a92eac22733f711d6805923a2b",
     "lastmod": "2026-11-26"
   },
   "imovel/apartamento-santana-flex-nascente.html": {
-    "sha256": "0e3351e4a58d2924d31659f076692a3531ea0bd016e1a32bd780b9d4376d5386",
+    "sha256": "5d88b5e241e10f3c591dbf2d6dd4b59903d81fe02df5524af23d702662c27c80",
     "lastmod": "2026-11-26"
   },
   "imovel/casa-terra-azul.html": {
-    "sha256": "6986badd314c09055d845448e52ede0e09996ce40d493189e326cb4eee19222d",
+    "sha256": "e5fc28e853df4d8772a4369c351d8227234bc19295e3152f929ebaf0e960b95c",
     "lastmod": "2026-11-26"
   },
   "imovel/sala-comercial-getulio-vargas-33m2.html": {
-    "sha256": "a3b494f49fd82ea93f74cd09fa8dedc0a8870d4216693d6d2ff556d5b65238c9",
+    "sha256": "3bb2bdf51b9cc6f986e677d81db7f70b0cdb7a3fdbafe4c437183518f62cc201",
     "lastmod": "2026-11-26"
   },
   "index.html": {
-    "sha256": "a9b6317ac945b7e9350a17892feff8ed2c1e5a50f7cc3c4682712e6cd81ee65e",
+    "sha256": "559654824e41242631875facb1f892ad1c74ab9454011312800b3a8cfefc5ffe",
     "lastmod": "2026-11-26"
   },
   "privacidade.html": {
-    "sha256": "c9fdcae7da8d35ddb712d1aec14a5e02f8807c9886726a41a262feab6dacd0e2",
+    "sha256": "eb9cf2e63fc394a83ec67c9fc83d1d565318b898e0a1df687b0bcc55c10703fd",
     "lastmod": "2026-11-26"
   },
   "sobre.html": {
-    "sha256": "c1a8dbbe64166240ab50261f55631b0d34c248e848c89b661002de82cef8b5c4",
+    "sha256": "d715334dce29daedc9924072268fe4842c160e018b27f8fcd795a736d61e11b2",
     "lastmod": "2026-11-26"
   }
 }
