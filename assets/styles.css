@@ -694,7 +694,7 @@ html.menu-aberto { overflow: hidden; }
 }
 .pagina-capa .nav a:hover { color: var(--marfim); }
 .pagina-capa .nav a:hover::after { transform: scaleX(1); }
-.pagina-capa .nav-wa { min-height: 48px; padding: 0 1.3rem; font-size: .94rem; color: var(--tinta-laranja); }
+.pagina-capa .nav-wa { min-height: 48px; padding: 0 1.3rem; font-size: .94rem; }
 
 @media (max-width: 899px) {
   .pagina-capa .menu-btn { display: block; width: 48px; height: 48px; padding: 12px; margin-right: -8px; }
@@ -727,11 +727,10 @@ html.menu-aberto { overflow: hidden; }
   }
   .pagina-capa .nav.aberto .nav-pe { opacity: 1; }
 }
-@media (max-width: 1099px) {
-  .pagina-capa .nav-wa { background: none; color: var(--marfim); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.34); }
-  .pagina-capa .nav-wa::before { display: none; }
-  .pagina-capa .nav-wa:hover { color: var(--laranja-claro); box-shadow: inset 0 0 0 1.5px var(--laranja); }
-}
+/* o botão do cabeçalho é contorno: o laranja cheio fica para o botão da seção */
+.pagina-capa .nav-wa { background: none; color: var(--marfim); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.34); }
+.pagina-capa .nav-wa::before { display: none; }
+.pagina-capa .nav-wa:hover { color: var(--laranja-claro); box-shadow: inset 0 0 0 1.5px var(--laranja); }
 /* no celular a conversa já tem lugar fixo (botão da abertura, depois o botão flutuante):
    o cabeçalho fica só com marca e menu */
 @media (max-width: 760px) {
@@ -758,7 +757,7 @@ html.menu-aberto { overflow: hidden; }
   font: 700 12.5px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; padding: 9px 12px;
 }
 .sobre-linha, .capa-sobre {
-  font: 700 13.5px/1.3 var(--sans); letter-spacing: .17em; text-transform: uppercase;
+  font: 700 14px/1.3 var(--sans); letter-spacing: .16em; text-transform: uppercase;
   color: var(--laranja-claro);
 }
 /* Escala em três degraus: abertura > seção > subseção. --larg é a largura da linha
@@ -827,7 +826,7 @@ html.menu-aberto { overflow: hidden; }
 }
 
 /* com movimento: palco preso, a rolagem engrossa os riscos até a casa ocupar a tela */
-.js .abre { height: 250vh; height: 250svh; }
+.js .abre { height: 240vh; height: 240svh; }
 .js .palco { position: sticky; top: 0; height: 100vh; height: 100svh; }
 .js .abre-foto { display: none; }
 .js .abre-svg, .abre--sem-foto .abre-svg { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -864,7 +863,7 @@ html.menu-aberto { overflow: hidden; }
   display: flex; flex-direction: column-reverse; align-items: center; gap: 9px; margin-top: 16px;
   color: var(--texto-2);
 }
-.capa-convite i { font: 700 13px/1 var(--sans); letter-spacing: .16em; text-transform: uppercase; }
+.capa-convite i { font: 700 14px/1 var(--sans); letter-spacing: .15em; text-transform: uppercase; }
 .capa-convite span { display: block; width: 1.5px; height: 28px; background: rgba(255,255,255,.18); overflow: hidden; position: relative; }
 .capa-convite span::after {
   content: ""; position: absolute; inset: 0; background: var(--laranja-claro);
@@ -881,6 +880,7 @@ html.menu-aberto { overflow: hidden; }
 html:not(.js) .abre-sombra {
   background: linear-gradient(to top, #0a0a0a 8%, rgba(10,10,10,.9) 38%, rgba(10,10,10,.4) 62%, rgba(10,10,10,0) 84%);
 }
+html:not(.js) .capa-sobre { text-shadow: 0 0 14px #0a0a0a, 0 0 4px #0a0a0a; }
 
 @media (min-width: 900px) {
   .abre-sombra {
@@ -897,7 +897,7 @@ html:not(.js) .abre-sombra {
      que são a assinatura e precisam de palco */
   .capa-texto h1 { --teto: 7.2rem; }
   .capa-linha { display: flex; align-items: center; justify-content: center; gap: 34px; margin-top: 22px; }
-  .capa-linha .capa-apoio { margin: 0; max-width: 40ch; text-align: left; text-wrap: pretty; }
+  .capa-linha .capa-apoio { margin: 0; max-width: 48ch; text-align: left; text-wrap: balance; }
   .capa-linha .acoes { margin-top: 0; flex: none; }
   .js .capa-convite { flex-direction: row; gap: 12px; margin-top: 20px; }
   .capa-convite span { width: 34px; height: 1.5px; }
@@ -956,7 +956,7 @@ html:not(.js) .abre-sombra {
 .linha-foto img { width: 100%; height: 100%; object-fit: cover; transition: transform 1.2s var(--sai); }
 .linha-texto { align-self: end; min-width: 0; }
 .linha-tipo {
-  display: block; font: 700 13.5px/1.25 var(--sans); letter-spacing: .13em; text-transform: uppercase;
+  display: block; font: 700 14px/1.25 var(--sans); letter-spacing: .13em; text-transform: uppercase;
   color: var(--laranja-claro); transition: color .5s var(--sai);
 }
 .linha h3 {
@@ -964,7 +964,7 @@ html:not(.js) .abre-sombra {
   font: 900 clamp(1.5rem, 6.2vw, 4.2rem)/.95 var(--display); letter-spacing: -.03em;
   transition: color .5s var(--sai);
 }
-.linha-dados { display: block; color: var(--texto-2); font-size: 15.5px; transition: color .5s var(--sai); }
+.linha-dados { display: block; color: var(--texto-2); font-size: 16px; transition: color .5s var(--sai); }
 .linha-preco { grid-column: 2; align-self: start; font: 900 1.36rem/1.2 var(--display); letter-spacing: -.01em; transition: color .5s var(--sai); }
 .linha-preco small { font: 600 1rem/1 var(--sans); letter-spacing: 0; color: var(--texto-2); transition: color .5s var(--sai); }
 .linha-dados span { white-space: nowrap; }
@@ -1001,6 +1001,9 @@ html:not(.js) .abre-sombra {
   .linha-preco { grid-column: auto; align-self: center; margin: 0; font-size: 2.1rem; text-align: right; white-space: nowrap; }
   .linha--sem-foto, .linha--porta { grid-template-columns: minmax(0, 1fr) auto; }
   .linha--sem-foto .linha-preco, .linha--porta .linha-preco { grid-column: auto; }
+  .linha.linha--cartaz:not(.linha--porta):not(.linha--sem-foto) { grid-template-columns: clamp(260px, 26vw, 360px) minmax(0, 1fr) auto; }
+  .linha--cartaz .linha-foto { width: auto; aspect-ratio: 5 / 4.6; }
+  .linha--cartaz .linha-foto img { object-position: 50% 40%; }
   .linha--porta { padding: 34px 84px 34px 0; }
   .linha--porta h3 { font-size: clamp(2.4rem, 4.6vw, 3.6rem); }
   .linha--porta::after { font-size: 2.8rem; }
@@ -1075,7 +1078,7 @@ html:not(.js) .abre-sombra {
 .pagina-capa .duvida summary {
   min-height: 68px; padding: 20px 0; color: var(--marfim);
   font: 800 clamp(1.08rem, 4.5vw, 1.42rem)/1.2 var(--display); letter-spacing: -.01em;
-  transition: color .5s var(--sai);
+  text-wrap: balance; transition: color .5s var(--sai);
 }
 .pagina-capa .duvida summary::after { content: "+"; flex: none; font: 400 2rem/1 var(--sans); color: var(--laranja); transition: transform .6s var(--sai); }
 .pagina-capa .duvida[open] summary::after { content: "+"; transform: rotate(45deg); }
@@ -1092,7 +1095,12 @@ html:not(.js) .abre-sombra {
 .fecho .bloco-apoio { margin-inline: auto; text-wrap: balance; }
 .fecho .acoes { justify-content: center; margin-top: 32px; }
 .fecho-assinatura { margin-top: 46px; font-size: 14.5px; letter-spacing: .03em; color: var(--marfim-suave); }
-.fecho-assinatura span { white-space: nowrap; }
+.assinatura span { white-space: nowrap; }
+.assinatura i { font-style: normal; }
+@media (max-width: 599px) {
+  .assinatura span { display: block; }
+  .assinatura i { display: none; }
+}
 
 /* --- rodapé: mesma margem da página, texto legível para 40+ ------------------------- */
 .pagina-capa .rodape { border-top: 1px solid var(--linha-escura); color: var(--texto-2); }
@@ -1113,10 +1121,16 @@ html:not(.js) .abre-sombra {
     transition: transform .6s var(--sai);
   }
   .pagina-capa .barra-mobile .btn {
-    min-height: 52px; padding: 0 22px; font-size: 1rem;
+    width: 56px; height: 56px; min-height: 56px; padding: 0; border-radius: 50%;
+    font-size: 0; line-height: 0; color: transparent;
     box-shadow: 0 10px 28px -8px rgba(0,0,0,.75), 0 0 0 1px rgba(10,10,10,.35);
   }
-  .na-abertura .pagina-capa .barra-mobile, .cta-a-vista .pagina-capa .barra-mobile { transform: translateY(220%); }
+  .pagina-capa .barra-mobile .btn::after {
+    content: ""; width: 26px; height: 26px; background: var(--preto);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-7.2L7 22.4V18H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-7.2L7 22.4V18H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  .na-abertura .pagina-capa .barra-mobile, .cta-a-vista .pagina-capa .barra-mobile,
+  .sem-flutuante .pagina-capa .barra-mobile { transform: translateY(220%); }
   .pagina-capa .rodape { padding-bottom: 96px; }
 }
 

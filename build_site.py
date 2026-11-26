@@ -481,8 +481,7 @@ def rodape(corretor: dict, prefixo: str) -> str:
     </div>
   </div>
   <div class="wrap rodape-legal">
-    <p><strong>{e(corretor['nome_pessoa'])}</strong> · {e(corretor['titulo_profissional'])}
-       · <strong>{e(corretor['creci'])}</strong></p>
+    <p class="assinatura"><span><strong>{e(corretor['nome_pessoa'])}</strong></span><i> · </i><span>{e(corretor['titulo_profissional'])}</span><i> · </i><span><strong>{e(corretor['creci'])}</strong></span></p>
     <p class="mini">Imagens e informações sujeitas a conferência em visita. Valores de
        condomínio e IPTU informados pelo proprietário e confirmados na documentação.</p>
   </div>
@@ -869,11 +868,11 @@ CAPA = {
     # No celular o título quebra em 3 linhas a partir desta palavra (fica o maior da página).
     "titulo_quebra_celular": "assinatura.",
     "apoio": ("Casas e apartamentos em Feira de Santana. "
-              "Você conhece a casa por dentro antes da visita."),
+              "A casa em destaque você percorre por dentro, antes da visita."),
     "botao": "Falar com Igor",
     "convite": "Role e abra a casa",
     "venda_titulo": ("Imóveis", "à venda."),
-    "venda_apoio": "Poucos imóveis. Cada um apresentado por inteiro, com o preço na página.",
+    "venda_apoio": "Poucos imóveis, com o preço na página.",
     "aluguel_sobrelinha": "Aluguel",
     "aluguel_titulo": ("Para alugar,", "o mesmo cuidado."),
     "aluguel_apoio": "O custo do mês aparece na ficha, antes da visita: aluguel, condomínio e IPTU informados.",
@@ -881,7 +880,7 @@ CAPA = {
     "quem_apoio": ("Do primeiro contato à entrega das chaves, é uma única pessoa. "
                    "Seu contato não é repassado e a sua negociação não muda de mãos."),
     "fatos": [("{anos} anos", "de corretagem em Feira de Santana"),
-              ("2ª geração", "formado ao lado do pai, corretor há mais de 40 anos"),
+              ("2ª geração", "formado ao lado do pai, que é corretor há mais de 40 anos"),
               ("1 corretor", "da visita ao contrato, na compra e no aluguel")],
     "quem_botao": "Agendar uma conversa",
     "dono_sobrelinha": "Para quem tem imóvel",
@@ -1217,7 +1216,7 @@ def pagina_home(corretor: dict, imoveis: list[dict], publicar: bool = False) -> 
   <h2 class="bloco-titulo" id="t-fecho" style="--larg:{larg(CAPA['fecho_titulo'])}" data-reveal>{titulo_linhas(CAPA['fecho_titulo'], 1)}</h2>
   <p class="bloco-apoio" {reveal(1, 120)}>{e(CAPA['fecho_apoio'].format(prazo=corretor['resposta_prometida']))}</p>
   <div class="acoes" {reveal(2, 120)}><a class="bt bt-cheio bt-grande" href="{wa_geral}" target="_blank" rel="noopener">{e(CAPA['fecho_botao'])}</a></div>
-  <p class="fecho-assinatura"><span>{e(corretor['nome_pessoa'])}</span> <span>· {e(corretor['titulo_profissional'])}</span> <span>· {e(corretor['creci'])}</span></p>
+  <p class="fecho-assinatura assinatura"><span>{e(corretor['nome_pessoa'])}</span><i> · </i><span>{e(corretor['titulo_profissional'])}</span><i> · </i><span>{e(corretor['creci'])}</span></p>
   </div>
 </section>"""
 

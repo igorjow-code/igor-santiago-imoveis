@@ -246,6 +246,19 @@
     Array.prototype.forEach.call(document.querySelectorAll('main .bloco .bt-cheio[href*="wa.me"]'), function (b) {
       olhoBotoes.observe(b);
     });
+    // ...e também enquanto as dúvidas ou o fecho estão na tela (ele cobria o "+" e o texto)
+    var blocosLivres = [];
+    var olhoBlocos = new IntersectionObserver(function (entradas) {
+      entradas.forEach(function (entrada) {
+        var i = blocosLivres.indexOf(entrada.target);
+        if (entrada.isIntersecting && i < 0) blocosLivres.push(entrada.target);
+        if (!entrada.isIntersecting && i >= 0) blocosLivres.splice(i, 1);
+      });
+      raiz.classList.toggle("sem-flutuante", blocosLivres.length > 0);
+    }, { rootMargin: "0px 0px -18% 0px" });
+    Array.prototype.forEach.call(document.querySelectorAll("main .faq, main .fecho"), function (b) {
+      olhoBlocos.observe(b);
+    });
   } else {
     raiz.classList.remove("na-abertura");
   }
@@ -298,7 +311,7 @@
     // "fim" é o risco mais grosso que ainda faz diferença: o bastante para cobrir os cantos.
     // Risco gigante (2,4x a diagonal) custava quadros no desktop sem mudar um pixel na tela.
     g = { vw: vw, vh: vh, bw: bw, bh: bh, base: bw * .052, fim: Math.max(vw * 1.2, vh * 1.4),
-          cx: vw / 2, cy: y0 + bh * .49, cresce: largo ? .7 : .22 };
+          cx: vw / 2, cy: y0 + bh * .49, cresce: largo ? 1 : .22 };
     pintar(performance.now());
   }
 
@@ -309,8 +322,8 @@
 
     // Três movimentos sobrepostos desde o primeiro pixel de rolagem (sem tempo morto):
     // os riscos engrossam, o conjunto desce ao centro e cresce, e o título sai.
-    var e = 1 - Math.pow(1 - lim(p / .5), 2.6);
-    var c = suave(lim(p / .30));
+    var e = Math.pow(lim(p / .26), 1.35);
+    var c = suave(lim(p / .20));
     var escala = 1 + g.cresce * c;
     var sw = g.base * escala * Math.pow(g.fim / g.base, e);
     if (pulso) {                                   // convite: os riscos "respiram" enquanto ninguém rola
@@ -355,14 +368,14 @@
       imagem.setAttribute("y", (topo + (rh - h) * foco[1]).toFixed(1));
     }
 
-    var sai = lim(p / .18);
+    var sai = lim(p / .11);                     // o título sobe e some antes de a janela chegar nele
     // a sobrelinha é a primeira a sair, antes de a janela passar por ela
     if (sobre && abre.classList.contains("chegou")) sobre.style.opacity = (1 - lim(p / .04)).toFixed(3);
-    capaDy = -34 * sai;
+    capaDy = -64 * sai;
     capa.style.opacity = (1 - sai).toFixed(3);
     capa.style.transform = "translate3d(0," + capaDy.toFixed(1) + "px,0)";
     capa.style.visibility = sai >= 1 ? "hidden" : "visible";
-    var entra = suave(lim((p - .3) / .28));     // sem platô: a ficha entra logo depois de a casa abrir
+    var entra = suave(lim((p - .27) / .27));    // sem platô: a ficha entra logo depois de a casa abrir
     if (sombra) sombra.style.opacity = entra.toFixed(3);
     if (destaque) {
       destaque.style.opacity = entra.toFixed(3);
