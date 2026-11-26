@@ -114,11 +114,98 @@ class SiteTests(unittest.TestCase):
         self.assertIn('1 suíte', b.resumo(dict(self.imoveis[0], suites=1, finalidade='residencial')))
 
     def test_catalogo_publico_e_apenas_de_alugueis(self):
+        # IS-42 (26/11/2026) trouxe a venda de volta ao site: o menu e o rodapé falam
+        # de venda em toda página. O que continua valendo é a LISTA do catálogo de
+        # aluguel não misturar imóvel à venda.
         documento = b.pagina_catalogo(self.corretor, self.imoveis, publicar=True)
         self.assertIn('Imóveis para alugar em Feira de Santana', documento)
-        self.assertNotIn('venda', documento.lower())
         self.assertNotIn('data-operacao="venda"', documento)
-        self.assertNotIn('Venda de imóveis', b.jsonld(self.corretor, self.imoveis, 'imoveis.html', []))
+        lista = documento.split('id="lista"', 1)[1].split('</section>', 1)[0]
+        for imovel in self.imoveis:
+            if imovel['operacao'] == 'venda':
+                self.assertNotIn(imovel['slug'], lista)
+        self.assertIn('Compra e venda de imóveis', b.jsonld(self.corretor, self.imoveis, 'imoveis.html', []))
+
+    def test_capa_so_tem_venda_e_aluguel_fica_nas_paginas_de_aluguel(self):
+        capa = b.pagina_home(self.corretor, self.imoveis)
+        self.assertIn('pagina-capa', capa)
+        self.assertNotIn('class="card', capa)
+        self.assertNotIn('quero-alugar', capa)
+        vendas = [i for i in self.imoveis if i['operacao'] == 'venda' or i.get('preco_venda')]
+        alugueis = [i for i in self.imoveis if i['operacao'] == 'locacao' and not i.get('preco_venda')]
+        self.assertTrue(vendas and alugueis)
+        for imovel in vendas:
+            self.assertIn(f'href="imovel/{imovel["slug"]}.html"', capa)
+        for imovel in alugueis:
+            self.assertNotIn(f'imovel/{imovel["slug"]}.html', capa)
+        # a capa só aponta para o aluguel, com o menor custo calculado dos dados
+        for finalidade, pagina in (('residencial', 'alugar-residencial.html'), ('comercial', 'alugar-sala-comercial.html')):
+            menor, _ = b.menor_aluguel(self.imoveis, finalidade)
+            self.assertIn(f'href="{pagina}"', capa)
+            self.assertIn(b.moeda(menor), capa)
+            segmento = b.pagina_segmento(self.corretor, self.imoveis, finalidade)
+            self.assertIn('id="quero-alugar"', segmento)
+            for imovel in alugueis:
+                self.assertEqual(f'imovel/{imovel["slug"]}.html' in segmento, imovel['finalidade'] == finalidade)
+        # ordem: do maior para o menor valor de venda
+        posicoes = [capa.index(f'href="imovel/{i["slug"]}.html"') for i in b.a_venda(self.imoveis)]
+        self.assertEqual(posicoes, sorted(posicoes))
+
+    def test_capa_sem_foto_nao_prende_palco_nem_inventa_imagem(self):
+        capa = b.pagina_home(self.corretor, self.imoveis)
+        self.assertIn('abre--sem-foto', capa)
+        self.assertNotIn('<image ', capa)
+        self.assertNotIn('class="destaque"', capa)
+        self.assertNotIn('class="linha-foto"', capa)
+        self.assertIn('<h1 style="--larg:', capa)
+
+    def test_capa_com_foto_passeio_e_tela_sem_movimento(self):
+        with tempfile.TemporaryDirectory() as pasta:
+            ficha = Path(pasta) / 'casa' / 'ficha.md'
+            fotos = ficha.parent / 'fotos-tratadas'
+            fotos.mkdir(parents=True)
+            (fotos / '01-fachada.webp').write_bytes(
+                b'RIFF\x00\x00\x00\x00WEBPVP8X\x0a\x00\x00\x00' + b'\x00\x00\x00\x00'
+                + (1209).to_bytes(3, 'little') + (1599).to_bytes(3, 'little'))
+            casa = dict(next(i for i in self.imoveis if i['operacao'] == 'venda'),
+                        slug='casa-teste', destaque=True, area=236.91, area_terreno=200,
+                        passeio_url='https://passeio.example.invalid/', foco_capa='50% 46%',
+                        _arquivo=ficha)
+            capa = b.pagina_home(self.corretor, [casa] + self.imoveis)
+            # com movimento: máscara SVG; sem movimento ou sem JS: a mesma foto num <img> comum
+            self.assertIn('<img class="abre-foto" src="assets/imoveis/casa-teste/01-fachada.webp" width="1210" height="1600"', capa)
+            self.assertIn('<image href="assets/imoveis/casa-teste/01-fachada.webp"', capa)
+            self.assertIn('data-foto-l="1210" data-foto-a="1600" data-foco="50% 46%"', capa)
+            self.assertIn('<link rel="preload" as="image" href="assets/imoveis/casa-teste/01-fachada.webp" fetchpriority="high" />', capa)
+            self.assertIn('236,91 m² construídos · terreno de 200 m²', capa)
+            self.assertEqual(capa.count('href="https://passeio.example.invalid/" target="_blank" rel="noopener"'), 3)
+            pagina_ficha = b.pagina_imovel(self.corretor, casa, [casa])
+            self.assertIn('href="https://passeio.example.invalid/"', pagina_ficha)
+            self.assertIn('<span class="selo selo-op">À venda</span>', pagina_ficha)
+            self.assertNotIn('Para alugar', pagina_ficha)
+            self.assertRegex(pagina_ficha, r'<title>[^<]* à venda[^<]*</title>')
+        css = (b.ASSETS / 'styles.css').read_text(encoding='utf-8')
+        # nada da capa nasce invisível fora do modo .js (movimento reduzido não recebe .js)
+        capa_css = re.sub(r'/\*.*?\*/', '', css.split('CAPA — redesenho', 1)[1], flags=re.S)
+        achadas = 0
+        for regra in re.findall(r'([^{}]+)\{([^{}]*opacity:\s*0[;\s}][^{}]*)\}', capa_css):
+            seletores = [s.strip() for s in regra[0].split(',')]
+            if all(re.fullmatch(r'from|to|[\d.]+%', s) for s in seletores):
+                continue  # passo de @keyframes: só roda dentro de regra .js
+            achadas += 1
+            self.assertTrue(all(s.startswith('.js ') or '.nav' in s or '.topo' in s for s in seletores), regra[0])
+        self.assertGreater(achadas, 3)
+
+    def test_metragem_com_virgula_e_valor_de_venda(self):
+        with tempfile.TemporaryDirectory() as pasta:
+            ficha = b.ler_ficha(self.ficha(pasta, 'area: 236,91\narea_terreno: 200\npreco: 1600000\noperacao: venda\ntipo: Casa'))
+            self.assertEqual((ficha['area'], ficha['area_terreno']), (236.91, 200))
+            self.assertEqual(b.metragem(ficha['area']), '236,91')
+            self.assertEqual(b.metragem(ficha['area_terreno']), '200')
+            self.assertIn(('Área construída', '236,91 m²'), b.specs(ficha))
+            self.assertEqual(b.valor_venda(ficha), 1600000)
+            with self.assertRaises(ValueError):
+                b.ler_ficha(self.ficha(pasta, 'preco: 1600,50'))
 
     def test_metadata_social_e_canonical_da_home(self):
         home = b.pagina_home(self.corretor, self.imoveis, publicar=True)
@@ -301,8 +388,17 @@ class SiteTests(unittest.TestCase):
                 self.assertIn('noindex, nofollow' if p.name in {'404.html', 'obrigado.html'} else 'content="index, follow"', documento, str(p))
                 self.assertIn('<link rel="canonical"', documento)
                 self.assertNotIn('fonts.googleapis.com', documento)
-            self.assertIn('data-netlify="true"', (saida / 'index.html').read_text(encoding='utf-8'))
+            # o formulário de aluguel saiu da capa (capa só venda, IS-43) e mora nas páginas de aluguel
+            self.assertIn('data-netlify="true"', (saida / 'alugar-residencial.html').read_text(encoding='utf-8'))
             home = (saida / 'index.html').read_text(encoding='utf-8')
+            self.assertNotIn('data-netlify', home)
+            # todo endereço que existia antes do redesenho continua existindo
+            for antiga in ('index.html', 'imoveis.html', 'alugar-residencial.html', 'alugar-sala-comercial.html',
+                           'administracao.html', 'sobre.html', 'privacidade.html', 'obrigado.html', '404.html'):
+                self.assertTrue((saida / antiga).is_file(), antiga)
+            # nenhum link interno da capa aponta para página que o build não gerou
+            for href in re.findall(r'href="([^"#:]+\.html)(?:#[^"]*)?"', home):
+                self.assertTrue((saida / href).is_file(), href)
             self.assertIn('<link rel="canonical" href="https://igorsantiagoimoveis.com.br/" />', home)
             self.assertIn('<meta property="og:image"', home)
             catalogo = (saida / 'imoveis.html').read_text(encoding='utf-8')

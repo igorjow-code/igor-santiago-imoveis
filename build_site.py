@@ -49,6 +49,8 @@ COORDENADAS_BAIRRO = {
 OBRIGATORIOS = ("slug", "titulo", "operacao", "finalidade", "tipo", "bairro", "cidade", "preco")
 NUMERICOS = ("area", "area_terreno", "quartos", "suites", "vagas",
              "preco", "preco_venda", "condominio", "iptu")
+# Metragem aceita vírgula decimal ("236,91"); os demais continuam inteiros.
+DECIMAIS = ("area", "area_terreno")
 BOOLEANOS = ("destaque", "demo", "rascunho")
 ALIASES = {"aluguel": "preco", "valor_aluguel": "preco", "taxa_condominio": "condominio"}
 DATAS = ("disponivel_a_partir",)
@@ -107,7 +109,10 @@ def _coerce(dados: dict, caminho: Path, origens: dict | None = None) -> None:
         valor = dados.get(chave, "")
         if valor != "":
             try:
-                dados[chave] = int(valor)
+                if chave in DECIMAIS and re.fullmatch(r"\d+,\d{1,2}", str(valor)):
+                    dados[chave] = float(str(valor).replace(",", "."))
+                else:
+                    dados[chave] = int(valor)
             except (ValueError, TypeError) as exc:
                 nome = (origens or {}).get(chave, chave)
                 raise ValueError(f"{caminho}: campo '{nome}' = {valor!r} não é número inteiro") from exc
@@ -199,6 +204,13 @@ def moeda(valor: int) -> str:
     return "R$ " + f"{valor:,}".replace(",", ".")
 
 
+def metragem(valor) -> str:
+    """236.91 -> '236,91'; 200 -> '200'. Nunca arredonda a área informada."""
+    if isinstance(valor, float) and not valor.is_integer():
+        return f"{valor:.2f}".rstrip("0").replace(".", ",")
+    return str(int(valor))
+
+
 def preco_rotulo(imovel: dict) -> str:
     if imovel.get("operacao") == "locacao":
         return 'Aluguel ' + moeda(imovel["preco"]) + '<span class="por-mes">/mês</span>'
@@ -246,11 +258,11 @@ def disponibilidade(imovel: dict, hoje: date | None = None) -> str:
 def specs(imovel: dict) -> list[tuple[str, str]]:
     itens: list[tuple[str, str]] = []
     if imovel.get("area"):
-        itens.append(("Área construída", f"{imovel['area']} m²"))
+        itens.append(("Área construída", f"{metragem(imovel['area'])} m²"))
     elif imovel.get('area_referencia'):
         itens.append(('Área da planta padrão', imovel['area_referencia']))
     if imovel.get("area_terreno"):
-        itens.append(("Terreno", f"{imovel['area_terreno']} m²"))
+        itens.append(("Terreno", f"{metragem(imovel['area_terreno'])} m²"))
     if imovel.get("quartos") and imovel.get("finalidade") != "comercial":
         itens.append(("Quartos", str(imovel["quartos"])))
     if imovel.get("suites") and imovel.get("finalidade") != "comercial":
@@ -281,7 +293,7 @@ def specs(imovel: dict) -> list[tuple[str, str]]:
 def resumo(imovel: dict) -> str:
     partes = []
     if imovel.get("area"):
-        partes.append(f"{imovel['area']} m²")
+        partes.append(f"{metragem(imovel['area'])} m²")
     if imovel.get("quartos") and imovel.get("finalidade") != "comercial":
         quartos = imovel["quartos"]
         partes.append(f"{quartos} {'quarto' if quartos == 1 else 'quartos'}")
@@ -413,12 +425,14 @@ def marca_simbolo(prefixo: str = "") -> str:
 
 
 def cabecalho(corretor: dict, ativo: str, prefixo: str) -> str:
-    itens = [("index.html", "Início"), ("imoveis.html", "Alugar"),
-             ("alugar-sala-comercial.html", "Salas comerciais"),
-             ("administracao.html", "Administração"), ("sobre.html", "Sobre")]
+    # "Comprar" aponta para a seção da capa até comprar.html existir (etapa seguinte).
+    itens = [("index.html#a-venda", "Comprar"), ("alugar-residencial.html", "Alugar"),
+             ("alugar-sala-comercial.html", "Comercial"),
+             ("administracao.html", "Anunciar imóvel"), ("sobre.html", "Sobre")]
+    marcado = {"imoveis.html": "alugar-residencial.html"}.get(ativo, ativo)
     partes = []
     for href, rotulo in itens:
-        classe = ' class="ativo"' if href == ativo else ""
+        classe = ' class="ativo"' if href == marcado else ""
         partes.append(f'<a href="{prefixo}{href}"{classe}>{rotulo}</a>')
     links = "".join(partes)
     classe = "topo" if ativo == "index.html" else "topo topo--fixado"
@@ -428,10 +442,10 @@ def cabecalho(corretor: dict, ativo: str, prefixo: str) -> str:
       {marca_simbolo(prefixo)}
       <span class="marca-nome">Igor Santiago</span>
     </a>
-    <nav class="nav" aria-label="Principal">{links}</nav>
-    <a class="btn btn-wa nav-wa" href="{e(wa_link(corretor, corretor['mensagem_whatsapp_geral']))}"
+    <nav class="nav" id="menu-principal" aria-label="Principal">{links}</nav>
+    <a class="btn btn-principal nav-wa" href="{e(wa_link(corretor, corretor['mensagem_whatsapp_geral']))}"
        target="_blank" rel="noopener">WhatsApp</a>
-    <button class="menu-btn" aria-label="Abrir menu" aria-expanded="false">
+    <button class="menu-btn" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu-principal">
       <span></span><span></span><span></span>
     </button>
   </div>
@@ -450,9 +464,10 @@ def rodape(corretor: dict, prefixo: str) -> str:
       <p class="rodape-pos">{e(corretor['posicionamento'])}</p>
     </div>
     <nav class="rodape-links" aria-label="Rodapé">
-      <a href="{prefixo}imoveis.html">Imóveis para alugar</a>
+      <a href="{prefixo}index.html#a-venda">Imóveis à venda</a>
       <a href="{prefixo}alugar-residencial.html">Aluguel residencial</a>
-      <a href="{prefixo}administracao.html">Administração</a>
+      <a href="{prefixo}alugar-sala-comercial.html">Aluguel comercial</a>
+      <a href="{prefixo}administracao.html">Anunciar imóvel</a>
       <a href="{prefixo}sobre.html">Sobre o corretor</a>
       <a href="{prefixo}privacidade.html">Privacidade</a>
     </nav>
@@ -492,7 +507,8 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
            imoveis: list[dict], ativo: str, prefixo: str = "",
            mensagem_wa: str | None = None, extra_js: str = "",
            publicar: bool = False, jsonld: str = "", no_pagina: str | None = None,
-           imovel: dict | None = None) -> str:
+           imovel: dict | None = None, preload: str = "",
+           social: tuple[str, str] | None = None) -> str:
     mensagem_wa = mensagem_wa or corretor["mensagem_whatsapp_geral"]
     no_pagina = no_pagina or ativo or "404.html"
     indexar = publicar and no_pagina not in {"obrigado.html", "404.html"}
@@ -506,8 +522,12 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
         if fotos:
             imagem = base + "/" + foto_url(imovel, fotos[0])
             imagem_alt = f"{imovel['tipo']} em {imovel['bairro']}, {imovel['cidade']}"
+    if social:
+        imagem, imagem_alt = social
     preload_imagem = (f'<link rel="preload" as="image" href="{e(imagem)}" fetchpriority="high" />'
-                      if imovel else '')
+                      if imovel else
+                      f'<link rel="preload" as="image" href="{e(prefixo + preload)}" fetchpriority="high" />'
+                      if preload else '')
     return f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -535,16 +555,17 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
 {preload_imagem}
 <link rel="preload" href="{prefixo}assets/fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="{prefixo}assets/fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="stylesheet" href="{prefixo}assets/styles.css?v=20261009-local-fonts" />
+<link rel="stylesheet" href="{prefixo}assets/styles.css?v=20261126-capa" />
 <link rel="icon" href="{prefixo}assets/favicon.png" type="image/png" />
 <link rel="apple-touch-icon" href="{prefixo}assets/favicon-512.png" />
 <script>
+  document.documentElement.className += " na-abertura";
   if (!window.matchMedia || !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {{
     if ("IntersectionObserver" in window) document.documentElement.className += " js";
   }}
 </script>
 </head>
-<body class="{'pagina-home' if ativo == 'index.html' else 'pagina-clara'}">
+<body class="{'pagina-home pagina-capa' if ativo == 'index.html' else 'pagina-clara'}">
 <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
 <span class="topo-sentinela" aria-hidden="true"></span>
 {barra_demo(imoveis)}
@@ -554,7 +575,7 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
 </main>
 {rodape(corretor, prefixo)}
 {wa_fixo(corretor, mensagem_wa, imovel)}
-<script src="{prefixo}assets/script.js"></script>
+<script src="{prefixo}assets/script.js?v=20261126-capa"></script>
 {extra_js}
 </body>
 </html>
@@ -679,7 +700,7 @@ def recibo_ficha(corretor: dict, imovel: dict) -> str:
     if imovel.get('preco_venda'):
         mensagem = f'Olá, Igor. Tenho interesse na compra do imóvel "{imovel["titulo"]}", anunciado por {moeda(imovel["preco_venda"])}. Podemos conversar?'
         venda = f'<div class="opcao-venda"><h3>Também disponível para compra</h3><p class="valor-venda">{moeda(imovel["preco_venda"])}</p><a class="btn btn-largo" href="{e(wa_link(corretor, mensagem))}" target="_blank" rel="noopener">Conversar sobre a compra</a></div>'
-    return f'''<aside class="recibo-ficha"><h2>Conta do imóvel</h2>
+    return f'''<aside class="recibo-ficha"><h2>{'Valor do imóvel' if imovel['operacao'] == 'venda' else 'Conta do imóvel'}</h2>
 {conta(imovel, 'painel')}{aviso}
 <a class="btn btn-wa btn-largo" target="_blank" rel="noopener" href="{e(wa_imovel(corretor, imovel))}">{'Avisar quando liberar' if reservado else 'Falar sobre este imóvel'}</a>
 {venda}
@@ -816,7 +837,7 @@ def pagina_segmento(corretor: dict, imoveis: list[dict], finalidade: str, public
     corpo = f'''<section class="cabeca-pagina"><div class="wrap"><h1>{titulo}</h1><p>{texto}</p>
 <a class="btn btn-wa" href="{e(wa_link(corretor, mensagem))}" target="_blank" rel="noopener">Falar com Igor</a></div></section>
 <section class="secao"><div class="wrap"><div class="grade-cards">{cards}</div>
-<a class="link-seta" href="index.html#quero-alugar">Conte o que procura</a></div></section>{secao_percurso(conta_de=lista[0] if lista else None)}{secao_objecoes(corretor)}'''
+<a class="link-seta" href="#quero-alugar">Conte o que procura</a></div></section>{secao_percurso(conta_de=lista[0] if lista else None)}{secao_objecoes(corretor)}{formulario_lead(corretor, publicar)}'''
     return pagina(titulo + ' — Igor Santiago Imóveis', texto, corpo, corretor, imoveis, nome, mensagem_wa=mensagem, publicar=publicar, jsonld=jsonld(corretor, imoveis, nome, faq_global(corretor)))
 
 
@@ -832,51 +853,359 @@ def pagina_administracao(corretor: dict, imoveis: list[dict], publicar: bool = F
     return pagina('Administração de imóveis — Igor Santiago Imóveis', 'Administração de imóveis para proprietários em Feira de Santana.', corpo, corretor, imoveis, 'administracao.html', mensagem_wa=msg, publicar=publicar, jsonld=jsonld(corretor, imoveis, 'administracao.html', []))
 
 
+# --------------------------------------------------------------------------
+# capa — redesenho "Marca forte" (IS-42, IS-43)
+# --------------------------------------------------------------------------
+
+# Texto da capa num lugar só. IS-41: só vira definitivo depois que Igor aprovar.
+# Regras de copy em igris-os/clientes/is-imoveis/redesign-2026-11/content-plan.md.
+CAPA = {
+    "titulo_pagina": "Igor Santiago Imóveis — alto padrão em Feira de Santana",
+    "descricao": ("Corretor de imóveis em Feira de Santana, CRECI-BA 28.140. Venda e aluguel, "
+                  "residencial e comercial. Conheça cada imóvel por dentro antes da visita."),
+    "titulo": ("Alto padrão", "tem assinatura."),
+    "apoio": ("Imóveis selecionados em Feira de Santana. Você percorre a casa antes da visita "
+              "e trata com um único corretor, do primeiro contato à escritura."),
+    "botao": "Falar com Igor",
+    "convite": "Role e abra a casa",
+    "venda_titulo": ("À venda", "agora"),
+    "venda_apoio": "Poucos imóveis. Cada um apresentado por inteiro, com o preço à vista.",
+    "aluguel_sobrelinha": "Aluguel",
+    "aluguel_titulo": ("Para alugar,", "o mesmo cuidado."),
+    "aluguel_apoio": "O custo mensal informado aparece na ficha antes da visita: aluguel, condomínio e IPTU.",
+    "quem_titulo": ("Você fala com", "quem assina."),
+    "quem_apoio": ("Do primeiro contato à entrega das chaves, é uma única pessoa. "
+                   "Seu contato não é repassado e a sua negociação não muda de mãos."),
+    "fatos": [("{anos} anos", "de corretagem em Feira de Santana"),
+              ("2ª geração", "formado ao lado do pai, corretor há mais de 40 anos"),
+              ("1 corretor", "da visita à escritura, na compra e no aluguel")],
+    "quem_botao": "Agendar uma conversa",
+    "dono_sobrelinha": "Para quem tem imóvel",
+    "dono_titulo": ("Seu imóvel não é", "mais um anúncio."),
+    "dono_apoio": ("Em portal, ele divide a tela com dezenas de outros. Veja como a casa do "
+                   "Terra Azul foi apresentada: página própria, passeio cômodo a cômodo e fotos "
+                   "reais. Quem chega para a visita já conhece a casa."),
+    "dono_apoio_sem_passeio": ("Em portal, ele divide a tela com dezenas de outros. Aqui, a "
+                               "conversa começa pelo imóvel: documentação, preço e a forma de "
+                               "apresentar, antes de qualquer compromisso."),
+    "dono_botao": "Apresentar meu imóvel",
+    "dono_passeio": "Ver o passeio do Terra Azul",
+    "faq_titulo": ("Antes de", "você perguntar"),
+    "fecho_titulo": ("O próximo passo", "é uma conversa."),
+    "fecho_apoio": "Diga o que procura, ou o que pretende vender. Quem responde sou eu, em até {prazo}.",
+    "fecho_botao": "Falar com Igor no WhatsApp",
+    "mensagem_dono": "Olá, Igor. Tenho um imóvel e quero saber como você apresenta e anuncia.",
+}
+
+
+def faq_capa(corretor: dict) -> list[dict]:
+    return [
+        {"pergunta": "Você trabalha com venda e com aluguel?",
+         "resposta": "Sim. Venda e aluguel, residencial e comercial, em Feira de Santana. O atendimento é o mesmo nos dois casos: direto comigo, do primeiro contato à assinatura."},
+        {"pergunta": "Como funciona o passeio pela casa?",
+         "resposta": "É uma página do próprio imóvel que percorre a casa cômodo a cômodo, com fotos reais. Quando há móveis simulados por inteligência artificial, eles aparecem identificados. Você abre no celular e decide pela visita já conhecendo a casa."},
+        {"pergunta": "Como agendar uma visita?",
+         "resposta": "Pelo WhatsApp. Combinamos o dia e eu acompanho a visita pessoalmente. A localização exata do imóvel é enviada no agendamento."},
+        {"pergunta": "O preço aparece no site?",
+         "resposta": "Sempre. Na venda, o valor do imóvel. No aluguel, o custo mensal informado: aluguel, condomínio e IPTU."},
+        {"pergunta": "Em que região você atende?",
+         "resposta": f"{corretor['atuacao']}."},
+        {"pergunta": "Tenho um imóvel. Como anunciar com você?",
+         "resposta": "Me chame no WhatsApp com o endereço, a metragem e a documentação que já tem. Conversamos sobre o imóvel, o preço e a forma de apresentar antes de qualquer compromisso."},
+    ]
+
+
+def valor_venda(imovel: dict) -> int:
+    return imovel["preco"] if imovel["operacao"] == "venda" else imovel.get("preco_venda", 0)
+
+
+def a_venda(imoveis: list[dict]) -> list[dict]:
+    """Imóveis que podem ser comprados: venda pura ou aluguel que também aceita compra."""
+    lista = [i for i in imoveis
+             if (i["operacao"] == "venda" or i.get("preco_venda"))
+             and i.get("situacao") not in {"alugado", "vendido"}]
+    return sorted(lista, key=lambda i: -valor_venda(i))
+
+
+def nome_curto(imovel: dict) -> str:
+    return imovel.get("nome_curto") or nome_predio(imovel) or imovel["titulo"]
+
+
+def menor_aluguel(imoveis: list[dict], finalidade: str) -> tuple[int, int] | None:
+    """(menor custo mensal informado, quantidade) dos aluguéis de uma finalidade."""
+    valores = [custo_mensal(i) for i in imoveis
+               if i["operacao"] == "locacao" and i["finalidade"] == finalidade
+               and i.get("situacao") not in {"alugado", "vendido"}]
+    return (min(valores), len(valores)) if valores else None
+
+
+# Avanço de cada caractere da Archivo 900 em caixa alta, em "em" (medido no
+# navegador com a fonte do site, 26/11/2026). Serve para o título ocupar a largura
+# exata do recipiente sem quebrar linha: font-size = largura / --larg.
+LARGURA_ARCHIVO: dict[str, float] = {
+    "A": .778, "B": .778, "C": .778, "D": .778, "E": .722, "F": .667, "G": .833, "H": .833,
+    "I": .369, "J": .667, "K": .833, "L": .667, "M": .972, "N": .833, "O": .833, "P": .722,
+    "Q": .833, "R": .778, "S": .722, "T": .722, "U": .833, "V": .778, "W": 1.0, "X": .778,
+    "Y": .778, "Z": .722, " ": .18, ".": .333, ",": .333, "?": .611, "!": .333, ":": .333,
+    ";": .333, "-": .333, "ª": .4, "º": .4, "$": .611, "/": .306, "+": .66, "&": .889,
+    **{str(n): .667 for n in range(10)},
+}
+LARGURA_PADRAO = 0.78
+ENTRELETRA = -0.035
+
+
+def larg(partes: tuple[str, ...]) -> str:
+    """Largura, em "em", da linha mais comprida de um título em caixa alta."""
+    def linha(texto: str) -> float:
+        maiusculas = _sem_acento(texto.upper())   # acento não muda o avanço da letra
+        return sum(LARGURA_ARCHIVO.get(c, LARGURA_PADRAO) + ENTRELETRA for c in maiusculas)
+    # 3% de folga: arredondamento de subpixel não pode cortar a última letra.
+    return f"{max(linha(t) for t in partes) * 1.03:.3f}"
+
+
+def titulo_linhas(partes: tuple[str, str], acento: int = 1) -> str:
+    """Título em duas linhas; cada linha sobe sozinha e uma delas leva o laranja."""
+    saida = []
+    for n, texto in enumerate(partes):
+        miolo = f"<em>{e(texto)}</em>" if n == acento else e(texto)
+        saida.append(f'<span class="ln"><b>{miolo}</b></span>')
+    return " ".join(saida)
+
+
+def linha_imovel(imovel: dict, prefixo: str = "", n: int = 0) -> str:
+    """Linha da lista: o gesto que substitui o card na direção Marca forte."""
+    fotos = fotos_imovel(imovel)
+    foto = ""
+    if fotos:
+        miniatura = fotos[0].parent / "_miniaturas" / "capa.webp"
+        dimensoes = dimensoes_imagem(miniatura if miniatura.is_file() else fotos[0])
+        tamanho = f'width="{dimensoes[0]}" height="{dimensoes[1]}" ' if dimensoes else ""
+        foco = e(imovel.get("foco_capa", "50% 50%"))
+        foto = (f'<div class="linha-foto"><img src="{e(foto_card_url(imovel, fotos[0], prefixo))}" '
+                f'alt="{e(imovel["tipo"])} em {e(imovel["bairro"])}, {e(imovel["cidade"])}" {tamanho}'
+                f'style="object-position:{foco}" loading="lazy" decoding="async" /></div>')
+    operacao = "À venda" if imovel["operacao"] == "venda" else "À venda ou para alugar"
+    nome = nome_curto(imovel)
+    local = imovel["cidade"] if imovel["bairro"] == nome else imovel["bairro"]
+    dados = " · ".join(p for p in (local, resumo(imovel),
+                                   "mobiliado" if imovel.get("mobiliado") == "sim" else "") if p)
+    return f"""<a class="linha{'' if foto else ' linha--sem-foto'}" href="{prefixo}imovel/{e(imovel['slug'])}.html" {reveal(n, 110)}>
+  {foto}
+  <div class="linha-texto"><span class="linha-tipo">{e(imovel['tipo'])} · {operacao}</span>
+    <h3>{e(nome)}</h3><span class="linha-dados">{e(dados)}</span></div>
+  <div class="linha-preco">{moeda(valor_venda(imovel))}</div>
+</a>"""
+
+
+def retrato_capa(corretor: dict) -> str:
+    for campo in ("foto_capa", "foto"):
+        valor = corretor.get(campo, PENDENTE)
+        if not valor or valor == PENDENTE:
+            continue
+        arquivo = (ROOT / valor).resolve()
+        if not arquivo.is_relative_to(ASSETS.resolve()) or not arquivo.is_file():
+            continue
+        dimensoes = dimensoes_imagem(arquivo)
+        tamanho = f'width="{dimensoes[0]}" height="{dimensoes[1]}" ' if dimensoes else ""
+        url = quote(arquivo.relative_to(ROOT).as_posix(), safe="/")
+        return (f'<div class="retrato" data-reveal><img src="{e(url)}" {tamanho}'
+                'alt="Igor Santiago, corretor de imóveis" loading="lazy" decoding="async" /></div>')
+    return ""
+
+
+def capa_abertura(corretor: dict, destaque: dict | None) -> tuple[str, str]:
+    """Momento assinatura: os telhados da logo riscam, abrem e mostram a casa.
+    Devolve (html, url da foto para preload)."""
+    wa = e(wa_link(corretor, corretor["mensagem_whatsapp_geral"]))
+    fotos = fotos_imovel(destaque) if destaque else []
+    riscos = '<polyline class="risco" pathLength="1"/>' * 5
+    sobrelinha = f"{e(corretor['titulo_profissional'])} · {e(corretor['creci'])}"
+    convite = (f'<p class="capa-convite" aria-hidden="true"><span></span>{e(CAPA["convite"])}</p>'
+               if fotos else '')
+    texto = f"""<div class="capa-texto">
+        <p class="capa-sobre">{sobrelinha}</p>
+        <h1 style="--larg:{larg(CAPA['titulo'])}">{titulo_linhas(CAPA['titulo'])}</h1>
+        <p class="capa-apoio">{e(CAPA['apoio'])}</p>
+        <div class="acoes"><a class="bt bt-cheio" href="{wa}" target="_blank" rel="noopener">{e(CAPA['botao'])}</a></div>
+        {convite}
+      </div>"""
+    if not fotos:
+        # Sem foto real não existe casa pra abrir: os telhados ficam em laranja, parados.
+        return (f"""<section class="abre abre--sem-foto" aria-label="Abertura">
+    <div class="palco">
+      <svg class="abre-svg" aria-hidden="true" focusable="false">
+        <defs><mask id="telhados" maskUnits="userSpaceOnUse"><g>{riscos}</g></mask></defs>
+        <rect width="100%" height="100%" fill="#eb6316" mask="url(#telhados)"/>
+      </svg>
+      {texto}
+    </div>
+  </section>""", "")
+
+    foto = fotos[0]
+    url = foto_url(destaque, foto)
+    largura, altura = dimensoes_imagem(foto) or (900, 1200)
+    foco = destaque.get("foco_capa", "50% 50%")
+    alt = f"{destaque['tipo']} em {destaque['bairro']}, {destaque['cidade']}"
+    linhas_titulo = [p.strip() for p in destaque.get("titulo_capa", "").split("|") if p.strip()]
+    titulo_destaque = "<br>".join(e(p) for p in linhas_titulo) or e(nome_curto(destaque))
+    medidas = []
+    if destaque.get("area"):
+        medidas.append(f"{metragem(destaque['area'])} m² construídos")
+    if destaque.get("area_terreno"):
+        medidas.append(f"terreno de {metragem(destaque['area_terreno'])} m²")
+    chamada = f'<p class="destaque-chamada">{e(destaque["chamada"])}</p>' if destaque.get("chamada") else ""
+    ficha = f'imovel/{e(destaque["slug"])}.html'
+    if destaque.get("passeio_url"):
+        acoes = (f'<a class="bt bt-cheio" href="{e(destaque["passeio_url"])}" target="_blank" rel="noopener">Passear pela casa</a>'
+                 f'<a class="bt bt-fino" href="{ficha}">Ver a ficha</a>')
+    else:
+        acoes = f'<a class="bt bt-cheio" href="{ficha}">Ver a ficha</a>'
+    return (f"""<section class="abre" aria-label="Abertura" style="--foco:{e(foco)}"
+           data-foto-l="{largura}" data-foto-a="{altura}" data-foco="{e(foco)}">
+    <div class="palco">
+      <img class="abre-foto" src="{e(url)}" width="{largura}" height="{altura}" alt="{e(alt)}" fetchpriority="high" decoding="async" />
+      <svg class="abre-svg" aria-hidden="true" focusable="false">
+        <defs><mask id="telhados" maskUnits="userSpaceOnUse"><g>{riscos}</g></mask></defs>
+        <image href="{e(url)}" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" mask="url(#telhados)"/>
+      </svg>
+      <div class="abre-sombra"></div>
+      {texto}
+      <div class="destaque">
+        <span class="etiqueta">À venda · {e(destaque['bairro'])}</span>
+        <h2>{titulo_destaque}</h2>
+        <p class="destaque-preco"><b>{moeda(valor_venda(destaque))}</b><span>{e(' · '.join(medidas))}</span></p>
+        {chamada}
+        <div class="acoes">{acoes}</div>
+      </div>
+    </div>
+  </section>""", url)
+
+
 def pagina_home(corretor: dict, imoveis: list[dict], publicar: bool = False) -> str:
-    destaques = [i for i in imoveis if i["operacao"] == "locacao" and i.get("situacao") not in {"alugado", "vendido"}][:3]
-    cards = "".join(card(i, corretor, numero=n, atraso=(n - 1) * 90)
-                    for n, i in enumerate(destaques, 1))
-    corpo = f"""
-<section class="hero">
-  <img class="hero-marca-agua" src="assets/simbolo-leve.webp" alt="" aria-hidden="true" width="400" height="453" decoding="async" />
-  <div class="wrap hero-texto">
-    <div class="percurso-pontos" aria-hidden="true"><span class="ativo"></span><span></span><span></span><span></span></div>
-    <p class="sobrelinha" {reveal(0)}>Aluguel em Feira de Santana</p>
-    <h1 {reveal(1)}>Da primeira mensagem à <span class="acento">chave na mão</span></h1>
-    <p class="hero-sub" {reveal(2)}>Aluguel residencial e comercial em Feira de Santana, com opções para diferentes orçamentos e os encargos apresentados antes da visita.</p>
-    <div class="hero-botoes" {reveal(3)}>
-      <a class="btn btn-principal" target="_blank" rel="noopener" href="{e(wa_link(corretor, corretor['mensagem_whatsapp_geral']))}">Falar com Igor</a>
-      <a class="btn btn-contorno" href="imoveis.html">Ver imóveis para alugar</a>
-    </div>
-    <div class="hero-assinatura" {reveal(4)}>{retrato(corretor, 'hero-retrato')}<div><strong>{e(corretor['nome_pessoa'])}</strong><span>Corretor · {e(corretor['creci'])} · {e(corretor['anos_de_mercado'])} anos</span></div></div>
-  </div>
-</section>
+    vendas = a_venda(imoveis)
+    destaque = next((i for i in vendas if i.get("destaque") and fotos_imovel(i)),
+                    next((i for i in vendas if fotos_imovel(i)), None))
+    abertura, foto_capa = capa_abertura(corretor, destaque)
+    wa_geral = e(wa_link(corretor, corretor["mensagem_whatsapp_geral"]))
+    wa_dono = e(wa_link(corretor, CAPA["mensagem_dono"]))
 
-<section class="secao">
-  <div class="wrap">
-    <div class="secao-topo" {reveal(0)}>
-      <h2>Imóveis para alugar</h2>
-      <a class="link-seta" href="imoveis.html">Ver todos os imóveis</a>
-    </div>
-    <div class="grade-cards grade-cards--vitrine">{cards}</div>
-  </div>
-</section>
+    secao_venda = ""
+    if vendas:
+        linhas = "".join(linha_imovel(i, n=n) for n, i in enumerate(vendas))
+        secao_venda = f"""
+<section class="bloco" id="a-venda" aria-labelledby="t-venda">
+  <header class="bloco-cabeca">
+    <h2 class="bloco-titulo" id="t-venda" style="--larg:{larg(CAPA['venda_titulo'])}" data-reveal>{titulo_linhas(CAPA['venda_titulo'])}</h2>
+    <p class="bloco-apoio" {reveal(1, 120)}>{e(CAPA['venda_apoio'])}</p>
+  </header>
+  <div class="linhas">{linhas}</div>
+</section>"""
 
-{secao_percurso(conta_de=destaques[0] if destaques else None)}
-{secao_objecoes(corretor)}
-{secao_prova(corretor)}
-{secao_nao_faco(corretor)}
-{formulario_lead(corretor, publicar)}
-<section class="secao"><div class="wrap"><h2>Onde começa seu próximo capítulo?</h2><p class="sub">Me conte o que procura e quanto pretende investir por mês. Vamos conversar sobre os imóveis e as condições que combinam com sua busca.</p>
-<a class="btn btn-wa" href="{e(wa_link(corretor, 'Olá, Igor. Vi o custo mensal e quero agendar uma conversa para escolher meu aluguel.'))}" target="_blank" rel="noopener">Falar com Igor</a></div></section>
-"""
+    portas = []
+    for n, (finalidade, rotulo, href) in enumerate([
+            ("residencial", "Para morar", "alugar-residencial.html"),
+            ("comercial", "Para o seu negócio", "alugar-sala-comercial.html")]):
+        achado = menor_aluguel(imoveis, finalidade)
+        if not achado:
+            continue
+        menor, quantos = achado
+        contagem = "1 imóvel disponível" if quantos == 1 else f"{quantos} imóveis disponíveis"
+        portas.append(f"""<a class="linha linha--porta" href="{href}" {reveal(n, 110)}>
+  <div class="linha-texto"><span class="linha-tipo">{contagem}</span><h3>{rotulo}</h3></div>
+  <div class="linha-preco"><small>a partir de</small> {moeda(menor)}<small>/mês</small></div>
+</a>""")
+    secao_aluguel = ""
+    if portas:
+        secao_aluguel = f"""
+<section class="bloco bloco--aluguel" id="alugar" aria-labelledby="t-aluguel">
+  <header class="bloco-cabeca bloco-cabeca--lado">
+    <p class="sobre-linha" data-reveal>{e(CAPA['aluguel_sobrelinha'])}</p>
+    <h2 class="bloco-titulo bloco-titulo--menor" id="t-aluguel" style="--larg:{larg(CAPA['aluguel_titulo'])}" data-reveal>{titulo_linhas(CAPA['aluguel_titulo'])}</h2>
+    <p class="bloco-apoio" {reveal(1, 120)}>{e(CAPA['aluguel_apoio'])}</p>
+  </header>
+  <div class="linhas">{''.join(portas)}</div>
+</section>"""
+
+    fatos = "".join(
+        f'<li {reveal(n, 140)}><b>{e(numero.format(anos=corretor["anos_de_mercado"]))}</b><span>{e(texto)}</span></li>'
+        for n, (numero, texto) in enumerate(CAPA["fatos"]))
+    foto_igor = retrato_capa(corretor)
+    secao_quem = f"""
+<section class="bloco quem" id="quem-atende" aria-labelledby="t-quem">
+  <div class="quem-miolo{'' if foto_igor else ' quem-miolo--sem-foto'}">
+    {foto_igor}
+    <div class="quem-texto">
+      <h2 class="bloco-titulo bloco-titulo--menor" id="t-quem" style="--larg:{larg(CAPA['quem_titulo'])}" data-reveal>{titulo_linhas(CAPA['quem_titulo'])}</h2>
+      <p class="bloco-apoio" {reveal(1, 120)}>{e(CAPA['quem_apoio'])}</p>
+      <ul class="fatos">{fatos}</ul>
+      <div class="acoes" data-reveal>
+        <a class="bt bt-cheio" href="{wa_geral}" target="_blank" rel="noopener">{e(CAPA['quem_botao'])}</a>
+        <a class="bt bt-fino" href="sobre.html">Conhecer minha trajetória</a>
+      </div>
+    </div>
+  </div>
+</section>"""
+
+    passeio = destaque.get("passeio_url") if destaque else ""
+    vitrine = ""
+    if passeio:
+        fotos = fotos_imovel(destaque)
+        escolha = [fotos[n] for n in (0, 3, 2) if n < len(fotos)] or fotos[:3]
+        quadros = "".join(
+            f'<div class="vitrine-quadro" {reveal(n, 130)}><img src="{e(foto_url(destaque, f))}" alt="" '
+            f'width="{(dimensoes_imagem(f) or (900, 1200))[0]}" height="{(dimensoes_imagem(f) or (900, 1200))[1]}" '
+            'loading="lazy" decoding="async" /></div>' for n, f in enumerate(escolha))
+        vitrine = (f'<a class="vitrine" href="{e(passeio)}" target="_blank" rel="noopener" '
+                   f'aria-label="{e(CAPA["dono_passeio"])}">{quadros}</a>')
+    passeio_botao = (f'<a class="bt bt-fino" href="{e(passeio)}" target="_blank" rel="noopener">{e(CAPA["dono_passeio"])}</a>'
+                     if passeio else '')
+    secao_dono = f"""
+<section class="bloco dono" id="anunciar" aria-labelledby="t-dono">
+  <div class="dono-miolo{'' if vitrine else ' dono-miolo--sem-vitrine'}">
+    <div class="dono-texto">
+      <p class="sobre-linha" data-reveal>{e(CAPA['dono_sobrelinha'])}</p>
+      <h2 class="bloco-titulo bloco-titulo--menor" id="t-dono" style="--larg:{larg(CAPA['dono_titulo'])}" data-reveal>{titulo_linhas(CAPA['dono_titulo'])}</h2>
+      <p class="bloco-apoio" {reveal(1, 120)}>{e(CAPA['dono_apoio'] if passeio else CAPA['dono_apoio_sem_passeio'])}</p>
+      <div class="acoes" data-reveal>
+        <a class="bt bt-cheio" href="{wa_dono}" target="_blank" rel="noopener">{e(CAPA['dono_botao'])}</a>
+        {passeio_botao}
+      </div>
+    </div>
+    {vitrine}
+  </div>
+</section>"""
+
+    faq = faq_capa(corretor)
+    perguntas = "".join(
+        f'<details class="duvida"><summary>{e(d["pergunta"])}</summary><p>{e(d["resposta"])}</p></details>'
+        for d in faq)
+    secao_faq = f"""
+<section class="bloco faq" id="duvidas" aria-labelledby="t-faq">
+  <div class="faq-miolo">
+    <div class="faq-titulo"><h2 class="bloco-titulo bloco-titulo--menor" id="t-faq" style="--larg:{larg(CAPA['faq_titulo'])}" data-reveal>{titulo_linhas(CAPA['faq_titulo'])}</h2></div>
+    <div class="duvidas" data-reveal>{perguntas}</div>
+  </div>
+</section>"""
+
+    secao_fecho = f"""
+<section class="bloco fecho" aria-labelledby="t-fecho">
+  <div class="fecho-miolo">
+  <h2 class="bloco-titulo" id="t-fecho" style="--larg:{larg(CAPA['fecho_titulo'])}" data-reveal>{titulo_linhas(CAPA['fecho_titulo'])}</h2>
+  <p class="bloco-apoio" {reveal(1, 120)}>{e(CAPA['fecho_apoio'].format(prazo=corretor['resposta_prometida']))}</p>
+  <div class="acoes" {reveal(2, 120)}><a class="bt bt-cheio bt-grande" href="{wa_geral}" target="_blank" rel="noopener">{e(CAPA['fecho_botao'])}</a></div>
+  <p class="fecho-assinatura">{e(corretor['nome_pessoa'])} · {e(corretor['titulo_profissional'])} · {e(corretor['creci'])}</p>
+  </div>
+</section>"""
+
+    corpo = abertura + secao_venda + secao_aluguel + secao_quem + secao_dono + secao_faq + secao_fecho
+    base = corretor["site_url"].rstrip("/")
+    social = ((base + "/" + foto_capa, f"{destaque['tipo']} em {destaque['bairro']}, {destaque['cidade']}")
+              if foto_capa else None)
     return pagina(
-        titulo="Igor Santiago Imóveis — aluguel em Feira de Santana",
-        descricao=("Corretor de imóveis em Feira de Santana, CRECI-BA 28.140. "
-                   "Aluguel residencial e comercial, custo mensal visível e atendimento pessoal."),
+        titulo=CAPA["titulo_pagina"], descricao=CAPA["descricao"],
         corpo=corpo, corretor=corretor, imoveis=imoveis,
-        ativo="index.html", publicar=publicar,
-        jsonld=jsonld(corretor, imoveis, "index.html", faq_global(corretor)))
+        ativo="index.html", publicar=publicar, preload=foto_capa, social=social,
+        jsonld=jsonld(corretor, imoveis, "index.html", faq))
 
 
 def secao_mapa_bairros(imoveis: list[dict]) -> str:
@@ -967,7 +1296,7 @@ def pagina_catalogo(corretor: dict, imoveis: list[dict], publicar: bool = False)
     <div class="grade-cards" id="lista">{cards}</div>
     <p class="vazio" id="vazio" hidden>Nenhum imóvel com esses filtros.
        <button type="button" class="link-botao" id="limpar2">Limpar filtros</button>
-       ou <a href="index.html#quero-alugar">conte o que procura</a>.</p>
+       ou <a href="alugar-residencial.html#quero-alugar">conte o que procura</a>.</p>
   </div>
 </section>
 """
@@ -1038,11 +1367,17 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
         f'<details class="duvida"><summary>{e(d["pergunta"])}</summary>'
         f'<p>{e(d["resposta"])}</p></details>' for d in imovel["duvidas"])
     mapa = mapa_bairro(imovel)
-    selos = '<span class="selo selo-op">Aluguel</span>'
+    venda = imovel['operacao'] == 'venda'
+    selos = f'<span class="selo selo-op">{"À venda" if venda else "Aluguel"}</span>'
     if imovel.get('preco_venda'):
         selos += '<span class="selo selo-venda">Venda</span>'
     videos = galeria_videos(imovel)
     meta_venda = f' Também à venda por {moeda(imovel["preco_venda"])}.' if imovel.get('preco_venda') else ''
+    passeio = ''
+    if imovel.get('passeio_url'):
+        passeio = (f'<section class="secao secao-alt secao-passeio"><div class="wrap"><h2>Passeie pela casa antes da visita</h2>'
+                   f'<p class="sub">Uma página só deste imóvel percorre a casa cômodo a cômodo, com fotos reais.</p>'
+                   f'<a class="btn btn-principal" href="{e(imovel["passeio_url"])}" target="_blank" rel="noopener">Abrir o passeio</a></div></section>')
 
     corpo = f"""
 <nav class="migalha wrap" aria-label="Você está em">
@@ -1051,7 +1386,7 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
 </nav>
 
 <section class="imovel-topo">
-  <div class="wrap"><div class="card-selos">{selos}</div><h1 class="imovel-titulo">{e(imovel['titulo'])}</h1><p class="imovel-local">Para alugar{' ou comprar' if imovel.get('preco_venda') else ''} · {e(imovel['bairro'])} · {e(imovel['cidade'])}</p></div>
+  <div class="wrap"><div class="card-selos">{selos}</div><h1 class="imovel-titulo">{e(imovel['titulo'])}</h1><p class="imovel-local">{'À venda' if venda else 'Para alugar'}{' ou comprar' if imovel.get('preco_venda') else ''} · {e(imovel['bairro'])} · {e(imovel['cidade'])}</p></div>
   <div class="wrap imovel-grade{' imovel-grade--sem-foto' if not carrossel else ''}">
     {carrossel}
     {recibo_ficha(corretor, imovel)}
@@ -1059,6 +1394,7 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
 </section>
 
 {videos}
+{passeio}
 
 <section class="secao">
   <div class="wrap imovel-conteudo">
@@ -1099,6 +1435,12 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
     descricao_partes = [f"Aluguel de {imovel['tipo'].lower()}"
                         + (f" no {predio}" if predio else "")
                         + f" – {imovel['bairro']}, {imovel['cidade']}: {moeda(imovel['preco'])}/mês."]
+    if venda:
+        no_predio = f" no {predio}" if predio and predio != imovel['bairro'] else ""
+        titulo_seo = (f"{imovel['tipo']} à venda{no_predio} – {imovel['bairro']}, "
+                      f"{imovel['cidade']} | {moeda(imovel['preco'])}")
+        descricao_partes = [f"{imovel['tipo']} à venda{no_predio} – {imovel['bairro']}, "
+                            f"{imovel['cidade']}: {moeda(imovel['preco'])}."]
     detalhes = resumo(imovel)
     if detalhes:
         descricao_partes.append(f"{detalhes}.")
@@ -1303,7 +1645,7 @@ def pagina_404(corretor: dict, imoveis: list[dict], publicar: bool = False) -> s
     <h1>Página não encontrada</h1>
     <p>O endereço não existe ou o imóvel saiu do catálogo.</p>
     <a class="btn btn-principal" href="imoveis.html">Ver imóveis para alugar</a>
-    <a class="btn btn-claro" href="index.html#quero-alugar">Conte o que procura</a>
+    <a class="btn btn-claro" href="alugar-residencial.html#quero-alugar">Conte o que procura</a>
   </div>
 </section>
 """
@@ -1330,16 +1672,25 @@ def jsonld(corretor: dict, imoveis: list[dict], no_pagina: str, faq: list[dict])
         {'@type': 'RealEstateAgent', '@id': agente, 'name': corretor['nome_marca'],
          'url': base + '/', 'telephone': '+' + corretor['whatsapp_e164'],
          'logo': base + '/assets/simbolo.png', 'image': imagem_corretor,
-         'sameAs': redes, 'areaServed': corretor['atuacao'], 'founder': {'@id': pessoa}},
+         'sameAs': redes, 'areaServed': corretor['atuacao'], 'founder': {'@id': pessoa},
+         'description': corretor['posicionamento'],
+         'knowsAbout': ['Compra e venda de imóveis em Feira de Santana',
+                        'Imóveis de alto padrão em Feira de Santana',
+                        'Aluguel residencial em Feira de Santana',
+                        'Aluguel de sala comercial em Feira de Santana'],
+         'contactPoint': {'@type': 'ContactPoint', 'contactType': 'customer service',
+                          'telephone': '+' + corretor['whatsapp_e164'],
+                          'availableLanguage': 'pt-BR', 'areaServed': 'BR'}},
         {'@type': 'Person', '@id': pessoa, 'name': corretor['nome_pessoa'],
          'jobTitle': corretor['titulo_profissional'], 'identifier': corretor['creci'],
-         'description': corretor['bio_longa']},
+         'description': corretor['bio_longa'], 'worksFor': {'@id': agente}},
         {'@type': 'WebSite', '@id': site, 'name': corretor['nome_marca'], 'url': base + '/',
          'inLanguage': 'pt-BR', 'publisher': {'@id': agente}},
         {'@type': 'WebPage', '@id': url + '#pagina', 'url': url, 'inLanguage': 'pt-BR',
          'isPartOf': {'@id': site}, 'about': {'@id': agente}},
     ]
-    for slug, nome, pagina_servico in [('locacao', 'Locação residencial e comercial', 'imoveis.html'),
+    for slug, nome, pagina_servico in [('venda', 'Compra e venda de imóveis', ''),
+                                      ('locacao', 'Locação residencial e comercial', 'imoveis.html'),
                                       ('administracao', 'Administração de imóveis', 'administracao.html')]:
         grafo.append({'@type': 'Service', '@id': base + '/#' + slug, 'name': nome,
                       'serviceType': nome, 'provider': {'@id': agente},
@@ -1396,6 +1747,8 @@ def escrever_llms_txt(corretor: dict, urls: list[str], publicar: bool) -> None:
         linhas.extend(['', '## Imóveis disponíveis', ''])
         for imovel in ler_imoveis():
             condicoes = imovel.get('garantia_detalhe') or 'Condições a confirmar com Igor.'
+            if imovel.get('passeio_url'):
+                condicoes += f" Passeio pela casa: {imovel['passeio_url']}"
             inclusas = imovel.get('contas_inclusas', [])
             if inclusas:
                 condicoes += '; ' + ', '.join(inclusas) + ' incluído(s)'
@@ -1403,7 +1756,8 @@ def escrever_llms_txt(corretor: dict, urls: list[str], publicar: bool) -> None:
                 condicoes += '; IPTU não incluído'
             quartos = (f" {imovel['quartos']} quarto(s);" if imovel.get('quartos') else '')
             vagas = (f" {imovel['vagas']} vaga(s);" if imovel.get('vagas') else '')
-            preco = f"Aluguel {moeda(imovel['preco'])}/mês"
+            preco = (f"Venda {moeda(imovel['preco'])}" if imovel['operacao'] == 'venda'
+                     else f"Aluguel {moeda(imovel['preco'])}/mês")
             if imovel.get('preco_venda'):
                 preco += f"; venda {moeda(imovel['preco_venda'])}"
             linhas.append(f"- {imovel['tipo']} em {imovel['bairro']}, {imovel['cidade']}: "
@@ -1432,7 +1786,11 @@ def escrever_auxiliares(corretor: dict, imoveis: list[dict], publicar: bool) -> 
 
     # Enquanto houver demo, robots.txt proibe tudo. So o build --publicar libera.
     if publicar:
-        agentes = ['*', 'GPTBot', 'OAI-SearchBot', 'ClaudeBot', 'PerplexityBot', 'Google-Extended']
+        # Lista do checklist de GEO do método (estudio-de-sites, jul/2026): liberação explícita.
+        agentes = ['*', 'GPTBot', 'OAI-SearchBot', 'ChatGPT-User', 'ClaudeBot', 'Claude-User',
+                   'Claude-SearchBot', 'anthropic-ai', 'PerplexityBot', 'Perplexity-User',
+                   'Google-Extended', 'Applebot-Extended', 'Bingbot', 'Amazonbot',
+                   'meta-externalagent', 'cohere-ai']
         robots = ''.join(f'User-agent: {agente}\nAllow: /\n\n' for agente in agentes)
         robots += f"Sitemap: {base}/sitemap.xml\n"
     else:

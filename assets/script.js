@@ -26,9 +26,20 @@
   var botao = document.querySelector(".menu-btn");
   var nav = document.querySelector(".nav");
   if (botao && nav) {
-    botao.addEventListener("click", function () {
-      var aberto = nav.classList.toggle("aberto");
+    var capa = document.body.classList.contains("pagina-capa");
+    var menu = function (aberto) {
+      nav.classList.toggle("aberto", aberto);
       botao.setAttribute("aria-expanded", aberto ? "true" : "false");
+      botao.setAttribute("aria-label", aberto ? "Fechar menu" : "Abrir menu");
+      // Na capa o menu do celular cobre a tela: a página por baixo não rola.
+      if (capa) document.documentElement.classList.toggle("menu-aberto", aberto);
+    };
+    botao.addEventListener("click", function () { menu(!nav.classList.contains("aberto")); });
+    nav.addEventListener("click", function (evento) {
+      if (evento.target.closest && evento.target.closest("a")) menu(false);
+    });
+    document.addEventListener("keydown", function (evento) {
+      if (evento.key === "Escape" && nav.classList.contains("aberto")) { menu(false); botao.focus(); }
     });
   }
 
@@ -205,4 +216,131 @@
       ponto.addEventListener("click", function () { irPara(n); });
     });
   });
+})();
+
+// --- capa: os telhados da logo abrem e mostram a casa -------------------------
+// Momento assinatura da direção "Marca forte". A rolagem engrossa os 5 riscos da
+// máscara SVG até a foto ocupar a tela. Sem "js" no <html> (movimento reduzido ou
+// navegador antigo) nada disto roda: o CSS já mostra a foto inteira, parada.
+(function () {
+  "use strict";
+  var raiz = document.documentElement;
+  var abre = document.querySelector(".abre");
+  if (!abre) { raiz.classList.remove("na-abertura"); return; }
+
+  // A barra de WhatsApp do celular só entra depois da abertura.
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (entradas) {
+      raiz.classList.toggle("na-abertura", entradas[0].isIntersecting);
+    }, { rootMargin: "0px 0px -40% 0px" }).observe(abre);
+  } else {
+    raiz.classList.remove("na-abertura");
+  }
+
+  var palco = abre.querySelector(".palco");
+  var svg = abre.querySelector(".abre-svg");
+  var capa = abre.querySelector(".capa-texto");
+  if (!palco || !svg || !capa) return;
+  var semFoto = abre.classList.contains("abre--sem-foto");
+  var vivo = raiz.classList.contains("js");
+  if (!vivo && !semFoto) return;
+
+  var riscos = Array.prototype.slice.call(svg.querySelectorAll(".risco"));
+  var grupo = svg.querySelector("mask g");
+  var imagem = svg.querySelector("image");
+  var sombra = abre.querySelector(".abre-sombra");
+  var destaque = abre.querySelector(".destaque");
+  var fotoL = Number(abre.dataset.fotoL) || 0;
+  var fotoA = Number(abre.dataset.fotoA) || 0;
+  var foco = (abre.dataset.foco || "50% 50%").split(/\s+/).map(function (v) {
+    var n = parseFloat(v);
+    return (isNaN(n) ? 50 : n) / 100;
+  });
+  if (imagem) imagem.setAttribute("preserveAspectRatio", "none");
+  var g = null, quadro = 0, pulso = false, inicioPulso = 0;
+
+  function lim(v) { return Math.min(1, Math.max(0, v)); }
+  function suave(t) { return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+
+  function medir() {
+    var vw = palco.clientWidth, vh = semFoto ? window.innerHeight : palco.clientHeight;
+    var largo = vw >= 900;
+    var primeiro = capa.firstElementChild || capa;
+    var topoTexto = primeiro.getBoundingClientRect().top - palco.getBoundingClientRect().top;
+    var respiro = largo ? 104 : 90;
+    var altura = Math.max(150, topoTexto - respiro - (largo ? 28 : 20));  // os telhados moram entre o topo e o título
+    var bw = Math.min(vw * (largo ? .44 : .84), altura / .86), bh = bw * .86;
+    var x0 = (vw - bw) / 2, y0 = respiro + (altura - bh) / 2;
+    riscos.forEach(function (r, k) {                                      // 5 telhados empilhados: o desenho da logo
+      var dy = k * .145 * bh;
+      r.setAttribute("points", [[.02, .40], [.74, .05], [.98, .17]].map(function (p) {
+        return (x0 + p[0] * bw).toFixed(1) + "," + (y0 + p[1] * bh + dy).toFixed(1);
+      }).join(" "));
+    });
+    g = { vw: vw, vh: vh, base: bw * .052, fim: Math.hypot(vw, vh) * 2.2,
+          cx: vw / 2, cy: y0 + bh * .49, cresce: largo ? .9 : .28 };
+    pintar(performance.now());
+  }
+
+  function cobrir(zoom) {
+    if (!imagem || !fotoL || !fotoA) return;
+    var escala = Math.max(g.vw / fotoL, g.vh / fotoA) * zoom;
+    var w = fotoL * escala, h = fotoA * escala;
+    imagem.setAttribute("width", w.toFixed(1));
+    imagem.setAttribute("height", h.toFixed(1));
+    imagem.setAttribute("x", ((g.vw - w) * foco[0]).toFixed(1));
+    imagem.setAttribute("y", ((g.vh - h) * foco[1]).toFixed(1));
+  }
+
+  function pintar(agora) {
+    quadro = 0;
+    if (!g) return;
+    if (!vivo || semFoto) {
+      riscos.forEach(function (r) { r.setAttribute("stroke-width", g.base.toFixed(2)); });
+      return;
+    }
+    var p = lim(-abre.getBoundingClientRect().top / (abre.offsetHeight - g.vh));
+    var e = suave(lim((p - .04) / .6));
+    var sw = g.base * Math.pow(g.fim / g.base, e);
+    if (pulso) {                                   // convite: os riscos "respiram" enquanto ninguém rola
+      var t = (agora - inicioPulso) / 1100;
+      if (t >= 1 || p > .01) pulso = false;
+      else sw *= 1 + .55 * Math.sin(Math.PI * t);
+    }
+    // Enquanto o título sai, os telhados descem para o meio da tela e crescem: a casa
+    // abre do centro, não do canto de cima (no desktop o quadro intermediário ficava vazio).
+    var c = suave(lim(p / .34));
+    var escala = 1 + g.cresce * c;
+    if (grupo) {
+      grupo.setAttribute("transform", "translate(" + g.cx.toFixed(1) + "," + (g.cy + c * (g.vh / 2 - g.cy)).toFixed(1) +
+        ") scale(" + escala.toFixed(4) + ") translate(" + (-g.cx).toFixed(1) + "," + (-g.cy).toFixed(1) + ")");
+    }
+    riscos.forEach(function (r) { r.setAttribute("stroke-width", (sw / escala).toFixed(2)); });
+    cobrir(1.12 - .12 * e);                        // a câmera recua enquanto a casa abre
+    var sai = lim(p / .12);                      // o título sai antes de os telhados passarem por ele
+    capa.style.opacity = (1 - sai).toFixed(3);
+    capa.style.transform = "translate3d(0," + (-30 * sai).toFixed(1) + "px,0)";
+    capa.style.visibility = sai >= 1 ? "hidden" : "visible";
+    var entra = suave(lim((p - .62) / .25));
+    if (sombra) sombra.style.opacity = entra.toFixed(3);
+    if (destaque) {
+      destaque.style.opacity = entra.toFixed(3);
+      destaque.style.transform = "translate3d(0," + ((1 - entra) * 34).toFixed(1) + "px,0)";
+      destaque.style.visibility = entra <= 0 ? "hidden" : "visible";
+    }
+    if (pulso) pedir();
+  }
+
+  function pedir() { if (!quadro) quadro = requestAnimationFrame(pintar); }
+
+  window.addEventListener("resize", medir);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(medir);
+  medir();
+  if (!vivo || semFoto) return;
+
+  window.addEventListener("scroll", pedir, { passive: true });
+  window.setInterval(function () {
+    if (pulso || document.hidden || window.scrollY > 4) return;
+    pulso = true; inicioPulso = performance.now(); pedir();
+  }, 3800);
 })();
