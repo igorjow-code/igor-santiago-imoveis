@@ -1050,19 +1050,22 @@ def secao_duvidas(titulo: tuple[str, str], faq: list[dict], sobrelinha: str = ""
 </section>"""
 
 
-def bloco_fecho(corretor: dict, titulo: tuple[str, str], apoio: str, botao: str, wa: str,
-                assinatura: bool = True) -> str:
+def bloco_fecho(corretor: dict, titulo: tuple[str, str], apoio: str | tuple[str, ...], botao: str,
+                wa: str, assinatura: bool = True) -> str:
     """Fecho centralizado: toda página termina num convite. A assinatura com CRECI sai
     quando a página já foi assinada pela rubrica (o rodapé repete o CRECI logo abaixo).
     `wa` já chega escapado."""
     assina = (f'<p class="fecho-assinatura assinatura"><span>{e(corretor["nome_pessoa"])}</span><i> · </i>'
               f'<span>{e(corretor["titulo_profissional"])}</span><i> · </i><span>{e(corretor["creci"])}</span></p>'
               if assinatura else "")
+    # tupla = uma frase por linha (a quebra nunca separa sujeito e verbo)
+    apoio_html = (e(apoio) if isinstance(apoio, str)
+                  else " ".join(f"<span>{e(frase)}</span>" for frase in apoio))
     return f"""
 <section class="bloco fecho" aria-labelledby="t-fecho">
   <div class="fecho-miolo">
   <h2 class="bloco-titulo" id="t-fecho" style="--larg:{larg(titulo)}" data-reveal>{titulo_linhas(titulo, 1)}</h2>
-  <p class="bloco-apoio" {reveal(1, 120)}>{e(apoio)}</p>
+  <p class="bloco-apoio" {reveal(1, 120)}>{apoio_html}</p>
   <div class="acoes" {reveal(2, 120)}><a class="bt bt-cheio bt-grande" href="{wa}" target="_blank" rel="noopener">{e(botao)}</a></div>
   {assina}
   </div>
@@ -1278,15 +1281,14 @@ COMPRAR = {
     "como_apoio": "Quem conduz a compra é uma pessoa\u00a0só. Você fala comigo em todas as etapas.",
     "etapas": [
         ("Conversa", "Você me diz o que procura e quanto pretende investir."),
-        ("Página do imóvel", "Preço, medidas e fotos reais, antes de sair de casa."),
+        ("Página do imóvel", "Preço, medidas e fotos\u00a0reais, antes de sair de casa."),
         ("Visita", "Agendada pelo WhatsApp e acompanhada por mim. A localização exata é enviada no agendamento."),
-        ("Proposta", "Matrícula e certidões conferidas antes da proposta. Sigo com você até a assinatura."),
+        ("Proposta", "Matrícula e certidões conferidas antes da proposta. Sigo\u00a0com\u00a0você até a escritura."),
     ],
     "rubrica_link": "Minha trajetória",
-    "faq_sobrelinha": "Dúvidas",
     "faq_titulo": ("Antes de", "comprar."),
     "fecho_titulo": ("Outro imóvel?", "Me diga qual."),
-    "fecho_apoio": "Bairro, tamanho e faixa de valor. Quem responde sou eu, em até {prazo}.",
+    "fecho_apoio": ("Bairro, tamanho e faixa de valor.", "Quem responde sou eu, em até {prazo}."),
     "fecho_botao": "Falar com Igor",
     "mensagem_procura": "Olá, Igor. Procuro um imóvel para comprar em Feira de Santana.",
 }
@@ -1396,8 +1398,7 @@ def cartaz_imovel(corretor: dict, imovel: dict, n: int = 0) -> str:
         f'<div class="medida" {entra(350 + 100 * k)}><dt>{e(rotulo)}</dt><dd>{e(valor)}</dd></div>'
         for k, (rotulo, valor) in enumerate(linhas))
     medidas = f'<dl class="medidas">{medidas}</dl>' if medidas else ""
-    depois = 350 + 100 * len(linhas)
-    chamada = (f'<p class="cartaz-chamada" {entra(depois)}>{e(imovel["chamada"])}</p>'
+    chamada = (f'<p class="cartaz-chamada" data-reveal style="--atraso:240ms">{e(imovel["chamada"])}</p>'
                if imovel.get("chamada") else "")
     # o botão cheio é o passo mais rico que existe (passeio; sem ele, a ficha);
     # o de contorno é sempre a visita, pelo WhatsApp
@@ -1450,7 +1451,7 @@ def rubrica(corretor: dict, link: str = "", prefixo: str = "", wa: str = "") -> 
              if wa else "")
     botao += f'<a class="rubrica-link" href="{prefixo}sobre.html">{e(link)}</a>' if link else ""
     botao = f'<div class="rubrica-acoes">{botao}</div>' if botao else ""
-    return (f'<div class="rubrica" data-reveal style="--atraso:240ms">{foto}<div class="rubrica-texto">'
+    return (f'<div class="rubrica" data-reveal style="--atraso:120ms">{foto}<div class="rubrica-texto">'
             f'<p class="rubrica-nome"><b>{e(corretor["nome_pessoa"])}</b>'
             f'<span class="assinatura"><span>{e(corretor["titulo_profissional"])}</span><i> · </i>'
             f'<span>{e(corretor["creci"])}</span></span></p>{botao}</div></div>')
@@ -1495,7 +1496,7 @@ def pagina_comprar(corretor: dict, imoveis: list[dict], publicar: bool = False) 
 
     passos = list(COMPRAR["etapas"])
     etapas = "".join(
-        f'<li class="etapa" {reveal(n, 140)}><span class="etapa-n">{n + 1:02d}</span>'
+        f'<li class="etapa" data-reveal style="--atraso:{200 + n * 140}ms"><span class="etapa-n">{n + 1:02d}</span>'
         f'<h3>{e(nome)}</h3><p>{e(texto)}</p></li>'
         for n, (nome, texto) in enumerate(passos))
     # as mesmas etapas, visíveis na página, vão para os dados estruturados (checklist de GEO)
@@ -1516,10 +1517,10 @@ def pagina_comprar(corretor: dict, imoveis: list[dict], publicar: bool = False) 
 
     faq = faq_comprar(corretor, tem_passeio)
     wa = e(wa_link(corretor, COMPRAR["mensagem_procura"]))
-    fecho = bloco_fecho(corretor, COMPRAR["fecho_titulo"], COMPRAR["fecho_apoio"].format(prazo=prazo),
+    fecho = bloco_fecho(corretor, COMPRAR["fecho_titulo"],
+                        tuple(frase.format(prazo=prazo) for frase in COMPRAR["fecho_apoio"]),
                         COMPRAR["fecho_botao"], wa, assinatura=False)
-    corpo = (cabeca + lista + como
-             + secao_duvidas(COMPRAR["faq_titulo"], faq, COMPRAR["faq_sobrelinha"]) + fecho)
+    corpo = cabeca + lista + como + secao_duvidas(COMPRAR["faq_titulo"], faq) + fecho
 
     primeiro = next((i for i in vendas if fotos_imovel(i)), None)
     foto_topo = foto_url(primeiro, fotos_imovel(primeiro)[0]) if primeiro else ""

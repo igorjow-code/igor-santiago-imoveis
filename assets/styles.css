@@ -1217,19 +1217,17 @@ html:not(.js) .capa-sobre { text-shadow: 0 0 14px #0a0a0a, 0 0 4px #0a0a0a; }
   content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 2px;
   background: var(--laranja); transform: scaleX(0); transform-origin: left;
 }
-.js .etapa::before {
-  content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 3px;
-  background: var(--laranja); transform: scaleX(0); transform-origin: left; opacity: 0;
+.js .etapa:first-child::before {
+  content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 2px;
+  background: var(--laranja); transform: scaleX(0); transform-origin: left;
 }
 .js .fio[data-reveal] { opacity: 1; transform: none; }
 .js .fio[data-reveal].in-view::after { animation: fio-risca 1.3s var(--sai) var(--atraso, 0ms) both; }
-.js .etapa[data-reveal].in-view::before { animation: fio-passa 1.5s var(--sai) var(--atraso, 0ms) both; }
+.js .etapa:first-child[data-reveal].in-view::before { animation: fio-risca 1.3s var(--sai) var(--atraso, 0ms) both; }
 @keyframes fio-risca { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-@keyframes fio-passa {
-  0% { transform: scaleX(0); opacity: 1; }
-  62% { transform: scaleX(1); opacity: 1; }
-  100% { transform: scaleX(1); opacity: 0; }
-}
+/* sem movimento o estado é o final: os mesmos fios, já laranja */
+html:not(.js) .cartaz .fio { height: 2px; background: var(--laranja); }
+html:not(.js) .etapa:first-child { border-top: 2px solid var(--laranja); }
 
 /* --- cartaz: um imóvel apresentado por inteiro ---------------------------------- */
 .bloco--cartazes { padding-top: 0; padding-bottom: clamp(20px, 3vw, 44px); }
@@ -1339,30 +1337,27 @@ html:not(.js) .capa-sobre { text-shadow: 0 0 14px #0a0a0a, 0 0 4px #0a0a0a; }
   100% { transform: scaleX(1); opacity: 0; }
 }
 @keyframes foto-desliza {
-  from { transform: scale(1.12) translateY(-4.4%); }
-  to { transform: scale(1.12) translateY(4.4%); }
+  from { transform: scale(1.12) translateY(-5%); }
+  to { transform: scale(1.12) translateY(5%); }
 }
 
 /* --- como funciona: quatro etapas (sequência de verdade) -------------------------- */
 .como { background: var(--preto-suave); padding-bottom: clamp(60px, 6.4vw, 92px); }
 .etapas { list-style: none; max-width: 1320px; margin: 0 auto; padding: 0; display: grid; }
 .etapa { position: relative; padding: 22px 0 28px; border-top: 1px solid var(--linha-escura); }
-.etapa:last-child { border-bottom: 1px solid var(--linha-escura); }
 .etapa-n { display: block; font: 700 14px/1 var(--sans); letter-spacing: .16em; color: var(--marfim-suave); }
 .etapa h3 {
   margin: 12px 0 10px; color: var(--marfim); text-transform: uppercase;
   font: 900 clamp(1.5rem, 6vw, 1.9rem)/1 var(--display); letter-spacing: -.03em;
 }
-.etapa p { max-width: 42ch; font-size: 17px; color: var(--texto-2); text-wrap: balance; }
-@media (max-width: 479px) { .etapa p { max-width: 29ch; } }
+.etapa p { max-width: 42ch; font-size: 17px; color: var(--texto-2); text-wrap: pretty; }
+@media (max-width: 479px) { .etapa p { max-width: 30ch; } }
 @media (min-width: 600px) {
   .etapas { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: clamp(22px, 2.8vw, 44px); }
-  .etapa:nth-last-child(2) { border-bottom: 1px solid var(--linha-escura); }
 }
 @media (min-width: 900px) {
   .etapas { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .etapa { padding: 26px 0 0; }
-  .etapa:last-child, .etapa:nth-last-child(2) { border-bottom: 0; }
   .etapa h3 { font-size: clamp(1.3rem, 1.9vw, 1.75rem); }
   /* o cabeçalho da seção usa as mesmas quatro colunas das etapas */
   .como .bloco-cabeca { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: clamp(22px, 2.8vw, 44px); }
@@ -1375,8 +1370,8 @@ html:not(.js) .capa-sobre { text-shadow: 0 0 14px #0a0a0a, 0 0 4px #0a0a0a; }
 
 /* --- rubrica: quem assina, logo abaixo da frase "você fala comigo" ------------------ */
 .como-quem .bloco-apoio { text-wrap: pretty; }
-.rubrica { display: flex; align-items: flex-end; gap: clamp(18px, 2.4vw, 30px); margin-top: 28px; }
-.rubrica-foto { flex: none; width: 136px; aspect-ratio: 4 / 5; overflow: hidden; clip-path: polygon(0 18%, 100% 0, 100% 100%, 0 100%); background: var(--preto-elevado); }
+.rubrica { display: flex; align-items: stretch; gap: clamp(18px, 2.4vw, 30px); margin-top: 28px; }
+.rubrica-foto { flex: none; width: 144px; min-height: 180px; overflow: hidden; clip-path: polygon(0 18%, 100% 0, 100% 100%, 0 100%); background: var(--preto-elevado); }
 /* recorte da cabeça à cintura: no retrato inteiro a pessoa ficava pequena no quadro */
 .rubrica-foto img { width: 100%; height: 100%; object-fit: cover; object-position: 44% 30%; transform: scale(1.75); transform-origin: 46% 36%; }
 .rubrica-texto { min-width: 0; }
@@ -1385,7 +1380,19 @@ html:not(.js) .capa-sobre { text-shadow: 0 0 14px #0a0a0a, 0 0 4px #0a0a0a; }
 .rubrica .bt { margin-top: 16px; min-height: 48px; padding: 0 22px; font-size: 15.5px; }
 .rubrica-link { margin-top: 4px; font-size: 16px; color: var(--texto-2); }
 .rubrica-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 0 22px; }
-@media (min-width: 900px) { .rubrica-foto { width: 160px; } }
-
-/* --- dúvidas: sobrelinha opcional acima do título ---------------------------------- */
-.faq-titulo .sobre-linha { margin-bottom: 14px; }
+@media (max-width: 1099px) {
+  /* cargo e CRECI em duas linhas: o ponto do meio ficava pendurado no fim da linha */
+  .rubrica-nome .assinatura span { display: block; }
+  .rubrica-nome .assinatura i { display: none; }
+}
+@media (min-width: 900px) {
+  .rubrica { align-items: flex-end; }
+  .rubrica-foto { width: 160px; min-height: 0; aspect-ratio: 4 / 5; }
+  .rubrica-nome b { font-size: 1.5rem; }
+}
+@media (min-width: 1200px) {
+  .rubrica-foto { width: 200px; }
+  .rubrica-nome b { font-size: 1.9rem; }
+}
+/* fecho: uma frase por linha */
+.fecho .bloco-apoio span { display: block; }
