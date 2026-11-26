@@ -1058,8 +1058,7 @@ def capa_abertura(corretor: dict, destaque: dict | None) -> tuple[str, str]:
         return (f"""<section class="abre abre--sem-foto" aria-label="Abertura">
     <div class="palco">
       <svg class="abre-svg" aria-hidden="true" focusable="false">
-        <defs><clipPath id="corte"><rect x="-9999" y="-9999" width="29999" height="29999"/></clipPath>
-          <mask id="telhados" maskUnits="userSpaceOnUse"><g clip-path="url(#corte)"><g class="riscos">{riscos}</g></g></mask></defs>
+        <defs><mask id="telhados" maskUnits="userSpaceOnUse"><g class="riscos">{riscos}</g><rect class="tampa" fill="#000" width="0" height="0"/><rect class="tampa" fill="#000" width="0" height="0"/></mask></defs>
         <rect width="100%" height="100%" fill="#eb6316" mask="url(#telhados)"/>
       </svg>
       {texto}
@@ -1090,8 +1089,7 @@ def capa_abertura(corretor: dict, destaque: dict | None) -> tuple[str, str]:
     <div class="palco">
       <img class="abre-foto" src="{e(url)}" width="{largura}" height="{altura}" alt="{e(alt)}" fetchpriority="high" decoding="async" />
       <svg class="abre-svg" aria-hidden="true" focusable="false">
-        <defs><clipPath id="corte"><rect x="-9999" y="-9999" width="29999" height="29999"/></clipPath>
-          <mask id="telhados" maskUnits="userSpaceOnUse"><g clip-path="url(#corte)"><g class="riscos">{riscos}</g></g></mask></defs>
+        <defs><mask id="telhados" maskUnits="userSpaceOnUse"><g class="riscos">{riscos}</g><rect class="tampa" fill="#000" width="0" height="0"/><rect class="tampa" fill="#000" width="0" height="0"/></mask></defs>
         <image href="{e(url)}" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" mask="url(#telhados)"/>
       </svg>
       <div class="abre-sombra"></div>

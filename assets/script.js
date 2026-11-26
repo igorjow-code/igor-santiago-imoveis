@@ -260,7 +260,7 @@
 
   var riscos = Array.prototype.slice.call(svg.querySelectorAll(".risco"));
   var grupo = svg.querySelector(".riscos");
-  var corte = svg.querySelector("clipPath rect");
+  var tampas = svg.querySelectorAll(".tampa");
   var imagem = svg.querySelector("image");
   var sombra = abre.querySelector(".abre-sombra");
   var destaque = abre.querySelector(".destaque");
@@ -295,7 +295,9 @@
         return (x0 + p[0] * bw).toFixed(1) + "," + (y0 + p[1] * bh + dy).toFixed(1);
       }).join(" "));
     });
-    g = { vw: vw, vh: vh, bw: bw, bh: bh, base: bw * .052, fim: Math.hypot(vw, vh) * 2.4,
+    // "fim" é o risco mais grosso que ainda faz diferença: o bastante para cobrir os cantos.
+    // Risco gigante (2,4x a diagonal) custava quadros no desktop sem mudar um pixel na tela.
+    g = { vw: vw, vh: vh, bw: bw, bh: bh, base: bw * .052, fim: Math.max(vw * 1.2, vh * 1.4),
           cx: vw / 2, cy: y0 + bh * .49, cresce: largo ? .7 : .22 };
     pintar(performance.now());
   }
@@ -326,11 +328,15 @@
     // As pontas são cortadas na vertical: quando os riscos se fundem, os lados da janela
     // ficam retos (parede de casa) em vez de serrilhados.
     var meia = g.bw * .48 * escala + Math.max(0, sw - g.base * escala) * .45;
-    if (corte) {
-      corte.setAttribute("x", (g.cx - meia).toFixed(1));
-      corte.setAttribute("width", (meia * 2).toFixed(1));
-      corte.setAttribute("y", (-g.vh).toFixed(1));
-      corte.setAttribute("height", (g.vh * 3).toFixed(1));
+    // (dois retângulos pretos dentro da máscara; clipPath aqui custava 7 ms por quadro no desktop)
+    if (tampas.length === 2) {
+      var beira = [[-g.vw, g.cx - meia + g.vw], [g.cx + meia, g.vw * 2]];
+      for (var k = 0; k < 2; k++) {
+        tampas[k].setAttribute("x", beira[k][0].toFixed(1));
+        tampas[k].setAttribute("width", Math.max(0, beira[k][1]).toFixed(1));
+        tampas[k].setAttribute("y", (-g.vh).toFixed(1));
+        tampas[k].setAttribute("height", (g.vh * 3).toFixed(1));
+      }
     }
     if (!vivo || semFoto) return;
 
