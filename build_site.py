@@ -858,7 +858,8 @@ def pagina_administracao(corretor: dict, imoveis: list[dict], publicar: bool = F
 # capa — redesenho "Marca forte" (IS-42, IS-43)
 # --------------------------------------------------------------------------
 
-# Texto da capa num lugar só. IS-41: só vira definitivo depois que Igor aprovar.
+# Texto da capa num lugar só. Capa e título aprovados por Igor em 26/11/2026 (IS-46).
+# IS-41 continua: mudança de texto só vira definitiva depois que ele aprovar.
 # Regras de copy em igris-os/clientes/is-imoveis/redesign-2026-11/content-plan.md.
 CAPA = {
     "titulo_pagina": "Igor Santiago Imóveis — alto padrão em Feira de Santana",
@@ -885,9 +886,10 @@ CAPA = {
     "quem_botao": "Agendar uma conversa",
     "dono_sobrelinha": "Para quem tem imóvel",
     "dono_titulo": ("Seu imóvel não é", "só mais um anúncio."),
-    "dono_apoio": ("Em portal, ele divide a tela com dezenas de outros. Veja como a casa do "
-                   "Terra Azul foi apresentada: página própria, passeio cômodo a cômodo e fotos "
-                   "reais. Quem chega para a visita já conhece a casa."),
+    # Igor, 26/11/2026: todo imóvel que ele anunciar ganha página própria com passeio.
+    "dono_apoio": ("Em portal, ele divide a tela com dezenas de outros. Todo imóvel que eu "
+                   "anuncio ganha página própria, com passeio cômodo a cômodo e fotos reais. "
+                   "Quem chega para a visita já conhece a casa."),
     "dono_apoio_sem_passeio": ("Em portal, ele divide a tela com dezenas de outros. Aqui, a "
                                "conversa começa pelo imóvel: documentação, preço e a forma de "
                                "apresentar, antes de qualquer compromisso."),
