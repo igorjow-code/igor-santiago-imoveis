@@ -228,11 +228,24 @@
   var abre = document.querySelector(".abre");
   if (!abre) { raiz.classList.remove("na-abertura"); return; }
 
-  // A barra de WhatsApp do celular só entra depois da abertura.
+  // A barra verde do celular só aparece quando não há outro botão de WhatsApp na tela:
+  // some na abertura e sempre que um botão principal de conversa está visível.
   if ("IntersectionObserver" in window) {
     new IntersectionObserver(function (entradas) {
       raiz.classList.toggle("na-abertura", entradas[0].isIntersecting);
     }, { rootMargin: "0px 0px -40% 0px" }).observe(abre);
+    var aVista = [];
+    var olhoBotoes = new IntersectionObserver(function (entradas) {
+      entradas.forEach(function (entrada) {
+        var i = aVista.indexOf(entrada.target);
+        if (entrada.isIntersecting && i < 0) aVista.push(entrada.target);
+        if (!entrada.isIntersecting && i >= 0) aVista.splice(i, 1);
+      });
+      raiz.classList.toggle("cta-a-vista", aVista.length > 0);
+    }, { threshold: .6 });
+    Array.prototype.forEach.call(document.querySelectorAll('main .bloco .bt-cheio[href*="wa.me"]'), function (b) {
+      olhoBotoes.observe(b);
+    });
   } else {
     raiz.classList.remove("na-abertura");
   }
@@ -246,7 +259,8 @@
   if (!vivo && !semFoto) return;
 
   var riscos = Array.prototype.slice.call(svg.querySelectorAll(".risco"));
-  var grupo = svg.querySelector("mask g");
+  var grupo = svg.querySelector(".riscos");
+  var corte = svg.querySelector("clipPath rect");
   var imagem = svg.querySelector("image");
   var sombra = abre.querySelector(".abre-sombra");
   var destaque = abre.querySelector(".destaque");
@@ -257,7 +271,7 @@
     return (isNaN(n) ? 50 : n) / 100;
   });
   if (imagem) imagem.setAttribute("preserveAspectRatio", "none");
-  var g = null, quadro = 0, pulso = false, inicioPulso = 0;
+  var g = null, quadro = 0, pulso = false, inicioPulso = 0, capaDy = 0;
 
   function lim(v) { return Math.min(1, Math.max(0, v)); }
   function suave(t) { return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
@@ -266,62 +280,77 @@
     var vw = palco.clientWidth, vh = semFoto ? window.innerHeight : palco.clientHeight;
     var largo = vw >= 900;
     var primeiro = capa.firstElementChild || capa;
-    var topoTexto = primeiro.getBoundingClientRect().top - palco.getBoundingClientRect().top;
-    var respiro = largo ? 104 : 90;
-    var altura = Math.max(150, topoTexto - respiro - (largo ? 28 : 20));  // os telhados moram entre o topo e o título
-    var bw = Math.min(vw * (largo ? .44 : .84), altura / .86), bh = bw * .86;
+    var topoTexto = primeiro.getBoundingClientRect().top - palco.getBoundingClientRect().top - capaDy;
+    var respiro = largo ? 98 : 86;
+    var altura = Math.max(130, topoTexto - respiro - (largo ? 30 : 22));   // os telhados moram entre o topo e o título
+    var bw = Math.min(vw * (largo ? .48 : .84), altura / .86), bh = bw * .86;
     var x0 = (vw - bw) / 2, y0 = respiro + (altura - bh) / 2;
-    riscos.forEach(function (r, k) {                                      // 5 telhados empilhados: o desenho da logo
+    riscos.forEach(function (r, k) {                                       // 5 telhados empilhados: o desenho da logo
       var dy = k * .145 * bh;
       r.setAttribute("points", [[.02, .40], [.74, .05], [.98, .17]].map(function (p) {
         return (x0 + p[0] * bw).toFixed(1) + "," + (y0 + p[1] * bh + dy).toFixed(1);
       }).join(" "));
     });
-    g = { vw: vw, vh: vh, base: bw * .052, fim: Math.hypot(vw, vh) * 2.2,
-          cx: vw / 2, cy: y0 + bh * .49, cresce: largo ? .9 : .28 };
+    g = { vw: vw, vh: vh, bw: bw, bh: bh, base: bw * .052, fim: Math.hypot(vw, vh) * 2.4,
+          cx: vw / 2, cy: y0 + bh * .49, cresce: largo ? .7 : .22 };
     pintar(performance.now());
-  }
-
-  function cobrir(zoom) {
-    if (!imagem || !fotoL || !fotoA) return;
-    var escala = Math.max(g.vw / fotoL, g.vh / fotoA) * zoom;
-    var w = fotoL * escala, h = fotoA * escala;
-    imagem.setAttribute("width", w.toFixed(1));
-    imagem.setAttribute("height", h.toFixed(1));
-    imagem.setAttribute("x", ((g.vw - w) * foco[0]).toFixed(1));
-    imagem.setAttribute("y", ((g.vh - h) * foco[1]).toFixed(1));
   }
 
   function pintar(agora) {
     quadro = 0;
     if (!g) return;
-    if (!vivo || semFoto) {
-      riscos.forEach(function (r) { r.setAttribute("stroke-width", g.base.toFixed(2)); });
-      return;
-    }
-    var p = lim(-abre.getBoundingClientRect().top / (abre.offsetHeight - g.vh));
-    var e = suave(lim((p - .04) / .6));
-    var sw = g.base * Math.pow(g.fim / g.base, e);
+    var p = (!vivo || semFoto) ? 0 : lim(-abre.getBoundingClientRect().top / (abre.offsetHeight - g.vh));
+
+    // Três movimentos sobrepostos desde o primeiro pixel de rolagem (sem tempo morto):
+    // os riscos engrossam, o conjunto desce ao centro e cresce, e o título sai.
+    var e = 1 - Math.pow(1 - lim(p / .56), 1.9);
+    var c = suave(lim(p / .30));
+    var escala = 1 + g.cresce * c;
+    var sw = g.base * escala * Math.pow(g.fim / g.base, e);
     if (pulso) {                                   // convite: os riscos "respiram" enquanto ninguém rola
       var t = (agora - inicioPulso) / 1100;
       if (t >= 1 || p > .01) pulso = false;
-      else sw *= 1 + .55 * Math.sin(Math.PI * t);
+      else sw *= 1 + .5 * Math.sin(Math.PI * t);
     }
-    // Enquanto o título sai, os telhados descem para o meio da tela e crescem: a casa
-    // abre do centro, não do canto de cima (no desktop o quadro intermediário ficava vazio).
-    var c = suave(lim(p / .34));
-    var escala = 1 + g.cresce * c;
+    var cy = g.cy + c * (g.vh / 2 - g.cy);
     if (grupo) {
-      grupo.setAttribute("transform", "translate(" + g.cx.toFixed(1) + "," + (g.cy + c * (g.vh / 2 - g.cy)).toFixed(1) +
+      grupo.setAttribute("transform", "translate(" + g.cx.toFixed(1) + "," + cy.toFixed(1) +
         ") scale(" + escala.toFixed(4) + ") translate(" + (-g.cx).toFixed(1) + "," + (-g.cy).toFixed(1) + ")");
     }
     riscos.forEach(function (r) { r.setAttribute("stroke-width", (sw / escala).toFixed(2)); });
-    cobrir(1.12 - .12 * e);                        // a câmera recua enquanto a casa abre
-    var sai = lim(p / .12);                      // o título sai antes de os telhados passarem por ele
+
+    // As pontas são cortadas na vertical: quando os riscos se fundem, os lados da janela
+    // ficam retos (parede de casa) em vez de serrilhados.
+    var meia = g.bw * .48 * escala + Math.max(0, sw - g.base * escala) * .45;
+    if (corte) {
+      corte.setAttribute("x", (g.cx - meia).toFixed(1));
+      corte.setAttribute("width", (meia * 2).toFixed(1));
+      corte.setAttribute("y", (-g.vh).toFixed(1));
+      corte.setAttribute("height", (g.vh * 3).toFixed(1));
+    }
+    if (!vivo || semFoto) return;
+
+    // A foto acompanha a janela: na chegada a casa inteira cabe dentro dos telhados e,
+    // conforme a janela cresce, a casa vem na direção de quem rola até ocupar a tela.
+    if (imagem && fotoL && fotoA) {
+      var metadeAlta = g.bh * .5 * escala + sw * .56;
+      var esq = Math.max(0, g.cx - meia), dir = Math.min(g.vw, g.cx + meia);
+      var topo = Math.max(0, cy - metadeAlta), baixo = Math.min(g.vh, cy + metadeAlta);
+      var rw = dir - esq, rh = baixo - topo;
+      var s = Math.max(rw / fotoL, rh / fotoA) * 1.04;
+      var w = fotoL * s, h = fotoA * s;
+      imagem.setAttribute("width", w.toFixed(1));
+      imagem.setAttribute("height", h.toFixed(1));
+      imagem.setAttribute("x", (esq + (rw - w) * foco[0]).toFixed(1));
+      imagem.setAttribute("y", (topo + (rh - h) * foco[1]).toFixed(1));
+    }
+
+    var sai = lim(p / .13);
+    capaDy = -34 * sai;
     capa.style.opacity = (1 - sai).toFixed(3);
-    capa.style.transform = "translate3d(0," + (-30 * sai).toFixed(1) + "px,0)";
+    capa.style.transform = "translate3d(0," + capaDy.toFixed(1) + "px,0)";
     capa.style.visibility = sai >= 1 ? "hidden" : "visible";
-    var entra = suave(lim((p - .62) / .25));
+    var entra = suave(lim((p - .5) / .24));
     if (sombra) sombra.style.opacity = entra.toFixed(3);
     if (destaque) {
       destaque.style.opacity = entra.toFixed(3);

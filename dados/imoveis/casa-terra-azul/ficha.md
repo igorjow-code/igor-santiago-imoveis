@@ -14,7 +14,7 @@ area_terreno: 200
 suites: 4
 passeio_url: https://terra-azul-passeio.netlify.app/
 foco_capa: 50% 46%
-chamada: Pé-direito duplo, piscina e quatro suítes. Entregue com acabamento completo.
+chamada: Pé-direito duplo e piscina. Entregue com acabamento completo.
 situacao: disponivel
 destaque: true
 demo: false

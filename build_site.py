@@ -434,7 +434,9 @@ def cabecalho(corretor: dict, ativo: str, prefixo: str) -> str:
     for href, rotulo in itens:
         classe = ' class="ativo"' if href == marcado else ""
         partes.append(f'<a href="{prefixo}{href}"{classe}>{rotulo}</a>')
-    links = "".join(partes)
+    links = "".join(partes) + (
+        f'<span class="nav-pe">{e(corretor["titulo_profissional"])} · {e(corretor["creci"])}<br />'
+        f'{e(corretor["whatsapp_exibicao"])}</span>')
     classe = "topo" if ativo == "index.html" else "topo topo--fixado"
     return f"""<header class="{classe}">
   <div class="wrap topo-linha">
@@ -864,21 +866,23 @@ CAPA = {
     "descricao": ("Corretor de imóveis em Feira de Santana, CRECI-BA 28.140. Venda e aluguel, "
                   "residencial e comercial. Conheça cada imóvel por dentro antes da visita."),
     "titulo": ("Alto padrão", "tem assinatura."),
-    "apoio": ("Imóveis selecionados em Feira de Santana. Você percorre a casa antes da visita "
-              "e trata com um único corretor, do primeiro contato à escritura."),
+    # No celular o título quebra em 3 linhas a partir desta palavra (fica o maior da página).
+    "titulo_quebra_celular": "assinatura.",
+    "apoio": ("Casas e apartamentos em Feira de Santana. "
+              "Você conhece cada um por dentro antes da visita."),
     "botao": "Falar com Igor",
     "convite": "Role e abra a casa",
-    "venda_titulo": ("À venda", "agora"),
-    "venda_apoio": "Poucos imóveis. Cada um apresentado por inteiro, com o preço à vista.",
+    "venda_titulo": ("Imóveis", "à venda."),
+    "venda_apoio": "Poucos imóveis. Cada um apresentado por inteiro, com o preço na página.",
     "aluguel_sobrelinha": "Aluguel",
     "aluguel_titulo": ("Para alugar,", "o mesmo cuidado."),
-    "aluguel_apoio": "O custo mensal informado aparece na ficha antes da visita: aluguel, condomínio e IPTU.",
+    "aluguel_apoio": "O custo do mês aparece na ficha, antes da visita: aluguel, condomínio e IPTU informados.",
     "quem_titulo": ("Você fala com", "quem assina."),
     "quem_apoio": ("Do primeiro contato à entrega das chaves, é uma única pessoa. "
                    "Seu contato não é repassado e a sua negociação não muda de mãos."),
     "fatos": [("{anos} anos", "de corretagem em Feira de Santana"),
               ("2ª geração", "formado ao lado do pai, corretor há mais de 40 anos"),
-              ("1 corretor", "da visita à escritura, na compra e no aluguel")],
+              ("1 corretor", "da visita ao contrato, na compra e no aluguel")],
     "quem_botao": "Agendar uma conversa",
     "dono_sobrelinha": "Para quem tem imóvel",
     "dono_titulo": ("Seu imóvel não é", "mais um anúncio."),
@@ -890,7 +894,7 @@ CAPA = {
                                "apresentar, antes de qualquer compromisso."),
     "dono_botao": "Apresentar meu imóvel",
     "dono_passeio": "Ver o passeio do Terra Azul",
-    "faq_titulo": ("Antes de", "você perguntar"),
+    "faq_titulo": ("Antes de", "você perguntar."),
     "fecho_titulo": ("O próximo passo", "é uma conversa."),
     "fecho_apoio": "Diga o que procura, ou o que pretende vender. Quem responde sou eu, em até {prazo}.",
     "fecho_botao": "Falar com Igor no WhatsApp",
@@ -963,11 +967,16 @@ def larg(partes: tuple[str, ...]) -> str:
     return f"{max(linha(t) for t in partes) * 1.03:.3f}"
 
 
-def titulo_linhas(partes: tuple[str, str], acento: int = 1) -> str:
-    """Título em duas linhas; cada linha sobe sozinha e uma delas leva o laranja."""
+def titulo_linhas(partes: tuple[str, str], acento: int | None = None, quebra: str = "") -> str:
+    """Título em duas linhas; cada linha sobe sozinha. `acento` pinta uma linha de laranja
+    (só a abertura e o fecho usam). `quebra` é o trecho final que vira linha própria no celular."""
     saida = []
     for n, texto in enumerate(partes):
-        miolo = f"<em>{e(texto)}</em>" if n == acento else e(texto)
+        miolo = e(texto)
+        if quebra and texto.endswith(quebra) and texto != quebra:
+            miolo = f'{e(texto[:-len(quebra)])}<span class="q">{e(quebra)}</span>'
+        if n == acento:
+            miolo = f"<em>{miolo}</em>"
         saida.append(f'<span class="ln"><b>{miolo}</b></span>')
     return " ".join(saida)
 
@@ -984,14 +993,14 @@ def linha_imovel(imovel: dict, prefixo: str = "", n: int = 0) -> str:
         foto = (f'<div class="linha-foto"><img src="{e(foto_card_url(imovel, fotos[0], prefixo))}" '
                 f'alt="{e(imovel["tipo"])} em {e(imovel["bairro"])}, {e(imovel["cidade"])}" {tamanho}'
                 f'style="object-position:{foco}" loading="lazy" decoding="async" /></div>')
-    operacao = "À venda" if imovel["operacao"] == "venda" else "À venda ou para alugar"
+    operacao = "À venda" if imovel["operacao"] == "venda" else "Venda ou aluguel"
     nome = nome_curto(imovel)
     local = imovel["cidade"] if imovel["bairro"] == nome else imovel["bairro"]
-    dados = " · ".join(p for p in (local, resumo(imovel),
+    dados = " · ".join(p for p in (imovel["tipo"], local, resumo(imovel),
                                    "mobiliado" if imovel.get("mobiliado") == "sim" else "") if p)
     return f"""<a class="linha{'' if foto else ' linha--sem-foto'}" href="{prefixo}imovel/{e(imovel['slug'])}.html" {reveal(n, 110)}>
   {foto}
-  <div class="linha-texto"><span class="linha-tipo">{e(imovel['tipo'])} · {operacao}</span>
+  <div class="linha-texto"><span class="linha-tipo">{operacao}</span>
     <h3>{e(nome)}</h3><span class="linha-dados">{e(dados)}</span></div>
   <div class="linha-preco">{moeda(valor_venda(imovel))}</div>
 </a>"""
@@ -1020,13 +1029,19 @@ def capa_abertura(corretor: dict, destaque: dict | None) -> tuple[str, str]:
     fotos = fotos_imovel(destaque) if destaque else []
     riscos = '<polyline class="risco" pathLength="1"/>' * 5
     sobrelinha = f"{e(corretor['titulo_profissional'])} · {e(corretor['creci'])}"
-    convite = (f'<p class="capa-convite" aria-hidden="true"><span></span>{e(CAPA["convite"])}</p>'
+    convite = (f'<p class="capa-convite" aria-hidden="true"><span></span><i>{e(CAPA["convite"])}</i></p>'
                if fotos else '')
+    quebra = CAPA.get("titulo_quebra_celular", "")
+    partes_celular = tuple(parte for texto in CAPA["titulo"] for parte in (
+        (texto[:-len(quebra)].strip(), quebra) if quebra and texto.endswith(quebra) and texto != quebra
+        else (texto,)))
     texto = f"""<div class="capa-texto">
         <p class="capa-sobre">{sobrelinha}</p>
-        <h1 style="--larg:{larg(CAPA['titulo'])}">{titulo_linhas(CAPA['titulo'])}</h1>
-        <p class="capa-apoio">{e(CAPA['apoio'])}</p>
-        <div class="acoes"><a class="bt bt-cheio" href="{wa}" target="_blank" rel="noopener">{e(CAPA['botao'])}</a></div>
+        <h1 style="--larg:{larg(CAPA['titulo'])};--larg-c:{larg(partes_celular)}">{titulo_linhas(CAPA['titulo'], 1, quebra)}</h1>
+        <div class="capa-linha">
+          <p class="capa-apoio">{e(CAPA['apoio'])}</p>
+          <div class="acoes"><a class="bt bt-cheio" href="{wa}" target="_blank" rel="noopener">{e(CAPA['botao'])}</a></div>
+        </div>
         {convite}
       </div>"""
     if not fotos:
@@ -1034,7 +1049,8 @@ def capa_abertura(corretor: dict, destaque: dict | None) -> tuple[str, str]:
         return (f"""<section class="abre abre--sem-foto" aria-label="Abertura">
     <div class="palco">
       <svg class="abre-svg" aria-hidden="true" focusable="false">
-        <defs><mask id="telhados" maskUnits="userSpaceOnUse"><g>{riscos}</g></mask></defs>
+        <defs><clipPath id="corte"><rect x="-9999" y="-9999" width="29999" height="29999"/></clipPath>
+          <mask id="telhados" maskUnits="userSpaceOnUse"><g clip-path="url(#corte)"><g class="riscos">{riscos}</g></g></mask></defs>
         <rect width="100%" height="100%" fill="#eb6316" mask="url(#telhados)"/>
       </svg>
       {texto}
@@ -1065,7 +1081,8 @@ def capa_abertura(corretor: dict, destaque: dict | None) -> tuple[str, str]:
     <div class="palco">
       <img class="abre-foto" src="{e(url)}" width="{largura}" height="{altura}" alt="{e(alt)}" fetchpriority="high" decoding="async" />
       <svg class="abre-svg" aria-hidden="true" focusable="false">
-        <defs><mask id="telhados" maskUnits="userSpaceOnUse"><g>{riscos}</g></mask></defs>
+        <defs><clipPath id="corte"><rect x="-9999" y="-9999" width="29999" height="29999"/></clipPath>
+          <mask id="telhados" maskUnits="userSpaceOnUse"><g clip-path="url(#corte)"><g class="riscos">{riscos}</g></g></mask></defs>
         <image href="{e(url)}" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" mask="url(#telhados)"/>
       </svg>
       <div class="abre-sombra"></div>
@@ -1150,7 +1167,7 @@ def pagina_home(corretor: dict, imoveis: list[dict], publicar: bool = False) -> 
     vitrine = ""
     if passeio:
         fotos = fotos_imovel(destaque)
-        escolha = [fotos[n] for n in (0, 3, 2) if n < len(fotos)] or fotos[:3]
+        escolha = [fotos[n] for n in (3, 4, 2) if n < len(fotos)] or fotos[:3]
         quadros = "".join(
             f'<div class="vitrine-quadro" {reveal(n, 130)}><img src="{e(foto_url(destaque, f))}" alt="" '
             f'width="{(dimensoes_imagem(f) or (900, 1200))[0]}" height="{(dimensoes_imagem(f) or (900, 1200))[1]}" '
@@ -1190,10 +1207,10 @@ def pagina_home(corretor: dict, imoveis: list[dict], publicar: bool = False) -> 
     secao_fecho = f"""
 <section class="bloco fecho" aria-labelledby="t-fecho">
   <div class="fecho-miolo">
-  <h2 class="bloco-titulo" id="t-fecho" style="--larg:{larg(CAPA['fecho_titulo'])}" data-reveal>{titulo_linhas(CAPA['fecho_titulo'])}</h2>
+  <h2 class="bloco-titulo" id="t-fecho" style="--larg:{larg(CAPA['fecho_titulo'])}" data-reveal>{titulo_linhas(CAPA['fecho_titulo'], 1)}</h2>
   <p class="bloco-apoio" {reveal(1, 120)}>{e(CAPA['fecho_apoio'].format(prazo=corretor['resposta_prometida']))}</p>
   <div class="acoes" {reveal(2, 120)}><a class="bt bt-cheio bt-grande" href="{wa_geral}" target="_blank" rel="noopener">{e(CAPA['fecho_botao'])}</a></div>
-  <p class="fecho-assinatura">{e(corretor['nome_pessoa'])} · {e(corretor['titulo_profissional'])} · {e(corretor['creci'])}</p>
+  <p class="fecho-assinatura"><span>{e(corretor['nome_pessoa'])}</span> · <span>{e(corretor['titulo_profissional'])}</span> · <span>{e(corretor['creci'])}</span></p>
   </div>
 </section>"""
 
