@@ -1261,7 +1261,8 @@ def pagina_home(corretor: dict, imoveis: list[dict], publicar: bool = False) -> 
 # comprar.html — imóveis à venda, cada um como cartaz (pele "Marca forte")
 # --------------------------------------------------------------------------
 
-# Texto num lugar só. PROPOSTA: nada aqui foi aprovado por Igor ainda (IS-41).
+# Texto num lugar só. Página e texto aprovados por Igor em 26/11/2026 (IS-48).
+# IS-41 continua: mudança de texto só vira definitiva depois que ele aprovar.
 # Regras de copy em igris-os/clientes/is-imoveis/redesign-2026-11/content-plan.md.
 COMPRAR = {
     "titulo_pagina": "Imóveis à venda em Feira de Santana | Igor Santiago Imóveis",
