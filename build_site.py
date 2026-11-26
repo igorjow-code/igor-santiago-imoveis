@@ -1167,7 +1167,7 @@ def pagina_home(corretor: dict, imoveis: list[dict], publicar: bool = False) -> 
     vitrine = ""
     if passeio:
         fotos = fotos_imovel(destaque)
-        escolha = [fotos[n] for n in (3, 4, 2) if n < len(fotos)] or fotos[:3]
+        escolha = [fotos[n] for n in (3, 5, 2) if n < len(fotos)] or fotos[:3]
         quadros = "".join(
             f'<div class="vitrine-quadro" {reveal(n, 130)}><img src="{e(foto_url(destaque, f))}" alt="" '
             f'width="{(dimensoes_imagem(f) or (900, 1200))[0]}" height="{(dimensoes_imagem(f) or (900, 1200))[1]}" '
