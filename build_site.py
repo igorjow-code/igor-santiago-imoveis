@@ -741,7 +741,7 @@ def secao_percurso(passos: list[tuple[str, str]] | None = None, conta_de: dict |
 
 def faq_global(corretor: dict) -> list[dict]:
     return [
-        {"pergunta": "Qual é a condição de entrada no aluguel?", "resposta": "Primeiro aluguel mais dois meses de caução no ato: três valores de aluguel no total. Confirmamos os documentos e as condições do contrato antes da proposta."},
+        {"pergunta": "Qual é a condição de entrada no aluguel?", "resposta": "Primeiro aluguel mais um mês de caução no ato: dois valores de aluguel no total. Confirmamos os documentos e as condições do contrato antes da proposta."},
         {"pergunta": "É meu primeiro aluguel e não tenho comprovação tradicional. Posso conversar?", "resposta": "Sim. Vamos entender sua situação e conferir os documentos aceitos pelo imóvel de seu interesse. A aprovação depende da análise cadastral e da garantia escolhida."},
         {"pergunta": "Posso levar meu pet?", "resposta": "Consulte o campo de pet da ficha. Quando estiver como consultar, verifico as condições do imóvel antes da visita."},
         {"pergunta": "Posso procurar uma sala sem ter CNPJ ainda?", "resposta": "Sim. Podemos agendar uma conversa sobre o espaço e a atividade pretendida. A viabilidade do uso e os documentos precisam ser conferidos antes da contratação."},

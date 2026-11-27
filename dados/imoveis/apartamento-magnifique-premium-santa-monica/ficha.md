@@ -17,9 +17,9 @@ condominio:
 iptu:
 garantias: caucao
 # Opcional: descreva os valores ou etapas específicos da garantia acordada.
-garantia_detalhe: Primeiro aluguel + dois meses de caução no ato (3 valores de aluguel no total).
+garantia_detalhe: Primeiro aluguel + um mês de caução no ato (2 valores de aluguel no total).
 # Meses de caução pagos no ato, em número: alimenta a conta de entrada das páginas de aluguel.
-caucao_meses: 2
+caucao_meses: 1
 mobiliado:
 aceita_pet:
 contas_inclusas: condominio
@@ -43,11 +43,11 @@ São 3 quartos, sendo 1 suíte com armários. O imóvel tem armários na cozinha
 - Área de serviço e banheiro de serviço.
 - 2 garagens cobertas e 1 depósito.
 - Condomínio incluído no aluguel de R$ 4.800/mês.
-- Garantia: primeiro aluguel mais dois meses de caução no ato.
+- Garantia: primeiro aluguel mais um mês de caução no ato.
 
 ## Dúvidas comuns
 ### Qual é o valor do aluguel?
-R$ 4.800 por mês, com o condomínio incluído. O IPTU não consta na informação recebida; consulte Igor.
+R$ 4.800 por mês, com o condomínio incluído. O IPTU não consta na informação recebida; eu confirmo o valor com você antes da visita.
 
 ### Quantos quartos e vagas o apartamento tem?
 São 3 quartos, sendo 1 suíte, e 2 garagens cobertas.
@@ -56,7 +56,7 @@ São 3 quartos, sendo 1 suíte, e 2 garagens cobertas.
 Sim. A ficha informa armários na suíte, cozinha e banheiro, além de varanda gourmet com fechamento em Reiki.
 
 ### Quais garantias são aceitas?
-Primeiro aluguel mais dois aluguéis de caução pagos no ato (três valores de aluguel no total).
+Primeiro aluguel mais um aluguel de caução, pagos no ato (dois valores de aluguel no total).
 
 ### Quando posso entrar e qual é o valor do IPTU?
-Consulte Igor para confirmar a data de entrada e o IPTU, que não consta na informação recebida.
+A data de entrada e o IPTU, que não consta na informação recebida, eu confirmo com você antes da visita.

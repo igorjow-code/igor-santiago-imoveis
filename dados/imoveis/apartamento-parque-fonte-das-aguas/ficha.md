@@ -17,9 +17,9 @@ condominio:
 iptu:
 garantias: caucao
 # Opcional: descreva os valores ou etapas específicos da garantia acordada.
-garantia_detalhe: Primeiro aluguel + dois meses de caução no ato (3 valores de aluguel no total).
+garantia_detalhe: Primeiro aluguel + um mês de caução no ato (2 valores de aluguel no total).
 # Meses de caução pagos no ato, em número: alimenta a conta de entrada das páginas de aluguel.
-caucao_meses: 2
+caucao_meses: 1
 mobiliado:
 aceita_pet:
 contas_inclusas: condominio, agua, luz
@@ -37,14 +37,14 @@ Apartamento para locação no Condomínio Parque Fonte das Águas, no bairro 35�
 ## Destaques
 - Aluguel de R$ 1.600 por mês.
 - Condomínio, água e luz incluídos, conforme informação recebida.
-- Garantia pública: primeiro aluguel mais dois meses de caução no ato.
+- Garantia pública: primeiro aluguel mais um mês de caução no ato.
 
 ## Dúvidas comuns
 ### Qual é o valor do aluguel?
 R$ 1.600 por mês, com condomínio, água e luz incluídos.
 
 ### Qual é o valor do IPTU e quais são as características do apartamento?
-Consulte Igor para confirmar o IPTU, a metragem, a quantidade de quartos e vagas.
+O IPTU, a metragem e a quantidade de quartos e vagas, eu confirmo com você antes da visita.
 
 ### Quais garantias são aceitas?
-Primeiro aluguel mais dois aluguéis de caução pagos no ato (três valores de aluguel no total).
+Primeiro aluguel mais um aluguel de caução, pagos no ato (dois valores de aluguel no total).

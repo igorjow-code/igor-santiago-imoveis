@@ -17,9 +17,9 @@ aceita_pet: consultar
 contas_inclusas: condominio
 iptu_nao_incluido: sim
 garantias: caucao
-garantia_detalhe: Primeiro aluguel + dois meses de caução no ato (3 valores de aluguel no total).
+garantia_detalhe: Primeiro aluguel + um mês de caução no ato (2 valores de aluguel no total).
 # Meses de caução pagos no ato, em número: alimenta a conta de entrada das páginas de aluguel.
-caucao_meses: 2
+caucao_meses: 1
 situacao: disponivel
 destaque: false
 demo: false
@@ -29,9 +29,9 @@ rascunho: false
 ## Descrição
 Apartamento nascente e totalmente mobiliado no Santana Flex, no bairro Capuchinhos, em Feira de Santana. São 1 quarto, sala, varanda e 1 vaga de carro.
 
-Aluguel de R$ 3.100 por mês, com condomínio incluso. IPTU não incluído. Para a entrada: primeiro aluguel mais dois meses de caução no ato.
+Aluguel de R$ 3.100 por mês, com condomínio incluso. IPTU não incluído. Para a entrada: primeiro aluguel mais um mês de caução no ato.
 
-O mesmo apartamento também está disponível para venda por R$ 370.000. Converse com Igor para conhecer as condições de compra e agendar uma visita.
+O mesmo apartamento também está disponível para venda por R$ 370.000. Fale comigo para conhecer as condições de compra e agendar uma visita.
 
 A construtora PDK divulga a planta padrão do Santana Flex com 48,98 m². A área específica desta unidade será conferida na documentação antes da proposta.
 
@@ -55,10 +55,10 @@ Sim, por R$ 370.000. É o mesmo imóvel anunciado para aluguel e venda; a dispon
 1 quarto, sala, varanda e 1 vaga de carro. É totalmente mobiliado e nascente. A relação de móveis e equipamentos será conferida na visita e no contrato.
 
 ### Qual é a condição de entrada?
-Primeiro aluguel mais dois meses de caução no ato: três valores de aluguel no total.
+Primeiro aluguel mais um mês de caução no ato: dois valores de aluguel no total.
 
 ### Qual é a metragem?
 A PDK informa 48,98 m² para a planta padrão do empreendimento. A área específica desta unidade será confirmada na documentação.
 
 ### Quando posso entrar e posso levar pet?
-Consulte Igor para confirmar a data de entrada e as condições para pet.
+A data de entrada e as condições para pet, eu confirmo com você antes da visita.

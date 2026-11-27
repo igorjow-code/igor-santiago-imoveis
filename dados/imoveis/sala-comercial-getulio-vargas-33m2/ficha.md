@@ -16,9 +16,9 @@ vagas:
 condominio:
 iptu:
 garantias: caucao
-garantia_detalhe: Primeiro aluguel + dois meses de caução no ato (3 valores de aluguel no total).
+garantia_detalhe: Primeiro aluguel + um mês de caução no ato (2 valores de aluguel no total).
 # Meses de caução pagos no ato, em número: alimenta a conta de entrada das páginas de aluguel.
-caucao_meses: 2
+caucao_meses: 1
 mobiliado:
 aceita_pet:
 contas_inclusas: condominio, iptu
@@ -46,4 +46,4 @@ O aluguel é de R$ 2.400 por mês, com a taxa de condomínio e o IPTU incluídos
 A sala tem 33 m².
 
 ### Quais são as opções de garantia e pagamento inicial?
-No ato da assinatura, primeiro aluguel mais dois aluguéis de caução — três valores de aluguel ao todo.
+No ato da assinatura, primeiro aluguel mais um aluguel de caução — dois valores de aluguel ao todo.
