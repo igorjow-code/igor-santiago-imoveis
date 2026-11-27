@@ -1805,8 +1805,14 @@ def pagina_alugar(corretor: dict, imoveis: list[dict], finalidade: str, publicar
     # índice com o custo do mês: a página promete "a conta na página" e cumpre na primeira tela
     indice = ""
     if lista_imoveis:
+        def rotulo_indice(imovel: dict) -> str:
+            # com um imóvel só, o nome vem logo abaixo no cartaz: a linha diz o que o valor inclui
+            inclusas = [NOMES_CONTAS.get(c, c) for c in imovel.get("contas_inclusas", [])]
+            if len(lista_imoveis) > 1 or not inclusas or custo_mensal(imovel) != imovel["preco"]:
+                return nome_curto(imovel)
+            return juntar_e(inclusas) + (" inclusos" if len(inclusas) > 1 else " incluso")
         indice = (f'<nav class="cabeca-indice" aria-label="{e(textos["lista_rotulo"])} nesta página">' + "".join(
-            f'<a href="#v-{e(i["slug"])}"><span>{e(nome_curto(i))}</span>'
+            f'<a href="#v-{e(i["slug"])}"><span>{e(rotulo_indice(i))}</span>'
             f'<b>{moeda(custo_mensal(i))}<small>/mês</small></b></a>'
             for i in lista_imoveis) + '</nav>')
     cabeca = f"""

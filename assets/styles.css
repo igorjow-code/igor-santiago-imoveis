@@ -1775,7 +1775,7 @@ html:not(.js) .ficha-passeio .fio { height: 2px; background: var(--laranja); }
    Mesmos quatro gestos; nenhuma peça nova além da conta de entrada.
    ========================================================================== */
 .cartaz-preco small { margin-left: .22em; font: 700 .4em/1 var(--sans); letter-spacing: 0; color: var(--texto-2); }
-.cabeca-indice b small { margin-left: .2em; font: 700 .62em/1 var(--sans); letter-spacing: 0; color: var(--texto-2); transition: color .5s var(--sai); }
+.cabeca-indice b small { text-transform: none; margin-left: .2em; font: 700 .62em/1 var(--sans); letter-spacing: 0; color: var(--texto-2); transition: color .5s var(--sai); }
 /* valor escrito em palavra ("Condomínio, água e luz") não pesa como número */
 .medida--palavra dd { font: 700 1.06rem/1.3 var(--sans); letter-spacing: 0; white-space: normal; text-wrap: balance; }
 /* etapas sem rubrica ao lado: a frase fica na base do título */
