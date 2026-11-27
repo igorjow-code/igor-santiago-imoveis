@@ -320,11 +320,13 @@ class SiteTests(unittest.TestCase):
             self.assertEqual(tira.count('loading="lazy"'), 3)
             self.assertIn('foto 4 de 4', tira)
             self.assertIn('<link rel="preload" as="image" href="../assets/imoveis/casa-teste/01-fachada.webp" fetchpriority="high" />', pagina)
-            # o botão cheio é o passo mais rico (passeio); o fim da tira e o bloco levam ao mesmo lugar
+            # o botão cheio é o passo mais rico (passeio); o fim da tira e a faixa levam ao mesmo lugar
             self.assertIn('>Passear pela casa</a><a class="bt bt-fino" href="https://wa.me/', pagina)
-            self.assertEqual(pagina.count('href="https://passeio.example.invalid/" target="_blank" rel="noopener"'), 4)
+            self.assertEqual(pagina.count('href="https://passeio.example.invalid/" target="_blank" rel="noopener"'), 3)
             self.assertIn('class="tira-quadro tira-fim"', tira)
-            self.assertEqual(pagina.count('class="vitrine-quadro"'), 3)
+            # a faixa do passeio não repete as fotos que a pessoa acabou de ver na tira
+            self.assertIn('id="passeio"', pagina)
+            self.assertNotIn('vitrine-quadro', pagina)
             # venda: a folha mostra o valor, não uma conta de aluguel
             self.assertIn('<p class="valor-rotulo" data-reveal>Valor de venda</p>', pagina)
             self.assertNotIn('conta-linha', pagina)
@@ -353,7 +355,12 @@ class SiteTests(unittest.TestCase):
         pagina = b.pagina_imovel(self.corretor, aluguel, [aluguel])
         self.assertIn('<span class="etiqueta">Aluguel</span>', pagina)
         self.assertIn('<a href="../alugar-residencial.html" class="ativo">Alugar</a>', pagina)
-        self.assertIn('data-total="2010"', pagina)
+        self.assertIn('data-total="2010" data-parcelas="3"', pagina)
+        self.assertIn('IPTU dividido por 12', pagina)
+        # sem parcela além do aluguel não há soma para animar nem nota sobre IPTU dividido
+        so_aluguel = b.conta(dict(aluguel, contas_inclusas=['condominio'], iptu=0, iptu_nao_incluido='sim'))
+        self.assertIn('data-parcelas="1"', so_aluguel)
+        self.assertNotIn('IPTU dividido por 12', so_aluguel)
         self.assertIn('R$ 2.010/mês com os encargos informados', pagina)
         self.assertIn('<a class="bt bt-fino" href="#conta">Ver a conta do mês</a>', pagina)
         self.assertIn('>Agendar visita</a></div>', pagina.split('class="barra-mobile"', 1)[1])

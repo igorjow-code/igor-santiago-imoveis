@@ -301,9 +301,116 @@
       }, { threshold: .55 }).observe(rolo);
     }
 
+    // toque ou clique (sem arraste) amplia a foto; o teclado anda de foto em foto
+    var comFoto = quadros.filter(function (q) { return !q.classList.contains("tira-fim") && q.querySelector("img"); });
+    if (comFoto.length && typeof HTMLDialogElement !== "undefined") {
+      // uma parada de Tab só (a foto da vez); as setas do teclado andam de foto em foto
+      var vez = function (k) {
+        comFoto.forEach(function (q, n) { q.setAttribute("tabindex", n === k ? "0" : "-1"); });
+      };
+      comFoto.forEach(function (q, k) {
+        q.setAttribute("role", "button");
+        q.setAttribute("aria-label", "Ampliar foto " + (k + 1) + " de " + comFoto.length);
+        q.addEventListener("click", function () { if (!calar) abrirLuz(comFoto, k, rolo); });
+        q.addEventListener("focus", function () {
+          vez(k);
+          // no teclado, a foto em foco vira a foto da vez (o contador e o fio acompanham)
+          if (q.matches(":focus-visible")) rolo.scrollTo({ left: Math.min(inicio(quadros.indexOf(q)), maximo()), behavior: "auto" });
+        });
+        q.addEventListener("keydown", function (ev) {
+          if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); abrirLuz(comFoto, k, rolo); }
+          var passo = ev.key === "ArrowRight" ? 1 : ev.key === "ArrowLeft" ? -1 : 0;
+          if (!passo) return;
+          ev.preventDefault();
+          var alvo = comFoto[Math.max(0, Math.min(comFoto.length - 1, k + passo))];
+          tocou = true;
+          alvo.focus();
+        });
+      });
+      vez(0);
+      rolo.removeAttribute("tabindex");
+    }
+
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(pedir);
     window.addEventListener("load", pedir);
     pintar();
+  });
+
+  // --- luz: a foto ampliada, com as mesmas setas, o mesmo contador e o mesmo fio ---
+  var luz = null, luzFoto, luzConta, luzFio, lista = [], onde = 0, deOnde = null;
+  function doisDigitos(n) { return (n < 10 ? "0" : "") + n; }
+  function mostrar(k) {
+    onde = (k + lista.length) % lista.length;
+    var origem = lista[onde].querySelector("img");
+    luzFoto.style.animation = "none";
+    luzFoto.src = origem.currentSrc || origem.src;
+    luzFoto.alt = origem.alt;
+    void luzFoto.offsetWidth;
+    luzFoto.style.animation = "";
+    luzConta.innerHTML = "<b>" + doisDigitos(onde + 1) + "</b> / " + doisDigitos(lista.length);
+    luzFio.style.setProperty("--p", ((onde + 1) / lista.length).toFixed(4));
+  }
+  function montar() {
+    luz = document.createElement("dialog");
+    luz.className = "luz";
+    luz.setAttribute("aria-label", "Foto ampliada");
+    luz.innerHTML = '<div class="luz-palco"><img alt="" /></div>' +
+      '<button class="tira-seta luz-fechar" type="button" aria-label="Fechar foto ampliada">&#215;</button>' +
+      '<div class="luz-pe"><p class="tira-conta"></p><span class="tira-fio" aria-hidden="true"><i></i></span>' +
+      '<div class="tira-setas"><button class="tira-seta" type="button" data-anterior aria-label="Foto anterior">&#8592;</button>' +
+      '<button class="tira-seta" type="button" data-proxima aria-label="Próxima foto">&#8594;</button></div></div>';
+    document.body.appendChild(luz);
+    luzFoto = luz.querySelector("img");
+    luzConta = luz.querySelector(".tira-conta");
+    luzFio = luz.querySelector(".tira-fio i");
+    luz.querySelector("[data-anterior]").addEventListener("click", function () { mostrar(onde - 1); });
+    luz.querySelector("[data-proxima]").addEventListener("click", function () { mostrar(onde + 1); });
+    luz.querySelector(".luz-fechar").addEventListener("click", function () { luz.close(); });
+    luz.addEventListener("click", function (ev) {
+      if (ev.target === luz || ev.target.classList.contains("luz-palco")) luz.close();
+    });
+    luz.addEventListener("keydown", function (ev) {
+      if (ev.key === "ArrowLeft") mostrar(onde - 1);
+      if (ev.key === "ArrowRight") mostrar(onde + 1);
+    });
+    var toque = null;                        // no celular, o dedo passa as fotos
+    luz.addEventListener("touchstart", function (ev) { toque = ev.touches.length === 1 ? ev.touches[0].clientX : null; }, { passive: true });
+    luz.addEventListener("touchend", function (ev) {
+      if (toque === null) return;
+      var dx = ev.changedTouches[0].clientX - toque;
+      toque = null;
+      if (Math.abs(dx) > 44) mostrar(onde + (dx < 0 ? 1 : -1));
+    }, { passive: true });
+    luz.addEventListener("close", function () {
+      document.documentElement.classList.remove("luz-aberta");
+      var quadro = lista[onde];
+      if (deOnde && quadro) deOnde.scrollTo({ left: quadro.offsetLeft - lista[0].offsetLeft, behavior: "auto" });
+      if (quadro) quadro.focus({ preventScroll: true });
+    });
+  }
+  function abrirLuz(quadros, k, rolo) {
+    if (!luz) montar();
+    lista = quadros;
+    deOnde = rolo;
+    mostrar(k);
+    document.documentElement.classList.add("luz-aberta");
+    luz.showModal();
+  }
+
+  // --- vídeos: o controle nativo só entra depois do toque no botão da própria página ---
+  var videos = Array.prototype.slice.call(document.querySelectorAll(".tira-quadro--video video"));
+  videos.forEach(function (video) {
+    var botao = video.parentNode.querySelector(".tira-tocar");
+    if (!botao) return;
+    video.controls = false;
+    botao.hidden = false;
+    botao.addEventListener("click", function () {
+      videos.forEach(function (outro) { if (outro !== video) outro.pause(); });
+      botao.hidden = true;
+      video.controls = true;
+      var toca = video.play();
+      if (toca && toca.catch) toca.catch(function () {});
+    });
   });
 })();
 
@@ -317,7 +424,8 @@
   var linha = document.querySelector(".folha .conta-total[data-total]");
   var forte = linha && linha.querySelector("strong");
   var fim = linha ? Number(linha.dataset.total) : 0;
-  if (!forte || !fim) return;
+  // só há soma para mostrar quando mais de uma parcela em reais entra no total
+  if (!forte || !fim || Number(linha.dataset.parcelas) < 2) return;
   var texto = forte.textContent;
   function moeda(n) { return "R$ " + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
   var olho = new IntersectionObserver(function (entradas) {
@@ -346,9 +454,17 @@
   var raiz = document.documentElement;
   var abre = document.querySelector(".abre");
   var pele = document.body.classList.contains("pagina-capa");
-  // na ficha a barra do celular leva o valor e a visita: ocupa a largura e só sai quando o
-  // preço do topo ou outro botão de conversa está na tela, no fecho e com o menu aberto
+  // na ficha a barra do celular leva o valor e a visita: ocupa a largura e só sai quando
+  // outro botão de conversa está na tela, no fecho e com o menu aberto. Enquanto o preço
+  // do topo está à vista ela espera fora (o preço não aparece duas vezes na mesma tela).
   var ficha = document.body.classList.contains("pagina-ficha");
+  var precoTopo = ficha && document.querySelector(".ficha-valor");
+  if (precoTopo && "IntersectionObserver" in window) {
+    raiz.classList.add("preco-a-vista");
+    new IntersectionObserver(function (entradas) {
+      raiz.classList.toggle("preco-a-vista", entradas[0].isIntersecting);
+    }, { rootMargin: "-72px 0px 0px 0px" }).observe(precoTopo);
+  }
   if (!abre) raiz.classList.remove("na-abertura");
   if (!pele) return;
 
@@ -381,7 +497,7 @@
       });
       raiz.classList.toggle("sem-flutuante", blocosLivres.length > 0);
     }, { rootMargin: "0px 0px -18% 0px" });
-    Array.prototype.forEach.call(document.querySelectorAll(ficha ? "main .fecho, main .ficha-valor" : "main .faq, main .fecho"), function (b) {
+    Array.prototype.forEach.call(document.querySelectorAll(ficha ? "main .fecho" : "main .faq, main .fecho"), function (b) {
       olhoBlocos.observe(b);
     });
     // a tabela de medidas e a rubrica têm conteúdo no canto direito: basta encostarem na tela

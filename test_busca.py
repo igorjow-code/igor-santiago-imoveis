@@ -38,6 +38,8 @@ class BuscaTests(unittest.TestCase):
             self.assertIn('R$ 370.000', documento)
             self.assertIn('Não incluído', documento)
             self.assertIn('controls playsinline preload="none"', documento)
+            # o botão próprio nasce escondido: sem JS o controle nativo continua valendo
+            self.assertIn('<button class="tira-tocar" type="button" hidden aria-label="Assistir ao vídeo 1 de 1">', documento)
             self.assertNotIn('autoplay', documento)
             self.assertIn('Conversar sobre a compra', documento)
             self.assertNotIn('conta-mobile', documento)

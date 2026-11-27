@@ -281,12 +281,12 @@ def specs(imovel: dict) -> list[tuple[str, str]]:
         itens.append(("Garantia", imovel["garantia_detalhe"]))
     elif imovel.get("garantias"):
         nomes = {"seguro-fianca": "seguro-fiança", "caucao": "caução", "agua": "água",
-                 "condominio": "condomínio"}
+                 "condominio": "condomínio", "iptu": "IPTU"}
         itens.append(("Garantias aceitas", ", ".join(
             nomes.get(v, v) for v in imovel["garantias"])))
     if imovel.get("contas_inclusas"):
         nomes = {"seguro-fianca": "seguro-fiança", "caucao": "caução", "agua": "água",
-                 "condominio": "condomínio"}
+                 "condominio": "condomínio", "iptu": "IPTU"}
         itens.append(("Contas inclusas", ", ".join(
             nomes.get(v, v) for v in imovel["contas_inclusas"])))
     return itens
@@ -682,21 +682,35 @@ def conta(imovel: dict, variante: str = 'cena', atraso_base: int = 0) -> str:
     for chave, rotulo, divisor in [('condominio', 'Condomínio', 1), ('iptu', 'IPTU ÷ 12', 12)]:
         valor = ('Incluso no aluguel' if locacao and chave in inclusas else
                  moeda(imovel[chave] // divisor) if chave in imovel else 'Consultar')
-        if chave == 'iptu' and imovel.get('iptu_nao_incluido') == 'sim' and chave not in imovel:
-            rotulo, valor = 'IPTU', 'Não incluído'
+        if chave == 'iptu' and chave not in imovel:
+            # sem valor informado não há o que dividir por 12
+            rotulo = 'IPTU'
+            if imovel.get('iptu_nao_incluido') == 'sim':
+                valor = 'Não incluído'
         linhas.append((rotulo, valor))
+    # parcelas em reais que entram na soma (a ficha só anima a soma quando há mais de uma)
+    parcelas = 1 + sum(1 for chave in ('condominio', 'iptu')
+                       if locacao and chave not in inclusas and imovel.get(chave))
+    iptu_somado = locacao and 'iptu' not in inclusas and imovel.get('iptu')
     def animar(atraso):
         return f'data-reveal style="--atraso:{atraso_base + atraso}ms"' if variante == 'cena' else ''
-    itens = ''.join(f'<div class="conta-linha" {animar(n * 130)}><dt>{e(k)}</dt><dd>{e(v)}</dd></div>' for n, (k, v) in enumerate(linhas))
+    # valor escrito em palavra ("Incluso no aluguel") leva classe própria: não pesa como número
+    palavra = ' class="em-palavra"'
+    itens = ''.join(f'<div class="conta-linha" {animar(n * 130)}><dt>{e(k)}</dt>'
+                    f'<dd{"" if any(c.isdigit() for c in v) else palavra}>{e(v)}</dd></div>'
+                    for n, (k, v) in enumerate(linhas))
     legenda = 'Você paga por mês' if locacao else 'Valor de venda'
     acessivel = legenda + ': ' + numero_extenso(total) + (' real' if total == 1 else ' reais')
-    nota = ('*Aluguel + encargos informados. IPTU dividido por 12, arredondado para baixo. Consumos e garantia à parte, quando aplicáveis.' if locacao else 'Condomínio e IPTU são encargos mensais, além do preço de venda.')
+    nota = ('Aluguel + encargos informados. '
+            + ('IPTU dividido por 12, arredondado para baixo. ' if iptu_somado else '')
+            + 'Consumos e garantia à parte, quando aplicáveis.'
+            if locacao else 'Condomínio e IPTU são encargos mensais, além do preço de venda.')
     revelar = 'data-reveal' if variante == 'painel' else ''
     return f'''<div class="conta conta--{variante}" {revelar}>
 <p class="conta-imovel">{e(imovel['tipo'])} · {e(imovel['bairro'])}</p>
 <dl class="conta-linhas">{itens}</dl>
 <div class="conta-regua" aria-hidden="true" {animar(390)}></div>
-<p class="conta-total" data-total="{total}" aria-label="{e(acessivel)}" {animar(520)}><span class="conta-legenda">{legenda}:</span> <strong>{moeda(total)}</strong></p>
+<p class="conta-total" data-total="{total}" data-parcelas="{parcelas}" aria-label="{e(acessivel)}" {animar(520)}><span class="conta-legenda">{legenda}:</span> <strong>{moeda(total)}</strong></p>
 <p class="conta-nota">{nota}</p></div>'''
 
 
@@ -1613,7 +1627,8 @@ FICHA = {
     "fim_passeio": ("Agora,", "por dentro."),
     "fim_visita": ("Agora,", "de perto."),
     "videos_titulo": ("Por dentro,", "em vídeo."),
-    "videos_apoio": "Toque para assistir aos ambientes antes da visita.",
+    "videos_apoio": "Assista aos ambientes antes da visita.",
+    "video_rotulo": "Vídeo {n}",
     "folha_sobrelinha": "Ficha do imóvel",
     "folha_titulo": "em números.",
     "valor_venda": "Valor de venda",
@@ -1668,6 +1683,26 @@ def videos_imovel(imovel: dict) -> list[Path]:
     return sorted(pasta.glob('*.mp4')) if pasta.is_dir() else []
 
 
+def duracao_mp4(arquivo: Path) -> int:
+    """Duração do vídeo em segundos, lida do cabeçalho 'mvhd' do MP4 (sem pacote externo).
+    Arquivo ilegível ou sem cabeçalho devolve 0 e o rótulo sai sem tempo."""
+    try:
+        dados = arquivo.read_bytes()
+    except OSError:
+        return 0
+    pos = dados.find(b'mvhd')
+    if pos < 0 or len(dados) < pos + 36:
+        return 0
+    versao = dados[pos + 4]
+    if versao == 1:
+        escala = int.from_bytes(dados[pos + 24:pos + 28], 'big')
+        duracao = int.from_bytes(dados[pos + 28:pos + 36], 'big')
+    else:
+        escala = int.from_bytes(dados[pos + 16:pos + 20], 'big')
+        duracao = int.from_bytes(dados[pos + 20:pos + 24], 'big')
+    return round(duracao / escala) if escala else 0
+
+
 def nome_predio(imovel: dict) -> str:
     if imovel.get('empreendimento'):
         return str(imovel['empreendimento']).strip()
@@ -1692,6 +1727,13 @@ def partir_nome(nome: str) -> tuple[str, ...]:
     firmes = [k for k in cortes if len(nome[:k].rsplit(" ", 1)[-1]) > 3] or cortes
     k = min(firmes, key=lambda k: abs(k - len(nome) / 2))
     return (nome[:k], nome[k + 1:])
+
+
+def lista_pontos(itens: list[str], classe: str) -> str:
+    """Itens separados por ponto. O ponto é desenhado no CSS antes de cada item e o da
+    primeira posição de cada linha fica fora da caixa (cortado): linha nenhuma começa
+    ou termina em separador."""
+    return (f'<p class="{classe} pontos">' + ''.join(f'<span>{e(i)}</span>' for i in itens if i) + '</p>')
 
 
 def secao_do_imovel(imovel: dict) -> tuple[str, str]:
@@ -1758,16 +1800,25 @@ def tira_videos(imovel: dict) -> str:
         return ""
     total = len(videos)
     quadros = []
+    # o mais longo primeiro: quem toca um só vê o passeio inteiro, não um trecho de 2 segundos
+    duracoes = {video: duracao_mp4(video) for video in videos}
+    videos = sorted(videos, key=lambda v: -duracoes[v])
     for n, video in enumerate(videos, 1):
+        segundos = duracoes[video]
+        # trecho de poucos segundos não anuncia a duração
+        tempo = f' · {segundos // 60}:{segundos % 60:02d}' if segundos >= 10 else ''
         caminho = f'../assets/imoveis/{imovel["slug"]}/videos/{video.name}'
         poster = video.with_suffix('.webp')
         poster_attr = f' poster="{e(caminho[:-4] + ".webp")}"' if poster.exists() else ''
+        # sem JS o controle nativo fica (o vídeo continua assistível); com JS ele sai até o toque
         quadros.append(
             f'<li class="tira-quadro tira-quadro--video" style="--r:.5625;--atraso:{min(n - 1, 4) * 110}ms" data-reveal>'
             f'<video controls playsinline preload="none"{poster_attr} '
             f'aria-label="Vídeo {n} de {total}: {e(imovel["tipo"])} em {e(imovel["bairro"])}">'
             f'<source src="{e(caminho)}" type="video/mp4" />Seu navegador não suporta este vídeo. '
-            f'<a href="{e(caminho)}">Abrir vídeo {n}</a></video></li>')
+            f'<a href="{e(caminho)}">Abrir vídeo {n}</a></video>'
+            f'<button class="tira-tocar" type="button" hidden aria-label="Assistir ao vídeo {n} de {total}">'
+            f'<i aria-hidden="true"></i><span>{e(FICHA["video_rotulo"].format(n=f"{n:02d}") + tempo)}</span></button></li>')
     contador = FICHA["contador_videos"].format(n=total) if total > 1 else "1 vídeo"
     tira = _tira("".join(quadros), contador, "Vídeos do imóvel", "Vídeo anterior", "Próximo vídeo")
     return f"""
@@ -1830,13 +1881,8 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
             extras.append('Condomínio incluso no aluguel')
     if imovel.get('preco_venda'):
         extras.append(f"{FICHA['tambem_venda']} · {moeda(imovel['preco_venda'])}")
-    resumo_html = ''
-    if notas:
-        resumo_html += ('<p class="ficha-resumo">'
-                        + ' <i aria-hidden="true">·</i> '.join(f'<span>{e(p)}</span>' for p in notas) + '</p>')
-    if extras:
-        resumo_html += ('<p class="ficha-resumo">'
-                        + ' <i aria-hidden="true">·</i> '.join(f'<span>{e(p)}</span>' for p in extras) + '</p>')
+    resumo_html = ((lista_pontos(notas, 'ficha-resumo') if notas else '')
+                   + (lista_pontos(extras, 'ficha-resumo') if extras else ''))
 
     # o botão cheio é o passo mais rico que existe (o passeio; sem ele, a visita)
     botao_visita = ('<a class="bt {classe}" href="' + wa_visita + '" target="_blank" rel="noopener">'
@@ -1854,17 +1900,18 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
         fim = (tira_fim(FICHA['fim_passeio'], sobre_fim, rotulo_passeio(imovel), e(passeio)) if passeio
                else tira_fim(FICHA['fim_visita'], sobre_fim, rotulo_visita, wa_visita))
     tira = tira_fotos(imovel, fim)
-    tipo_local = ' <i aria-hidden="true">·</i> '.join(f'<span>{e(p)}</span>' for p in locais)
     topo = f"""
 <section class="ficha-topo{'' if tira else ' ficha-topo--sem-foto'}" aria-labelledby="t-pagina">
   <div class="ficha-id">
     <nav class="trilha" aria-label="Você está em"><a href="../index.html">Início</a><i aria-hidden="true">/</i><a href="../{pagina_secao}">{rotulo_secao}</a><i aria-hidden="true">/</i><span>{e(nome)}</span></nav>
-    <p class="ficha-rotulo"><span class="etiqueta">{etiqueta}</span><span class="ficha-tipo">{tipo_local}</span></p>
+    <div class="ficha-rotulo"><span class="etiqueta">{etiqueta}</span>{lista_pontos(locais, 'ficha-tipo')}</div>
     <h1 class="ficha-h1" id="t-pagina"><span class="pagina-titulo" style="--larg:{larg(partes)}">{titulo_linhas(partes)}</span>
-      <span class="ficha-sub">{e(imovel['titulo'])}</span></h1>
-    <div class="ficha-valor"><p class="ficha-preco">{preco_html}</p>{resumo_html}</div>
+      <span class="so-leitor">{e(imovel['titulo'])}</span></h1>
   </div>
-  <div class="acoes ficha-acoes">{acoes}</div>
+  <div class="ficha-lado">
+    <div class="ficha-valor"><p class="ficha-preco">{preco_html}</p>{resumo_html}</div>
+    <div class="acoes ficha-acoes">{acoes}</div>
+  </div>
   {tira}
 </section>"""
 
@@ -1877,7 +1924,7 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
         valor = f'<div id="conta">{conta(imovel, "cena")}</div>'
     aviso = f'<p class="folha-aviso">{e(FICHA["reservado"])}</p>' if reservado else ''
     medidas = ''.join(
-        f'<div class="medida{" medida--longa" if len(v) > 18 else ""}" {reveal(k, 90)}>'
+        f'<div class="medida{" medida--longa" if len(v) > 18 else "" if any(c.isdigit() for c in v) else " medida--palavra"}" {reveal(k, 90)}>'
         f'<dt>{e(r)}</dt><dd>{e(v[:1].upper() + v[1:])}</dd></div>' for k, (r, v) in enumerate(specs(imovel)))
     medidas = f'<dl class="medidas">{medidas}</dl>' if medidas else ''
     tambem = ''
@@ -1893,7 +1940,9 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
         for n, p in enumerate(imovel['descricao']))
     disponivel = disponibilidade(imovel)
     disponivel = f'<p class="folha-disponivel">{e(disponivel)}</p>' if disponivel else ''
-    destaques = ''.join(f'<li {reveal(k, 60)}>{e(d)}</li>' for k, d in enumerate(imovel['destaques']))
+    repetida = f"{metragem(imovel['area'])} m²" if imovel.get('area') else None
+    destaques = ''.join(f'<li {reveal(k, 60)}>{e(d)}</li>' for k, d in enumerate(
+        d for d in imovel['destaques'] if not (repetida and repetida in d)))
     destaques = (f'<h3 class="folha-h">{e(FICHA["destaques"])}</h3><ul class="folha-lista">{destaques}</ul>'
                  if destaques else '')
     duvidas = secao_duvidas(FICHA['faq_titulo'], imovel['duvidas']) if imovel['duvidas'] else ''
@@ -1920,37 +1969,26 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
   </section>
   {duvidas}
   <footer class="folha-pe"><div class="folha-pe-miolo">
+    <span class="fio" data-reveal aria-hidden="true"></span>
+    <p class="folha-nota" data-reveal style="--atraso:220ms">{e(FICHA['nota'])}</p>
     {rubrica(corretor, FICHA['rubrica_link'], prefixo='../', wa=wa_visita)}
-    <p class="folha-nota">{e(FICHA['nota'])}</p>
   </div></footer>
 </div>"""
 
     # --- o passeio (quando existe) e o fecho ------------------------------------
     bloco_passeio = ''
     if passeio:
-        dentro = fotos_cartaz(imovel, fotos)
-        vitrine = ''
-        if dentro:
-            quadros = ''.join(
-                f'<div class="vitrine-quadro" {reveal(k, 130)}>{imagem_html(imovel, f, "", "../")}</div>'
-                for k, f in enumerate(dentro))
-            vitrine = (f'<a class="vitrine" href="{e(passeio)}" target="_blank" rel="noopener" '
-                       f'aria-label="{e(rotulo_passeio(imovel))}: {e(nome)}">{quadros}</a>')
         o_imovel = artigo_tipo(imovel)[0]
         o_imovel = o_imovel[0].lower() + o_imovel[1:]
         bloco_passeio = f"""
-<section class="bloco dono ficha-passeio" id="passeio" aria-labelledby="t-passeio">
-  <div class="dono-miolo{'' if vitrine else ' dono-miolo--sem-vitrine'}">
-    <div class="dono-texto">
-      <p class="sobre-linha" data-reveal>{e(FICHA['passeio_sobrelinha'])}</p>
-      <h2 class="bloco-titulo" id="t-passeio" style="--larg:{larg(FICHA['passeio_titulo'])}" data-reveal>{titulo_linhas(FICHA['passeio_titulo'])}</h2>
-      <p class="bloco-apoio" {reveal(1, 120)}>{e(FICHA['passeio_apoio'].format(o_imovel=o_imovel))}</p>
-      <div class="acoes" data-reveal>
-        <a class="bt bt-cheio bt-grande" href="{e(passeio)}" target="_blank" rel="noopener">{e(rotulo_passeio(imovel))}</a>
-      </div>
-    </div>
-    {vitrine}
-  </div>
+<section class="bloco ficha-passeio" id="passeio" aria-labelledby="t-passeio">
+  <span class="fio" data-reveal aria-hidden="true"></span>
+  <header class="bloco-cabeca">
+    <div class="cabeca-titulo"><p class="sobre-linha" data-reveal>{e(FICHA['passeio_sobrelinha'])}</p>
+    <h2 class="bloco-titulo bloco-titulo--menor" id="t-passeio" style="--larg:{larg(FICHA['passeio_titulo'])}" data-reveal>{titulo_linhas(FICHA['passeio_titulo'])}</h2></div>
+    <div class="passeio-lado"><p class="bloco-apoio" {reveal(1, 120)}>{e(FICHA['passeio_apoio'].format(o_imovel=o_imovel))}</p>
+    <div class="acoes" {reveal(2, 120)}><a class="bt bt-cheio" href="{e(passeio)}" target="_blank" rel="noopener">{e(rotulo_passeio(imovel))}</a></div></div>
+  </header>
 </section>"""
     volta = (f'<p class="fecho-volta"><a class="rubrica-link" href="../{pagina_secao}">'
              f'{e(FICHA["voltar"][pagina_secao])}</a></p>')
@@ -1959,7 +1997,7 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
                         tuple(frase.format(prazo=prazo) for frase in FICHA['fecho_apoio' + chave]),
                         rotulo_visita, wa_visita, assinatura=False, depois=volta)
 
-    corpo = topo + tira_videos(imovel) + folha + bloco_passeio + fecho
+    corpo = topo + folha + tira_videos(imovel) + bloco_passeio + fecho
 
     meta_venda = f' Também à venda por {moeda(imovel["preco_venda"])}.' if imovel.get('preco_venda') else ''
     predio = nome_predio(imovel)
@@ -2388,6 +2426,11 @@ def pendencias(corretor: dict, imoveis: list[dict]) -> list[str]:
         ficha = f"{imovel['_arquivo'].parent.name}/ficha.md"
         if imovel.get("rascunho"):
             faltas.append(f"{ficha} → rascunho — falta revisar ficha")
+        for foto in fotos_imovel(imovel):
+            medida = dimensoes_imagem(foto)
+            if medida and medida[0] / medida[1] < .5:
+                faltas.append(f"{ficha} → foto {foto.name} estreita demais ({medida[0]}×{medida[1]}): "
+                              "provável faixa preta gravada na imagem; reexportar")
         for campo, valores in ENUMS.items():
             if imovel.get(campo) and imovel[campo] not in valores:
                 faltas.append(f"{ficha} → {campo} inválido: {imovel[campo]!r}")

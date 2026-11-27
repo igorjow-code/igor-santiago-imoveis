@@ -1320,23 +1320,32 @@ html:not(.js) .etapa:first-child { border-top: 2px solid var(--laranja); }
 /* fecho: uma frase por linha */
 .fecho .bloco-apoio span { display: block; }
 
+
 /* ==========================================================================
    FICHA DO IMÓVEL — pele "Marca forte" (26/11/2026)
    A página é o documento do imóvel. Em cima, escuro: nome, preço e a rua de
    fotos que se arrasta de lado. Embaixo, a folha de papel com telhado: a conta,
    as medidas, a descrição e as dúvidas, assinada pela rubrica do corretor.
    Movimento da tela: arrastar as fotos (os telhados levantam em fila, o fio
-   laranja conta o progresso) e ler a conta (as linhas somam uma a uma).
+   laranja conta o progresso, o toque amplia) e ler a conta (as linhas somam).
    Mesmos quatro gestos do sistema; o papel é a superfície de leitura longa
    prevista no blueprint.
    ========================================================================== */
-.pagina-ficha { --linha-papel: rgba(15,15,15,.16); --tinta-2: #3a3936; }
+.pagina-ficha { --linha-papel: rgba(15,15,15,.16); --tinta-2: #33322f; }
+.folha { --tinta-suave: #4a4947; }
+.so-leitor { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* lista com pontos: o ponto vem antes de cada item e o primeiro de cada linha fica fora
+   da caixa, cortado. Linha nenhuma começa nem termina em separador. */
+.pontos { display: flex; flex-wrap: wrap; margin-left: -1.1em; clip-path: inset(0 0 0 1.1em); }
+.pontos span { position: relative; padding-left: 1.1em; white-space: nowrap; }
+.pontos span::before { content: "\00b7"; position: absolute; left: 0; width: 1.1em; text-align: center; color: var(--marfim-suave); }
 
 /* --- em cima: trilha, etiqueta, nome, preço ------------------------------------- */
-.ficha-topo { --sangra: max(var(--borda), (100vw - 1320px) / 2); display: grid; grid-template-columns: minmax(0, 1fr); padding-top: clamp(6px, 1.6vw, 22px); }
+.ficha-topo { --sangra: max(var(--borda), (100vw - 1320px) / 2); display: grid; grid-template-columns: minmax(0, 1fr); padding-top: clamp(4px, 1.4vw, 18px); }
 .ficha-id { container-type: inline-size; min-width: 0; padding: 0 var(--sangra); }
 .trilha {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; margin: 0 0 clamp(10px, 2.2vw, 30px);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; margin: 0 0 clamp(8px, 1.6vw, 20px);
   font: 700 13.5px/1.3 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--marfim-suave);
 }
 .trilha a { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; color: var(--texto-2); transition: color .5s var(--sai); }
@@ -1345,50 +1354,59 @@ html:not(.js) .etapa:first-child { border-top: 2px solid var(--laranja); }
 /* celular: o nome do imóvel vem logo abaixo, em letra grande; a trilha fica só com o caminho de volta */
 @media (max-width: 599px) { .trilha span, .trilha i:last-of-type { display: none; } }
 .ficha-rotulo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
-.ficha-tipo { font: 700 14px/1.3 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--texto-2); }
-.ficha-tipo i, .ficha-resumo i { font-style: normal; color: var(--marfim-suave); }
-.ficha-tipo span, .ficha-resumo span { white-space: nowrap; }
-.ficha-h1 { margin: 16px 0 0; font: inherit; letter-spacing: 0; }
+.ficha-tipo { font: 700 14px/1.5 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--texto-2); }
+.ficha-h1 { margin: 14px 0 0; font: inherit; letter-spacing: 0; }
 .ficha-h1 .pagina-titulo { display: block; }
-.ficha-sub {
-  display: block; max-width: 46ch; margin-top: 12px; text-wrap: balance;
-  font: 400 1.06rem/1.45 var(--sans); letter-spacing: .004em; text-transform: none; color: var(--texto-2);
-}
-.ficha-valor { margin-top: clamp(16px, 2vw, 26px); }
+/* nome em tamanho fixo por largura de tela (imóvel mais barato não ganha letra menor);
+   --larg continua só como teto, para nome comprido não estourar */
+.ficha-h1 .pagina-titulo { --teto: 10.9vw; font-size: min(calc(100cqi / var(--larg, 9)), var(--teto)); }
+.ficha-lado { display: contents; }
+.ficha-valor { padding: clamp(14px, 2vw, 22px) var(--sangra) 0; }
 .ficha-preco {
   color: var(--laranja-claro); white-space: nowrap;
-  font: 900 clamp(2.1rem, 9.4vw, 3.9rem)/1 var(--display); letter-spacing: -.025em;
+  font: 900 clamp(2.1rem, 9.4vw, 3.6rem)/1 var(--display); letter-spacing: -.025em;
 }
 .ficha-preco small { margin-left: .22em; font: 700 .36em/1 var(--sans); letter-spacing: 0; color: var(--texto-2); }
 .ficha-resumo { margin-top: 10px; font-size: 1rem; color: var(--texto-2); }
 .ficha-resumo + .ficha-resumo { margin-top: 2px; }
 .ficha-acoes { padding: clamp(22px, 3vw, 34px) var(--sangra) 0; }
 /* celular: o nome e o preço, depois as fotos, depois os botões (a conversa mora na barra) */
-.ficha-topo .tira { margin-top: clamp(8px, 3.4vw, 46px); }
+.ficha-topo .tira { margin-top: clamp(10px, 2.6vw, 30px); }
 @media (max-width: 899px) {
   .ficha-topo .ficha-acoes { order: 3; }
   .ficha-topo--sem-foto .ficha-acoes { order: 0; }
 }
 @media (max-width: 479px) {
-  .ficha-acoes { flex-direction: column; align-items: flex-start; }
-  .ficha-acoes .bt { min-width: 236px; }
+  .ficha-acoes { flex-direction: column; align-items: stretch; }
 }
+@media (min-width: 600px) { .ficha-h1 .pagina-titulo { --teto: clamp(3.4rem, 8.4vw, 4.6rem); } }
 @media (min-width: 900px) {
+  /* preço à esquerda e botões à direita, numa linha só, logo abaixo do nome */
+  .ficha-lado { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px 48px; padding: clamp(14px, 2vw, 22px) var(--sangra) 0; }
+  .ficha-valor, .ficha-acoes { padding: 0; }
+  .ficha-acoes { flex: none; padding-bottom: 4px; }
+  .ficha-h1 .pagina-titulo { --teto: clamp(4rem, 6.7vw, 6.1rem); }
+}
+@media (min-width: 1200px) {
+  /* duas pontas: o nome à esquerda; preço, medidas e botões à direita, na base do nome */
   .ficha-topo { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
   .ficha-id { padding-right: 0; }
-  .ficha-acoes { padding: 0 var(--sangra) 6px 48px; justify-content: flex-end; }
+  .ficha-lado { flex-direction: column; align-items: flex-end; gap: 18px; padding: 0 var(--sangra) 4px 56px; }
+  .ficha-valor { text-align: right; }
+  .ficha-valor .pontos { justify-content: flex-end; flex-wrap: nowrap; }
+  .ficha-valor .pontos span:first-child::before { display: none; }
+  .ficha-acoes { padding-bottom: 0; }
   .ficha-topo .tira { grid-column: 1 / -1; }
 }
 /* chegada coreografada: trilha, nome em linhas, preço, botões; os telhados das fotos fecham */
-.js .ficha-topo .trilha, .js .ficha-rotulo, .js .ficha-sub, .js .ficha-valor, .js .ficha-acoes { opacity: 0; animation: sobe .9s var(--sai) forwards; }
+.js .ficha-topo .trilha, .js .ficha-rotulo, .js .ficha-valor, .js .ficha-acoes { opacity: 0; animation: sobe .9s var(--sai) forwards; }
 .js .ficha-topo .trilha { animation-delay: .04s; }
 .js .ficha-rotulo { animation-delay: .1s; }
-.js .ficha-sub { animation-delay: .4s; }
-.js .ficha-valor { animation-delay: .5s; }
-.js .ficha-acoes { animation-delay: .62s; }
+.js .ficha-valor { animation-delay: .44s; }
+.js .ficha-acoes { animation-delay: .58s; }
 
 /* --- tira: a rua de fotos ----------------------------------------------------- */
-.tira { --alt: min(56vh, 470px); --alt: min(56svh, 470px); --sangra: max(var(--borda), (100vw - 1320px) / 2); position: relative; min-width: 0; }
+.tira { --alt: min(56svh, 470px); --sangra: max(var(--borda), (100vw - 1320px) / 2); position: relative; min-width: 0; }
 .tira-rolo {
   position: relative; overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
   -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
@@ -1403,26 +1421,40 @@ html:not(.js) .etapa:first-child { border-top: 2px solid var(--laranja); }
    a largura: o ângulo do telhado é o mesmo em foto em pé e em foto deitada. */
 .tira-quadro {
   --corte: polygon(0 calc(var(--r) * 15%), 100% 0, 100% 100%, 0 100%);
-  flex: none; width: min(86vw, calc(var(--alt) * var(--r))); aspect-ratio: var(--r);
+  position: relative; flex: none; width: min(86vw, calc(var(--alt) * var(--r))); aspect-ratio: var(--r);
   overflow: hidden; clip-path: var(--corte); background: var(--preto-suave); scroll-snap-align: start;
 }
 .tira-quadro img, .tira-quadro video { display: block; width: 100%; height: 100%; object-fit: cover; }
 .tira-quadro img { -webkit-user-drag: none; user-select: none; }
-.tira-quadro video { background: var(--preto); }
+.tira-quadro video { position: absolute; inset: 0; background: var(--preto); }
 /* a foto "levanta o telhado" quando chega: as primeiras em fila, as outras conforme o dedo traz */
 .js .tira-quadro[data-reveal] { opacity: 1; transform: none; clip-path: var(--reto); }
 .js .tira-quadro[data-reveal].in-view { clip-path: var(--corte); transition: clip-path 1.25s var(--sai) var(--atraso, 0ms); }
+/* toque ou clique amplia a foto (o JS liga): no desktop um "+" avisa ao passar o mouse */
+.tira-quadro[role="button"] { cursor: zoom-in; }
+.tira-quadro[role="button"]:focus-visible { outline: none; }
+.tira-quadro[role="button"]:focus-visible::before {
+  content: ""; position: absolute; inset: 8px; z-index: 2; border: 2px solid var(--laranja-claro); pointer-events: none;
+}
+.tira-quadro[role="button"]::after {
+  content: "+"; position: absolute; right: 14px; bottom: 14px; width: 44px; height: 44px; border-radius: 50%;
+  display: grid; place-items: center; background: rgba(10,10,10,.72); color: var(--marfim);
+  font: 400 1.5rem/1 var(--sans); pointer-events: none; transform: scale(0); transition: transform .5s var(--sai);
+}
+@media (hover: hover) { .tira-quadro[role="button"]:hover::after { transform: none; } }
+.tira-quadro[role="button"]:focus-visible::after { transform: none; }
 /* último quadro: o próximo passo, para quem arrastou até o fim */
 .tira-fim a {
   position: relative; isolation: isolate; display: flex; flex-direction: column; justify-content: flex-end; gap: 12px;
-  height: 100%; padding: clamp(20px, 2.4vw, 32px); text-decoration: none; color: var(--marfim);
+  height: 100%; padding: calc(var(--r) * 15% + 26px) clamp(20px, 2.4vw, 32px) clamp(20px, 2.4vw, 32px);
+  text-decoration: none; color: var(--marfim);
   transition: color .5s var(--sai);
 }
 .tira-fim a::before {
   content: ""; position: absolute; inset: 0; z-index: -1; background: var(--laranja);
   transform: scaleY(0); transform-origin: bottom; transition: transform .7s var(--sai);
 }
-.tira-fim-sobre { font: 700 13.5px/1.3 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--texto-2); transition: color .5s var(--sai); }
+.tira-fim-sobre { margin-bottom: auto; font: 700 13.5px/1.3 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--texto-2); transition: color .5s var(--sai); }
 .tira-fim b { font: 900 clamp(2rem, 8.4vw, 3.1rem)/.92 var(--display); letter-spacing: -.03em; text-transform: uppercase; }
 .tira-fim-acao { display: inline-flex; align-items: center; min-height: 48px; font-weight: 700; }
 .tira-fim-acao::after { content: "\2192"; margin-left: 10px; color: var(--laranja); transition: transform .6s var(--sai), color .5s var(--sai); }
@@ -1430,6 +1462,10 @@ html:not(.js) .etapa:first-child { border-top: 2px solid var(--laranja); }
   .tira-fim a:hover::before { transform: scaleY(1); }
   .tira-fim a:hover, .tira-fim a:hover .tira-fim-sobre, .tira-fim a:hover .tira-fim-acao::after { color: var(--tinta-laranja); }
   .tira-fim a:hover .tira-fim-acao::after { transform: translateX(6px); }
+}
+@media (hover: none) {
+  .tira-fim a::before { transform: scaleY(1); }
+  .tira-fim a, .tira-fim a .tira-fim-sobre, .tira-fim a .tira-fim-acao::after { color: var(--tinta-laranja); }
 }
 .tira-fim a:active::before, .tira-fim a:focus-visible::before { transform: scaleY(1); }
 .tira-fim a:active, .tira-fim a:active .tira-fim-sobre, .tira-fim a:active .tira-fim-acao::after,
@@ -1458,14 +1494,20 @@ html:not(.js) .etapa:first-child { border-top: 2px solid var(--laranja); }
   .com-tira .tira-setas { display: flex; }
   .com-tira .tira-rolo { cursor: grab; }
 }
-.tira-rolo.arrastando { cursor: grabbing; scroll-snap-type: none; scroll-behavior: auto; user-select: none; }
+.tira-rolo.arrastando, .tira-rolo.arrastando .tira-quadro { cursor: grabbing; }
+.tira-rolo.arrastando { scroll-snap-type: none; scroll-behavior: auto; user-select: none; }
 .tira-rolo.arrastando a { pointer-events: none; }
 /* aceno: enquanto ninguém arrasta, a rua anda um pouco sozinha e volta (convite ao dedo) */
 .js .tira-trilho.acena { animation: tira-acena 1.5s var(--vai-volta) both; }
 @keyframes tira-acena { 0%, 100% { transform: none; } 46% { transform: translateX(-54px); } }
-@media (min-width: 900px) {
-  .tira { --alt: min(62vh, 620px); --alt: min(62svh, 620px); }
+/* celular: foto deitada não fica baixa demais (deixaria um buraco entre o preço e a rua);
+   ela ganha altura e perde as pontas, e o toque mostra a foto inteira */
+@media (max-width: 899px) {
+  .tira-trilho { align-items: flex-start; min-height: 0; }
+  .tira-quadro { min-height: calc(var(--alt) * .8); }
 }
+@media (min-width: 900px) { .tira { --alt: min(62svh, 620px); } }
+@media (min-width: 1280px) { .tira { --alt: min(68svh, 680px); } }
 /* a foto desliza dentro da moldura conforme a rua passa (só onde o navegador liga a animação
    à rolagem; a linha do tempo é nomeada no quadro, que tem overflow oculto, e consumida na foto) */
 @supports (animation-timeline: view()) {
@@ -1479,15 +1521,55 @@ html:not(.js) .etapa:first-child { border-top: 2px solid var(--laranja); }
   to { transform: scale(1.1) translateX(3.6%); }
 }
 
-/* --- vídeos: a mesma tira ----------------------------------------------------- */
+/* --- luz: a foto ampliada ------------------------------------------------------- */
+html.luz-aberta { overflow: hidden; }
+.luz {
+  width: 100vw; max-width: none; height: 100vh; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0;
+  background: rgba(10,10,10,.97); color: var(--marfim); overflow: hidden;
+}
+.luz::backdrop { background: var(--preto); }
+.luz-palco { position: absolute; inset: 64px 0 76px; }
+/* a foto inteira, sem corte: o quadro ocupa o palco e a imagem se ajusta dentro dele */
+.luz-palco img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: contain; }
+.js .luz[open] .luz-palco img { animation: luz-abre .7s var(--sai) both; }
+@keyframes luz-abre { from { opacity: 0; transform: scale(.965); } to { opacity: 1; transform: none; } }
+.luz-pe { position: absolute; left: var(--borda); right: var(--borda); bottom: 14px; display: flex; align-items: center; gap: clamp(16px, 2.4vw, 32px); }
+.luz-pe .tira-setas { display: flex; }
+.luz-fechar { position: absolute; top: 10px; right: var(--borda); font-size: 1.5rem; }
+@media (min-width: 900px) { .luz-palco { inset: 28px 96px 84px; } .luz-fechar { top: 20px; } }
+
+/* --- vídeos: a mesma tira, com botão próprio (o controle nativo só entra depois do toque) --- */
 .ficha-videos { padding-top: clamp(64px, 8vw, 112px); }
 .ficha-videos .bloco-cabeca { box-sizing: border-box; max-width: calc(1320px + 2 * var(--borda)); padding: 0 var(--borda); margin-bottom: clamp(24px, 3vw, 40px); }
-.ficha-videos .tira { --alt: min(60vh, 520px); --alt: min(60svh, 520px); }
+.ficha-videos .tira { --alt: min(60svh, 520px); }
+.ficha-videos .bloco-titulo { --teto: clamp(1.75rem, 3.9vw, 3.5rem); }
+@media (min-width: 900px) {
+  /* a segunda coluna nasce onde nasce a leitura da folha */
+  .ficha-videos .bloco-cabeca, .ficha-passeio .bloco-cabeca { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); column-gap: clamp(48px, 7vw, 112px); }
+}
+.tira-tocar {
+  position: absolute; inset: 0; width: 100%; padding: 0 0 18px 18px; border: 0; cursor: pointer;
+  display: flex; align-items: flex-end; gap: 14px; text-align: left; color: var(--marfim);
+  background: linear-gradient(rgba(10,10,10,0) 52%, rgba(10,10,10,.78));
+  font: 700 13.5px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase;
+}
+.tira-tocar i {
+  position: relative; flex: none; width: 56px; height: 56px; border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.6); transition: box-shadow .5s var(--sai), background-color .5s var(--sai);
+}
+.tira-tocar i::before {
+  content: ""; position: absolute; left: 23px; top: 19px; border-style: solid; border-width: 9px 0 9px 14px;
+  border-color: transparent transparent transparent currentColor; transition: border-color .5s var(--sai);
+}
+.tira-tocar span { padding-bottom: 21px; }
+.tira-tocar:hover i, .tira-tocar:focus-visible i { background: var(--laranja); box-shadow: inset 0 0 0 1.5px var(--laranja); }
+.tira-tocar:hover i::before, .tira-tocar:focus-visible i::before { border-left-color: var(--tinta-laranja); }
+.tira-tocar:focus-visible { outline-offset: -8px; }
 
 /* --- a folha: papel com telhado ------------------------------------------------- */
 .folha {
-  --telhado-folha: clamp(40px, 9vw, 132px);
-  position: relative; margin-top: calc(var(--telhado-folha) + clamp(36px, 4.4vw, 60px));
+  --telhado-folha: clamp(36px, 6.5vw, 96px);
+  position: relative; margin-top: calc(var(--telhado-folha) + clamp(20px, 2.4vw, 32px));
   background: var(--papel); color: var(--tinta);
 }
 .folha ::selection { background: var(--laranja); color: var(--preto); }
@@ -1508,11 +1590,13 @@ html:not(.js) .etapa:first-child { border-top: 2px solid var(--laranja); }
   }
 }
 @keyframes folha-levanta { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-.folha .bloco { padding-top: clamp(36px, 4.6vw, 64px); padding-bottom: clamp(56px, 6.4vw, 96px); }
+.folha .bloco { padding-top: clamp(32px, 4vw, 56px); padding-bottom: clamp(56px, 6.4vw, 96px); }
 .folha-miolo { display: grid; gap: clamp(48px, 6vw, 72px); max-width: 1320px; margin: 0 auto; }
-.folha-conta, .folha-leitura { min-width: 0; }
+.folha-conta { container-type: inline-size; min-width: 0; }
+.folha-leitura { min-width: 0; }
 .folha .sobre-linha { color: var(--tinta-suave); }
-.folha .bloco-titulo { color: var(--tinta); }
+/* títulos da folha em um tamanho só: quem manda na coluna é o número, logo abaixo */
+.folha .bloco-titulo { color: var(--tinta); --teto: clamp(1.9rem, 8.2vw, 2.6rem); }
 /* valor de venda e conta do mês: o número é a maior coisa da folha */
 .valor, .folha .conta { margin-top: clamp(26px, 3.4vw, 42px); }
 .valor-rotulo, .folha .conta-legenda {
@@ -1520,8 +1604,12 @@ html:not(.js) .etapa:first-child { border-top: 2px solid var(--laranja); }
 }
 .valor-total, .folha .conta-total strong {
   display: block; margin-top: 8px; color: var(--laranja-fundo); white-space: nowrap; font-variant-numeric: tabular-nums;
-  font: 900 clamp(2.5rem, 11.4vw, 4.4rem)/1 var(--display); letter-spacing: -.03em;
+  font: 900 3rem/1 var(--display); letter-spacing: -.03em;
+  font-size: min(13cqi, 4.9rem);
 }
+@media (max-width: 599px) { .valor-total, .folha .conta-total strong { font-size: min(13cqi, 2.5rem); } }
+/* celular: a visita já está na barra fixa; o botão da folha repetiria o mesmo convite */
+@media (max-width: 760px) { .folha-conta > .acoes { display: none; } }
 .folha .conta-imovel { display: none; }
 .folha .conta-linhas { margin: 0; }
 .folha .conta-linha {
@@ -1530,17 +1618,17 @@ html:not(.js) .etapa:first-child { border-top: 2px solid var(--laranja); }
 }
 .folha .conta-linha dt, .folha .medida dt { font: 700 14px/1.3 var(--sans); letter-spacing: .13em; text-transform: uppercase; color: var(--tinta-suave); }
 .folha .conta-linha dd { margin: 0; max-width: 62%; font: 900 1.3rem/1.15 var(--display); letter-spacing: -.015em; text-align: right; }
+.folha .conta-linha dd.em-palavra, .folha .medida--palavra dd { font: 700 1.06rem/1.3 var(--sans); letter-spacing: 0; }
 .folha .conta-regua { height: 2px; background: var(--tinta); transform-origin: left; }
 .js .folha .conta-regua[data-reveal] { opacity: 1; transform: scaleX(0); }
 .js .folha .conta-regua[data-reveal].in-view { transform: none; transition: transform .9s var(--sai) var(--atraso, 0ms); }
 .folha .conta-total { margin-top: 18px; }
-.folha .conta-nota { max-width: 48ch; margin-top: 14px; font-size: 15px; line-height: 1.5; color: var(--tinta-suave); }
+.folha .conta-nota { max-width: 48ch; margin-top: 14px; font-size: 16.5px; line-height: 1.5; color: var(--tinta-2); }
 .folha-aviso { margin-top: 20px; padding: 14px 16px; border-left: 3px solid var(--laranja); background: rgba(235,99,22,.1); }
 .folha .medidas { margin-top: clamp(26px, 3.4vw, 40px); }
 .folha .medida { border-color: var(--linha-papel); }
-.folha .medida:last-child { border-color: var(--linha-papel); }
 .medida--longa { display: block; }
-.medida--longa dd, .folha .medida--longa dd { margin-top: 6px; font: 400 1rem/1.5 var(--sans); letter-spacing: 0; text-align: left; white-space: normal; color: var(--tinta-2); text-wrap: pretty; }
+.medida--longa dd, .folha .medida--longa dd { margin-top: 6px; font: 400 1.06rem/1.5 var(--sans); letter-spacing: 0; text-align: left; white-space: normal; color: var(--tinta-2); text-wrap: pretty; }
 .folha-conta > .acoes { margin-top: 28px; }
 .folha .bt-fino { color: var(--tinta); box-shadow: inset 0 0 0 1.5px rgba(15,15,15,.44); }
 .folha .bt-fino:hover { color: var(--laranja-fundo); box-shadow: inset 0 0 0 1.5px var(--laranja-fundo); }
@@ -1550,52 +1638,78 @@ html:not(.js) .etapa:first-child { border-top: 2px solid var(--laranja); }
 }
 .tambem b { display: block; margin-top: 6px; font: 900 1.9rem/1 var(--display); letter-spacing: -.025em; }
 .tambem .bt { min-height: 48px; padding: 0 22px; font-size: 15.5px; }
-/* leitura: descrição, destaques e bairro */
+/* leitura: descrição, destaques e bairro (18 px: é aqui que se lê muito) */
 .folha-h {
   margin: 0 0 16px; color: var(--tinta); text-transform: uppercase;
   font: 900 clamp(1.3rem, 4.8vw, 1.6rem)/1 var(--display); letter-spacing: -.025em;
 }
 .folha-leitura > * + .folha-h { margin-top: clamp(40px, 4.6vw, 56px); }
-.folha-leitura > p { max-width: 62ch; font-size: 1.06rem; line-height: 1.62; color: var(--tinta-2); }
+.folha-leitura > p { max-width: 60ch; font-size: 18px; line-height: 1.6; color: var(--tinta-2); }
 .folha-leitura > p + p { margin-top: 1em; }
-.folha-leitura > p.folha-abre { font-size: clamp(1.18rem, 1.5vw, 1.34rem); line-height: 1.48; color: var(--tinta); }
+.folha-leitura > p.folha-abre { font-size: clamp(1.24rem, 1.6vw, 1.42rem); line-height: 1.46; color: var(--tinta); }
 .folha-leitura > p.folha-disponivel { margin-bottom: 14px; font-weight: 700; color: var(--tinta); }
-.folha-lista { list-style: none; margin: 0; padding: 0; display: grid; column-gap: clamp(24px, 3vw, 40px); }
-.folha-lista li { padding: 13px 0; border-top: 1px solid var(--linha-papel); color: var(--tinta-2); }
-@media (min-width: 600px) { .folha-lista { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* destaques em colunas de texto: cada item ocupa só a altura que tem */
+.folha-lista { list-style: none; margin: 0; padding: 0; column-gap: clamp(24px, 3vw, 40px); }
+.folha-lista li { break-inside: avoid; padding: 13px 0; border-top: 1px solid var(--linha-papel); font-size: 18px; line-height: 1.45; color: var(--tinta-2); }
+@media (min-width: 600px) { .folha-lista { columns: 2; } }
 .local-mapa { position: relative; aspect-ratio: 16 / 10; overflow: hidden; border: 1px solid var(--linha-papel); background: var(--superficie); }
 .local-mapa iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; filter: grayscale(.85) contrast(1.04); }
-.folha-leitura > p.local-nota { margin-top: 12px; font-size: 15.5px; color: var(--tinta-suave); }
-.local-nota a { display: inline-flex; align-items: center; min-height: 44px; margin-left: 6px; color: var(--tinta); text-underline-offset: 4px; }
+.folha-leitura > p.local-nota { margin-top: 12px; font-size: 16.5px; }
+.local-nota a { display: flex; width: fit-content; align-items: center; min-height: 44px; margin-top: 4px; color: var(--tinta); text-underline-offset: 4px; }
 @media (min-width: 900px) {
-  .folha-miolo { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); column-gap: clamp(48px, 7vw, 112px); align-items: start; }
+  .folha-miolo, .folha .faq-miolo { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); column-gap: clamp(48px, 7vw, 112px); align-items: start; }
   /* a coluna mais curta acompanha a mais comprida */
   .folha-leitura { position: sticky; top: 104px; }
+  .folha .bloco-titulo { --teto: clamp(2.5rem, 3.9vw, 3.5rem); }
 }
-/* dúvidas sobre papel */
+/* dúvidas sobre papel, nas mesmas colunas da folha */
 .folha .faq { padding-top: 0; }
 .pagina-capa .folha .duvida { border-top-color: var(--linha-papel); }
 .pagina-capa .folha .duvida:last-child { border-bottom-color: var(--linha-papel); }
-.pagina-capa .folha .duvida summary { color: var(--tinta); }
+.pagina-capa .folha .duvida summary { color: var(--tinta); text-wrap: pretty; }
 .pagina-capa .folha .duvida summary::after { color: var(--laranja-fundo); }
-.pagina-capa .folha .duvida summary:hover { color: var(--laranja-fundo); }
-.pagina-capa .folha .duvida p { color: var(--tinta-2); }
-/* pé da folha: a rubrica assina o documento */
+.pagina-capa .folha .duvida summary:hover { color: #a8430b; }
+.pagina-capa .folha .duvida p { font-size: 18px; color: var(--tinta-2); }
+/* pé da folha: a régua risca, a frase fecha o documento e a rubrica assina (o retrato levanta o telhado) */
 .folha-pe { padding: 0 var(--borda) clamp(64px, 8vw, 112px); }
-.folha-pe-miolo { display: grid; gap: 28px; max-width: 1320px; margin: 0 auto; padding-top: clamp(28px, 3.6vw, 44px); border-top: 2px solid var(--tinta); }
-.folha .rubrica { margin-top: 0; }
+.folha-pe-miolo { max-width: 1320px; margin: 0 auto; }
+.folha-pe .fio { margin-bottom: clamp(28px, 3.6vw, 44px); background: var(--linha-papel); }
+.js .folha-pe .fio::after { background: var(--tinta); }
+html:not(.js) .folha-pe .fio { height: 2px; background: var(--tinta); }
+.folha-nota { max-width: 34ch; font-size: clamp(1.18rem, 1.55vw, 1.38rem); line-height: 1.42; color: var(--tinta); text-wrap: pretty; }
+.folha .rubrica { margin-top: clamp(26px, 3vw, 36px); }
+.js .folha .rubrica[data-reveal] { transition-delay: .36s; }
+.js .folha .rubrica[data-reveal] .rubrica-foto { clip-path: var(--reto); }
+.js .folha .rubrica[data-reveal].in-view .rubrica-foto { clip-path: polygon(0 18%, 100% 0, 100% 100%, 0 100%); transition: clip-path 1.2s var(--sai) .5s; }
 .folha .rubrica-foto { background: var(--preto-suave); }
 .folha .rubrica-nome .assinatura { color: var(--tinta-2); }
 .folha .rubrica-link { color: var(--tinta-2); text-decoration-color: rgba(15,15,15,.3); }
 .folha .rubrica-link::after { color: var(--laranja-fundo); }
 .folha .rubrica-link:hover { color: var(--laranja-fundo); text-decoration-color: var(--laranja-fundo); }
-.folha-nota { max-width: 50ch; font-size: 15.5px; line-height: 1.55; color: var(--tinta-suave); }
 @media (min-width: 900px) {
-  .folha-pe-miolo { grid-template-columns: minmax(0, 1fr) minmax(0, 40ch); column-gap: clamp(48px, 7vw, 112px); align-items: end; }
+  /* nas colunas da folha: a frase à esquerda, quem assina à direita, as duas na mesma base */
+  .folha-pe-miolo { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); column-gap: clamp(48px, 7vw, 112px); align-items: end; }
+  .folha-pe .fio { grid-column: 1 / -1; }
+  .folha .rubrica { margin-top: 0; }
+  .folha .rubrica-foto { width: 160px; }
 }
 
 /* --- passeio e fecho da ficha --------------------------------------------------- */
-.ficha-passeio .bloco-apoio { max-width: 40ch; }
+.ficha-passeio { padding-top: 0; padding-bottom: clamp(36px, 4.6vw, 64px); }
+.ficha-passeio .fio { max-width: 1320px; margin: 0 auto clamp(32px, 4vw, 56px); }
+.ficha-passeio .bloco-titulo { --teto: clamp(1.75rem, 3.9vw, 3.5rem); }
+.pagina-ficha .fecho { padding-top: clamp(56px, 7vw, 104px); }
+.pagina-ficha .fecho .bloco-titulo { --teto: clamp(2.2rem, 6.2vw, 5.6rem); }
+html:not(.js) .ficha-passeio .fio { height: 2px; background: var(--laranja); }
+.ficha-passeio .bloco-cabeca { margin-bottom: 0; }
+.ficha-passeio .acoes { margin-top: 24px; }
+.ficha-videos + .ficha-passeio, .folha + .ficha-passeio { margin-top: clamp(64px, 8vw, 112px); }
+@media (min-width: 900px) {
+  .ficha-passeio .bloco-cabeca { align-items: center; }
+  .ficha-passeio .bloco-apoio { margin: 0; }
+  .ficha-passeio .acoes { margin-top: 18px; }
+}
+.ficha-videos + .fecho { margin-top: clamp(20px, 3vw, 44px); }
 .fecho-volta { margin-top: 22px; }
 .fecho-volta .rubrica-link { color: var(--texto-2); }
 
@@ -1604,7 +1718,7 @@ html:not(.js) .etapa:first-child { border-top: 2px solid var(--laranja); }
   .pagina-ficha .barra-mobile {
     left: 0; right: 0; bottom: 0; gap: 14px;
     padding: 10px var(--borda) calc(10px + env(safe-area-inset-bottom));
-    background: rgba(10,10,10,.97); border-top: 1px solid var(--linha-escura);
+    background: var(--preto); border-top: 1px solid var(--linha-escura);
   }
   .pagina-ficha .barra-mobile-custo strong { font: 900 1.3rem/1.1 var(--display); letter-spacing: -.015em; color: var(--marfim); white-space: nowrap; }
   .pagina-ficha .barra-mobile-custo strong small { margin-left: .2em; font: 700 .58em/1 var(--sans); letter-spacing: 0; color: var(--texto-2); }
@@ -1614,4 +1728,7 @@ html:not(.js) .etapa:first-child { border-top: 2px solid var(--laranja); }
     font: 700 15.5px/1 var(--sans); color: var(--preto); box-shadow: none;
   }
   .pagina-ficha .barra-mobile .btn::after { display: none; }
+  /* com o preço do topo na tela a barra espera fora: o preço não aparece duas vezes, e o
+     botão laranja da página aponta na beira da primeira tela */
+  .preco-a-vista .pagina-ficha .barra-mobile { transform: translateY(220%); }
 }
