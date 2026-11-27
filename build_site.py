@@ -1436,7 +1436,7 @@ def cartaz_imovel(corretor: dict, imovel: dict, n: int = 0, aluguel: bool = Fals
     # a página já diz "à venda" no título: a etiqueta informa o tipo e o bairro
     etiqueta = " · ".join(p for p in (
         "Reservado" if reservado else "", imovel["tipo"],
-        imovel["bairro"] if imovel["bairro"] != nome else "") if p)
+        imovel["bairro"] if imovel["bairro"] not in nome else "") if p)   # "Av. Getúlio Vargas" já diz o lugar
     classes = ("cartaz" + (" cartaz--destaque" if imovel.get("destaque") else "")
                + ("" if foto else " cartaz--sem-foto") + (" cartaz--com-trio" if trio else ""))
     return f"""<article class="{classes}" id="v-{e(imovel['slug'])}" aria-labelledby="c-{e(imovel['slug'])}">
@@ -2252,7 +2252,7 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
     etiqueta = ('Reservado' if reservado else 'À venda' if venda
                 else 'Aluguel ou venda' if imovel.get('preco_venda') else 'Aluguel')
     # o bairro só entra quando não é o próprio nome do imóvel; a cidade entra sempre
-    locais = [imovel['tipo']] + ([] if imovel['bairro'] == nome else [imovel['bairro']]) + [imovel['cidade']]
+    locais = [imovel['tipo']] + ([] if imovel['bairro'] in nome else [imovel['bairro']]) + [imovel['cidade']]
     preco_html = moeda(imovel['preco']) + ('' if venda else '<small>/mês</small>')
     notas = [p for p in resumo(imovel).split(' · ') if p]
     if imovel.get('mobiliado') == 'sim':
