@@ -1780,6 +1780,9 @@ html:not(.js) .ficha-passeio .fio { height: 2px; background: var(--laranja); }
 .medida--palavra dd { font: 700 1.06rem/1.3 var(--sans); letter-spacing: 0; white-space: normal; text-wrap: balance; }
 /* etapas sem rubrica ao lado: a frase fica na base do título */
 @media (min-width: 900px) { .como--so .bloco-cabeca { align-items: end; } }
+/* a folha encosta nas etapas: o telhado de papel sobe sobre o cinza delas, sem faixa preta no meio */
+.como--so { padding-bottom: calc(clamp(60px, 6.4vw, 92px) + clamp(36px, 6.5vw, 96px)); }
+.como--so + .folha { margin-top: 0; }
 
 /* --- a conta de entrada, na folha ------------------------------------------------ */
 .folha--alugar .entrada { padding-bottom: clamp(48px, 5.6vw, 84px); }

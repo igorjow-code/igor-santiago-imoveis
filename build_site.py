@@ -572,7 +572,7 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
 {preload_imagem}
 <link rel="preload" href="{prefixo}assets/fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="{prefixo}assets/fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="stylesheet" href="{prefixo}assets/styles.css?v=20261126-alugar" />
+<link rel="stylesheet" href="{prefixo}assets/styles.css?v=20261127-comercial" />
 <link rel="icon" href="{prefixo}assets/favicon.png" type="image/png" />
 <link rel="apple-touch-icon" href="{prefixo}assets/favicon-512.png" />
 <script>
@@ -592,7 +592,7 @@ def pagina(titulo: str, descricao: str, corpo: str, corretor: dict,
 </main>
 {rodape(corretor, prefixo)}
 {wa_fixo(corretor, mensagem_wa, imovel)}
-<script src="{prefixo}assets/script.js?v=20261126-alugar"></script>
+<script src="{prefixo}assets/script.js?v=20261127-comercial"></script>
 {extra_js}
 </body>
 </html>
@@ -1360,12 +1360,15 @@ def imagem_html(imovel: dict, foto: Path, alt: str, prefixo: str = "", primeira:
             f'width="{largura}" height="{altura}" {carga} decoding="async" />')
 
 
-def cartaz_imovel(corretor: dict, imovel: dict, n: int = 0, aluguel: bool = False) -> str:
+def cartaz_imovel(corretor: dict, imovel: dict, n: int = 0, aluguel: bool = False,
+                  vitrine: bool = False) -> str:
     """Um imóvel apresentado por inteiro: foto com corte de telhado, nome, preço,
     medidas confirmadas e o caminho curto (passeio ou ficha, depois a visita).
     Ordem de entrada: etiqueta, nome, preço, medidas uma a uma, frase, botões. O primeiro
     cartaz espera o título da página terminar de subir.
-    `aluguel`: o número grande é o custo do mês e as linhas dizem o que entra nele."""
+    `aluguel`: o número grande é o custo do mês e as linhas dizem o que entra nele.
+    `vitrine`: mostra as três fotos de dentro mesmo sem passeio, apontando para a ficha
+    (página com um imóvel só: ele é apresentado por inteiro, não como item de lista)."""
     fotos = fotos_imovel(imovel)
     ficha = f'imovel/{e(imovel["slug"])}.html'
     nome = nome_curto(imovel)
@@ -1387,13 +1390,15 @@ def cartaz_imovel(corretor: dict, imovel: dict, n: int = 0, aluguel: bool = Fals
     legenda = (f'<p class="cartaz-legenda" data-reveal><a href="{ficha}">'
                f'{e(COMPRAR["fotos_na_ficha"].format(n=len(fotos)))}</a></p>')
     trio = ""
-    dentro = fotos_cartaz(imovel, fotos) if passeio else []
+    dentro = fotos_cartaz(imovel, fotos) if passeio or vitrine else []
     if dentro:
         quadros = "".join(
             f'<div class="vitrine-quadro" {reveal(k, 130)}>{imagem_html(imovel, f, "")}</div>'
             for k, f in enumerate(dentro))
-        trio = (f'<div class="cartaz-trio"><a class="vitrine" href="{e(passeio)}" target="_blank" rel="noopener" '
-                f'aria-label="{e(rotulo_passeio(imovel))}: {e(nome)}">{quadros}</a>{legenda}</div>')
+        destino = (f'href="{e(passeio)}" target="_blank" rel="noopener" '
+                   f'aria-label="{e(rotulo_passeio(imovel))}: {e(nome)}"' if passeio
+                   else f'href="{ficha}" aria-label="Ver as fotos na ficha: {e(nome)}"')
+        trio = f'<div class="cartaz-trio"><a class="vitrine" {destino}>{quadros}</a>{legenda}</div>'
 
     if aluguel:
         # valor escrito em palavra ("Condomínio, água e luz") não pesa como número
@@ -1616,8 +1621,8 @@ ALUGAR = {
         "sobrelinha": "Comercial",
         "titulo": ("Para o seu", "negócio."),
         "titulo_quebra_celular": "",
-        "apoio": ("Espaço comercial em Feira de Santana, com o custo fixo do mês na página: o aluguel, "
-                  "o que está incluso e o que fica à parte."),
+        "apoio": ("Espaço comercial em Feira de Santana, com o custo fixo do mês na página: "
+                  "o aluguel e o que está incluso nele."),
         "apoio_vazio": ("Nenhum espaço comercial para alugar publicado neste momento. "
                         "Diga o que procura: quem responde sou eu, em até {prazo}."),
         "lista_rotulo": "Salas para alugar",
@@ -1647,7 +1652,7 @@ ALUGAR = {
                  "Eu confiro com você as condições para a atividade pretendida antes da assinatura."),
         "rubrica_link": "Minha trajetória",
         "fecho_titulo": ("Conte como é", "o seu negócio."),
-        "fecho_apoio": ("Atividade, região e quanto cabe no mês.", "Quem responde sou eu, em até {prazo}."),
+        "fecho_apoio": ("Quem responde sou eu, em até {prazo}.",),
         "fecho_botao": "Quero falar com Igor",
         "fecho_alternativa": "Prefiro falar pelo WhatsApp",
         "fecho_primeiro": "Sala comercial",
@@ -1799,7 +1804,7 @@ def pagina_alugar(corretor: dict, imoveis: list[dict], finalidade: str, publicar
         else (texto,)))
     # índice com o custo do mês: a página promete "a conta na página" e cumpre na primeira tela
     indice = ""
-    if len(lista_imoveis) > 1:
+    if lista_imoveis:
         indice = (f'<nav class="cabeca-indice" aria-label="{e(textos["lista_rotulo"])} nesta página">' + "".join(
             f'<a href="#v-{e(i["slug"])}"><span>{e(nome_curto(i))}</span>'
             f'<b>{moeda(custo_mensal(i))}<small>/mês</small></b></a>'
@@ -1817,7 +1822,8 @@ def pagina_alugar(corretor: dict, imoveis: list[dict], finalidade: str, publicar
     if lista_imoveis:
         cartazes = (f'<section class="bloco bloco--cartazes" id="para-alugar" aria-label="{e(textos["lista_rotulo"])}">'
                     '<div class="cartazes">'
-                    + "".join(cartaz_imovel(corretor, i, n, aluguel=True) for n, i in enumerate(lista_imoveis))
+                    + "".join(cartaz_imovel(corretor, i, n, aluguel=True, vitrine=len(lista_imoveis) == 1)
+                              for n, i in enumerate(lista_imoveis))
                     + '</div></section>')
 
     passos = list(textos["etapas"])

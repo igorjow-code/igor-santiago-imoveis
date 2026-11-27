@@ -478,7 +478,7 @@ class SiteTests(unittest.TestCase):
         for imovel in imoveis:
             self.assertEqual(f'id="v-{imovel["slug"]}"' in pagina, imovel is sala)
         self.assertIn('Comercial · 1 imóvel', pagina)
-        self.assertNotIn('cabeca-indice', pagina)
+        self.assertEqual(pagina.count('<a href="#v-'), 1)   # o índice traz o custo do mês na primeira tela
         self.assertIn(f'{b.moeda(b.custo_mensal(sala))}<small>/mês</small>', pagina)
         self.assertIn(f'data-entrada-total="{sala["preco"] * 2}"', pagina)
         self.assertNotIn('entrada-escolha', pagina)
