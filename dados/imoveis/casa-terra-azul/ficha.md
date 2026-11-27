@@ -42,7 +42,7 @@ Valor de venda: R$ 1.600.000. As condições de pagamento são tratadas diretame
 
 ## Dúvidas comuns
 ### Qual é o valor da casa?
-R$ 1.600.000. As condições de pagamento são tratadas diretamente com Igor.
+R$ 1.600.000. As condições de pagamento são tratadas diretamente comigo.
 
 ### A casa é vendida com móveis?
 Não. A casa é entregue com acabamento completo e sem móveis. Os móveis que aparecem no passeio são uma simulação feita com inteligência artificial, apenas como sugestão de decoração.
@@ -54,4 +54,4 @@ Não. A casa é entregue com acabamento completo e sem móveis. Os móveis que a
 No Terra Azul, em Feira de Santana (BA). A localização exata é enviada ao agendar a visita.
 
 ### Como conhecer a casa antes da visita?
-Pelo passeio online, que percorre a casa cômodo a cômodo. A visita presencial é agendada pelo WhatsApp e acompanhada por Igor.
+Pelo passeio online, que percorre a casa cômodo a cômodo. A visita presencial é agendada pelo WhatsApp e acompanhada por mim.
