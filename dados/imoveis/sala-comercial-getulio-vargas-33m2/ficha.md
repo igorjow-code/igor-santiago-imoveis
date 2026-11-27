@@ -2,6 +2,7 @@
 # Copie esta ficha para dados/imoveis/<slug>/ficha.md e preencha com dados conferidos.
 slug: sala-comercial-getulio-vargas-33m2
 titulo: Sala comercial de 33 m² em Feira de Santana
+nome_curto: Getúlio Vargas
 operacao: locacao
 finalidade: comercial
 tipo: Sala comercial

@@ -463,6 +463,47 @@ class SiteTests(unittest.TestCase):
         # dúvida de sala comercial não entra na página de quem procura onde morar
         self.assertNotIn('CNPJ', pagina)
 
+    def test_alugar_comercial_e_a_mesma_peca_com_texto_proprio(self):
+        todos = [dict(i) for i in self.imoveis]
+        sala = b.para_alugar(todos, 'comercial')[0]
+        # o caso do site hoje: uma sala só
+        imoveis = [i for i in todos if i['finalidade'] != 'comercial' or i is sala]
+        sala['caucao_meses'] = 1
+        pagina = b.pagina_segmento(self.corretor, imoveis, 'comercial')
+        self.assertIn('class="pagina-capa pagina-interna pagina-alugar"', pagina)
+        self.assertNotIn('class="card', pagina)
+        self.assertIn('<a href="alugar-sala-comercial.html" class="ativo">Comercial</a>', pagina)
+        self.assertIn('<link rel="canonical" href="https://igorsantiagoimoveis.com.br/alugar-sala-comercial.html"', pagina)
+        # só o aluguel comercial entra; um imóvel só não tem índice nem lista de escolha
+        for imovel in imoveis:
+            self.assertEqual(f'id="v-{imovel["slug"]}"' in pagina, imovel is sala)
+        self.assertIn('Comercial · 1 imóvel', pagina)
+        self.assertNotIn('cabeca-indice', pagina)
+        self.assertIn(f'{b.moeda(b.custo_mensal(sala))}<small>/mês</small>', pagina)
+        self.assertIn(f'data-entrada-total="{sala["preco"] * 2}"', pagina)
+        self.assertNotIn('entrada-escolha', pagina)
+        self.assertIn(b.ALUGAR['comercial']['entrada_apoio_um'], unescape(pagina))
+        # dúvidas: a de CNPJ entra; as de quem procura onde morar ficam de fora
+        self.assertIn('CNPJ', pagina)
+        self.assertNotIn('pet', pagina)
+        self.assertNotIn('mobiliadas', pagina)
+        # formulário no fecho, com a opção de sala primeiro, e a mensagem comercial do cadastro
+        self.assertIn('fecho--form', pagina)
+        self.assertLess(pagina.index('<option>Sala comercial até'), pagina.index('<option>Apartamento ou casa até'))
+        self.assertIn(b.e(b.wa_link(self.corretor, self.corretor['mensagem_whatsapp_comercial'])), pagina)
+        # dados estruturados: lista, etapas iguais às visíveis e o nome próprio do passo a passo
+        grafo = json.loads(re.search(r'<script type="application/ld\+json">(.*?)</script>', pagina, re.S)[1])['@graph']
+        itens = next(no for no in grafo if no['@type'] == 'ItemList')
+        self.assertEqual([i['url'].rsplit('/', 1)[1] for i in itens['itemListElement']], [f'{sala["slug"]}.html'])
+        como = next(no for no in grafo if no['@type'] == 'HowTo')
+        self.assertIn('sala comercial', como['name'])
+        visiveis = re.findall(r'<li class="etapa"[^>]*><span class="etapa-n">\d\d</span><h3>(.*?)</h3><p>(.*?)</p></li>', pagina)
+        self.assertEqual([(unescape(n), unescape(x)) for n, x in visiveis], [(p['name'], p['text']) for p in como['step']])
+        # sem sala publicada a página continua de pé, com o estado vazio
+        vazia = b.pagina_segmento(self.corretor, [i for i in imoveis if i is not sala], 'comercial')
+        self.assertIn('Nenhum espaço comercial para alugar publicado', vazia)
+        self.assertIn('id="quero-alugar"', vazia)
+
     def test_medidas_do_cartaz_de_aluguel_dizem_o_que_entra_na_conta(self):
         base = dict(operacao='locacao', finalidade='residencial', preco=2000)
         self.assertEqual(b.medidas_aluguel(dict(base, contas_inclusas=['condominio', 'agua', 'luz'])),

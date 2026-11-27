@@ -749,13 +749,6 @@ def faq_global(corretor: dict) -> list[dict]:
         {"pergunta": "Quem paga o quê além do aluguel?", "resposta": "O custo mensal mostrado soma aluguel, condomínio não incluso e IPTU anual dividido por 12, arredondado para baixo. Contas declaradas inclusas não são somadas novamente. Consumos e custos da garantia podem ser adicionais; confirmamos valores e responsabilidades no contrato."}]
 
 
-def secao_objecoes(corretor: dict) -> str:
-    itens = ''.join(f'<details class="duvida"><summary>{e(d["pergunta"])}</summary><p>{e(d["resposta"])}</p></details>' for d in faq_global(corretor))
-    wa = e(wa_link(corretor, "Olá, Igor. Quero agendar uma conversa para tirar dúvidas sobre garantia e custos do aluguel."))
-    return f'''<section class="secao secao-alt"><div class="wrap"><h2>Antes de alugar</h2>
-<div class="duvidas">{itens}</div><p class="duvidas-cta"><a class="btn btn-wa" href="{wa}" target="_blank" rel="noopener">Tirar minhas dúvidas com Igor</a></p></div></section>'''
-
-
 def secao_prova(corretor: dict) -> str:
     provas = ''.join(f'<div class="credencial"><h3>{e(p["titulo"])}</h3><p>{e(p["texto"])}</p></div>' for p in corretor['provas'])
     foto = retrato(corretor)
@@ -847,21 +840,8 @@ def pagina_obrigado(corretor: dict, imoveis: list[dict], publicar: bool = False)
 
 
 def pagina_segmento(corretor: dict, imoveis: list[dict], finalidade: str, publicar: bool = False) -> str:
-    if finalidade in ALUGAR:
-        return pagina_alugar(corretor, imoveis, finalidade, publicar)
-    comercial = finalidade == 'comercial'
-    nome = 'alugar-sala-comercial.html' if comercial else 'alugar-residencial.html'
-    titulo = ('Salas comerciais para alugar em Feira de Santana' if comercial
-              else 'Aluguel residencial em Feira de Santana')
-    texto = ('Encontre uma sala comercial para alugar em Feira de Santana. Compare localização, metragem e custo mensal; depois, conferimos juntos as condições para a atividade que você pretende exercer.' if comercial else 'Procura apartamento ou casa para alugar em Feira de Santana? Compare bairros, custo mensal e características como mobília e espaço para seu pet antes de marcar a visita.')
-    mensagem = corretor['mensagem_whatsapp_comercial'] if comercial else 'Olá, Igor. Quero agendar uma conversa para alugar um apartamento ou casa.'
-    lista = [i for i in imoveis if i['operacao'] == 'locacao' and i['finalidade'] == finalidade and i.get('situacao') not in {'alugado', 'vendido'}]
-    cards = ''.join(card(i, corretor) for i in lista)
-    corpo = f'''<section class="cabeca-pagina"><div class="wrap"><h1>{titulo}</h1><p>{texto}</p>
-<a class="btn btn-wa" href="{e(wa_link(corretor, mensagem))}" target="_blank" rel="noopener">Falar com Igor</a></div></section>
-<section class="secao"><div class="wrap"><div class="grade-cards">{cards}</div>
-<a class="link-seta" href="#quero-alugar">Conte o que procura</a></div></section>{secao_percurso(conta_de=lista[0] if lista else None)}{secao_objecoes(corretor)}{formulario_lead(corretor, publicar)}'''
-    return pagina(titulo + ' — Igor Santiago Imóveis', texto, corpo, corretor, imoveis, nome, mensagem_wa=mensagem, publicar=publicar, jsonld=jsonld(corretor, imoveis, nome, faq_global(corretor)))
+    """As duas páginas de aluguel (residencial e comercial) são a mesma peça, com texto próprio."""
+    return pagina_alugar(corretor, imoveis, finalidade, publicar)
 
 
 def pagina_administracao(corretor: dict, imoveis: list[dict], publicar: bool = False) -> str:
@@ -1627,6 +1607,56 @@ ALUGAR = {
         # dúvidas de quem procura sala não entram na página de quem procura onde morar
         "faq_fora": ("Posso procurar uma sala sem ter CNPJ ainda?",),
     },
+    # a mesma peça do residencial; o que muda é o texto: quem aluga para o negócio lê custo fixo
+    "comercial": {
+        "arquivo": "alugar-sala-comercial.html",
+        "titulo_pagina": "Sala comercial para alugar em Feira de Santana | Igor Santiago Imóveis",
+        "descricao": ("Sala comercial para alugar em Feira de Santana, com o custo fixo do mês na página: "
+                      "o aluguel e o que está incluso nele. Igor Santiago, CRECI-BA 28.140."),
+        "sobrelinha": "Comercial",
+        "titulo": ("Para o seu", "negócio."),
+        "titulo_quebra_celular": "",
+        "apoio": ("Espaço comercial em Feira de Santana, com o custo fixo do mês na página: o aluguel, "
+                  "o que está incluso e o que fica à parte."),
+        "apoio_vazio": ("Nenhum espaço comercial para alugar publicado neste momento. "
+                        "Diga o que procura: quem responde sou eu, em até {prazo}."),
+        "lista_rotulo": "Salas para alugar",
+        "como_nome": "Como alugar uma sala comercial com {nome}",
+        "como_sobrelinha": "Como funciona",
+        "como_titulo": ("Da conversa", "às chaves."),
+        "como_apoio": "Quem conduz o aluguel é uma pessoa só. Você fala comigo em todas as etapas.",
+        "etapas": [
+            ("Conversa", "Você me diz a atividade, a região e quanto cabe no mês."),
+            ("Custo fixo", "O aluguel e o que está incluso aparecem na página, antes da visita."),
+            ("Visita", "Agendada pelo WhatsApp e acompanhada por mim. A localização exata é enviada no agendamento."),
+            ("Contrato", "Atividade pretendida, garantia e documentos conferidos antes da proposta. Sigo com você até a entrega das chaves."),
+        ],
+        "entrada_sobrelinha": "Para entrar",
+        "entrada_titulo": ("A conta", "de entrada."),
+        "entrada_apoio": "Primeiro aluguel e caução, pagos no ato. Escolha o imóvel e veja o valor antes da visita.",
+        "entrada_apoio_um": "Primeiro aluguel e caução, pagos no ato. O valor aparece aqui, antes da visita.",
+        "entrada_primeiro": "Primeiro aluguel",
+        "entrada_caucao": "Caução · {n}",
+        "entrada_total": "Você paga no ato",
+        "entrada_depois": "Depois, {valor} por mês{inclusos}.{iptu}",
+        "entrada_iptu_fora": " IPTU à parte.",
+        "entrada_iptu_consultar": " IPTU a confirmar.",
+        "entrada_ficha": "Ver a ficha",
+        "faq_titulo": ("Antes de", "alugar."),
+        "nota": ("Aluguel, condomínio e IPTU confirmados na documentação antes da proposta. "
+                 "Eu confiro com você as condições para a atividade pretendida antes da assinatura."),
+        "rubrica_link": "Minha trajetória",
+        "fecho_titulo": ("Conte como é", "o seu negócio."),
+        "fecho_apoio": ("Atividade, região e quanto cabe no mês.", "Quem responde sou eu, em até {prazo}."),
+        "fecho_botao": "Quero falar com Igor",
+        "fecho_alternativa": "Prefiro falar pelo WhatsApp",
+        "fecho_primeiro": "Sala comercial",
+        # a mensagem do WhatsApp comercial mora no cadastro do corretor
+        "mensagem_do_cadastro": "mensagem_whatsapp_comercial",
+        "mensagem": "Olá, Igor. Quero agendar uma conversa para alugar uma sala ou ponto comercial.",
+        # dúvidas de quem procura onde morar não entram na página de quem procura sala
+        "faq_fora": ("Posso levar meu pet?", "Há opções mobiliadas?"),
+    },
 }
 
 NOMES_CONTAS = {"condominio": "condomínio", "iptu": "IPTU", "agua": "água", "luz": "luz",
@@ -1797,7 +1827,7 @@ def pagina_alugar(corretor: dict, imoveis: list[dict], finalidade: str, publicar
         for n, (nome, texto) in enumerate(passos))
     base = corretor["site_url"].rstrip("/")
     como_fazer = {'@type': 'HowTo', '@id': f'{base}/{nome_pagina}#como-funciona',
-                  'name': 'Como alugar um imóvel com ' + corretor['nome_pessoa'],
+                  'name': textos.get('como_nome', 'Como alugar um imóvel com {nome}').format(nome=corretor['nome_pessoa']),
                   'step': [{'@type': 'HowToStep', 'position': n, 'name': nome, 'text': texto}
                            for n, (nome, texto) in enumerate(passos, 1)]}
     como = f"""
@@ -1811,7 +1841,8 @@ def pagina_alugar(corretor: dict, imoveis: list[dict], finalidade: str, publicar
 </section>"""
 
     faq = faq_alugar(corretor, finalidade)
-    wa = e(wa_link(corretor, textos["mensagem"]))
+    mensagem = corretor.get(textos.get("mensagem_do_cadastro", "")) or textos["mensagem"]
+    wa = e(wa_link(corretor, mensagem))
     folha = f"""
 <div class="folha folha--alugar">
   <span class="folha-telhado" data-reveal aria-hidden="true"></span>{secao_entrada(textos, lista_imoveis)}
@@ -1835,7 +1866,7 @@ def pagina_alugar(corretor: dict, imoveis: list[dict], finalidade: str, publicar
     return pagina(
         titulo=textos["titulo_pagina"], descricao=textos["descricao"],
         corpo=corpo, corretor=corretor, imoveis=imoveis, ativo=nome_pagina,
-        mensagem_wa=textos["mensagem"], publicar=publicar, preload=foto_topo,
+        mensagem_wa=mensagem, publicar=publicar, preload=foto_topo,
         social=social, pele="alugar",
         jsonld=jsonld(corretor, imoveis, nome_pagina, faq, extra=[como_fazer]))
 
@@ -2219,7 +2250,9 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
         if total_mes != imovel['preco']:
             extras.append(f"{moeda(total_mes)}/mês com os encargos informados")
         elif 'condominio' in imovel.get('contas_inclusas', []):
-            extras.append('Condomínio incluso no aluguel')
+            # o IPTU incluso também aparece (caso da sala comercial)
+            extras.append('Condomínio e IPTU inclusos no aluguel' if 'iptu' in imovel['contas_inclusas']
+                          else 'Condomínio incluso no aluguel')
     if imovel.get('preco_venda'):
         extras.append(f"{FICHA['tambem_venda']} · {moeda(imovel['preco_venda'])}")
     resumo_html = ((lista_pontos(notas, 'ficha-resumo') if notas else '')
