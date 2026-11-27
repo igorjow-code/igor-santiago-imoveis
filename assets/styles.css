@@ -1790,15 +1790,15 @@ html:not(.js) .ficha-passeio .fio { height: 2px; background: var(--laranja); }
   min-height: 60px; padding: 18px 0 16px; border: 0; border-top: 1px solid var(--linha-papel); border-radius: 0;
   background: none; cursor: pointer; text-align: left;
   font: 700 14px/1.3 var(--sans); letter-spacing: .13em; text-transform: uppercase; color: var(--tinta-suave);
-  transition: color .5s var(--sai), padding .6s var(--sai);
+  transition: color .5s var(--sai);
 }
 .entrada-botao::before {
-  content: ""; position: absolute; inset: 0; z-index: -1; background: var(--laranja);
+  content: ""; position: absolute; inset: 0 -16px; z-index: -1; background: var(--laranja);
   transform: scaleY(0); transform-origin: bottom; transition: transform .6s var(--sai);
 }
 .entrada-botao b { font: 900 1.2rem/1 var(--display); letter-spacing: -.01em; color: var(--tinta); white-space: nowrap; transition: color .5s var(--sai); }
 .entrada-botao b small { margin-left: .2em; font: 700 .62em/1 var(--sans); letter-spacing: 0; color: var(--tinta-suave); transition: color .5s var(--sai); }
-.entrada-botao[aria-pressed="true"] { padding-left: 16px; padding-right: 16px; color: var(--tinta-laranja); }
+.entrada-botao[aria-pressed="true"] { color: var(--tinta-laranja); }
 .entrada-botao[aria-pressed="true"]::before { transform: none; }
 .entrada-botao[aria-pressed="true"] b, .entrada-botao[aria-pressed="true"] b small { color: var(--tinta-laranja); }
 @media (hover: hover) { .entrada-botao:hover { color: var(--tinta); } .entrada-botao[aria-pressed="true"]:hover { color: var(--tinta-laranja); } }
@@ -1806,7 +1806,7 @@ html:not(.js) .ficha-passeio .fio { height: 2px; background: var(--laranja); }
 .entrada-conta + .entrada-conta { margin-top: clamp(40px, 4.6vw, 56px); }
 .entrada-conta .folha-h { margin-bottom: 8px; }
 .folha .entrada-conta .conta-linha:first-child { border-top: 0; }
-.entrada .conta-nota a { display: inline-flex; align-items: center; min-height: 44px; margin-left: .3em; color: var(--tinta); font-weight: 700; text-underline-offset: 4px; white-space: nowrap; }
+.entrada .conta-nota .rubrica-link { display: flex; width: fit-content; margin-top: 2px; font-size: 16.5px; }
 /* a conta soma de novo a cada imóvel escolhido */
 .js .entrada-conta.soma .folha-h { animation: sobe .6s var(--sai) both; }
 .js .entrada-conta.soma .conta-linha { animation: sobe .7s var(--sai) .08s both; }
@@ -1861,7 +1861,6 @@ html:not(.js) .ficha-passeio .fio { height: 2px; background: var(--laranja); }
 .form-acoes .rubrica-link { font-size: 16px; color: var(--texto-2); }
 .form-nota { margin-top: 18px; font-size: 15.5px; color: var(--marfim-suave); }
 .pagina-alugar .fecho .bloco-titulo { --teto: clamp(2.2rem, 6.2vw, 5.6rem); }
-.entrada .conta-nota a { display: flex; width: fit-content; margin-left: 0; }
 /* desktop: sem trio, a foto acompanha a altura da coluna de texto (o acervo é em pé:
    moldura alta mostra mais do imóvel e não sobra vazio embaixo da foto) */
 @media (min-width: 900px) {
@@ -1879,3 +1878,32 @@ html:not(.js) .ficha-passeio .fio { height: 2px; background: var(--laranja); }
   /* texto curto fica no meio da foto; texto comprido estica a foto */
   .pagina-alugar .cartaz:not(.cartaz--com-trio) .cartaz-texto { align-self: center; padding-block: clamp(20px, 3.4vw, 56px); }
 }
+
+/* --- consertos da 1ª rodada do crítico (27/11/2026) ------------------------------ */
+/* a linha escolhida não muda de tamanho: o laranja sangra para fora, o texto fica no lugar */
+@media (max-width: 899px) { .entrada-botao::before { inset: 0 calc(var(--borda) * -1); } }
+@media (hover: hover) { .entrada-botao:not([aria-pressed="true"]):hover::before { transform: scaleY(.08); } }
+/* com a lista ligada, o nome do imóvel já está na linha laranja: o título repetido fica só para leitor de tela */
+.entrada--abas .entrada-conta .folha-h { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.cabeca-indice span, .entrada-botao span, .entrada-apoio { text-wrap: balance; }
+.cabeca-indice b small, .entrada-botao b small { font-size: .7em; }
+/* acento da segunda linha não encosta na linha de cima */
+.pagina-alugar .cartaz-nome, .pagina-alugar .como .bloco-titulo { line-height: .97; }
+@media (min-width: 600px) and (max-width: 899px) {
+  .pagina-alugar .cabeca-pe { grid-template-columns: minmax(0, 1fr) minmax(0, 54%); }
+}
+/* celular: o toque e o resultado na mesma tela. O total vem logo abaixo da lista; as parcelas, depois */
+@media (max-width: 899px) {
+  .folha--alugar .entrada .folha-miolo { gap: 22px; }
+  .entrada-escolha { margin-top: 22px; }
+  .entrada-botao { min-height: 52px; padding: 15px 0 13px; }
+  .entrada-conta { display: flex; flex-direction: column; }
+  .entrada-conta .folha-h { order: -2; }
+  .folha .entrada-conta .conta-total { order: -1; margin-top: 0; }
+  .entrada-conta .conta-regua { display: none; }
+  .folha .entrada-conta .conta-linhas { margin-top: 16px; border-top: 2px solid var(--tinta); }
+  .js .entrada-conta.soma .conta-total { animation-delay: .06s; }
+  .js .entrada-conta.soma .conta-linha { animation-delay: .34s; }
+  .js .entrada-conta.soma .conta-linha:nth-child(2) { animation-delay: .46s; }
+}
+.form-pele .form-campo input::placeholder { color: rgba(247,245,242,.45); }

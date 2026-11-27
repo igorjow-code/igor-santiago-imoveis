@@ -469,7 +469,7 @@ class SiteTests(unittest.TestCase):
                          [('Incluso', 'Condomínio, água e luz'), ('IPTU', 'Consultar')])
         self.assertEqual(b.medidas_aluguel(dict(base, contas_inclusas=['condominio'], iptu_nao_incluido='sim',
                                                 quartos=1, vagas=1, mobiliado='sim', preco_venda=370000)),
-                         [('Incluso', 'Condomínio'), ('IPTU', 'Não incluído'), ('Quartos', '1'), ('Vagas', '1'),
+                         [('Incluso', 'Condomínio'), ('IPTU', 'Não incluso'), ('Quartos', '1'), ('Vagas', '1'),
                           ('Mobília', 'Mobiliado'), ('Ou compra', 'R$ 370.000')])
         # com encargo fora do aluguel, as parcelas aparecem e somam o custo do mês
         com_encargos = dict(base, condominio=300, iptu=1200)

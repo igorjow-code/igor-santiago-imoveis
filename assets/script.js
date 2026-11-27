@@ -474,7 +474,7 @@
   var contas = Array.prototype.slice.call(raiz.querySelectorAll(".entrada-conta"));
   if (!escolha || botoes.length < 2 || botoes.length !== contas.length) return;
   var vivo = document.documentElement.classList.contains("js");
-  var relogio = 0, quadro = 0;
+  var relogio = 0, quadro = 0, vezes = 0;
   function moeda(n) { return "R$ " + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
   function somar(conta) {
     var linha = conta.querySelector("[data-entrada-total]");
@@ -485,7 +485,10 @@
     forte.setAttribute("data-final", texto);
     window.clearTimeout(relogio); cancelAnimationFrame(quadro);
     conta.classList.remove("soma"); void conta.offsetWidth; conta.classList.add("soma");
-    var espera = 460, dura = 900, comeco = performance.now() + espera;
+    // a primeira soma é a apresentação; quem compara imóveis recebe a resposta depressa
+    var celular = window.matchMedia && window.matchMedia("(max-width: 899px)").matches;
+    var espera = vezes ? 120 : (celular ? 160 : 460), dura = vezes ? 450 : 900, comeco = performance.now() + espera;
+    vezes++;
     forte.textContent = moeda(0);
     function passo(agora) {
       var t = Math.min(1, Math.max(0, (agora - comeco) / dura));

@@ -794,6 +794,8 @@ def formulario_lead(corretor: dict, publicar: bool, fecho: dict | None = None) -
               'Sala comercial acima de R$ 3.000', 'Apartamento ou casa até R$ 2.000',
               'Apartamento ou casa R$ 2.000–3.000',
               'Apartamento ou casa acima de R$ 3.000', 'Outro']
+    if fecho and fecho.get('primeiro'):
+        opcoes.sort(key=lambda o: (o == 'Outro', not o.startswith(fecho['primeiro'])))
     options = ''.join(f'<option>{e(o)}</option>' for o in opcoes)
     if fecho:
         prazo = corretor['resposta_prometida']
@@ -1417,8 +1419,9 @@ def cartaz_imovel(corretor: dict, imovel: dict, n: int = 0, aluguel: bool = Fals
         # valor escrito em palavra ("Condomínio, água e luz") não pesa como número
         medidas = "".join(
             f'<div class="medida{"" if any(c.isdigit() for c in valor) else " medida--palavra"}" '
-            f'{entra(350 + 100 * k)}><dt>{e(rotulo)}</dt><dd>{e(valor)}</dd></div>'
+            f'{entra(320 + 60 * k)}><dt>{e(rotulo)}</dt><dd>{e(valor)}</dd></div>'
             for k, (rotulo, valor) in enumerate(medidas_aluguel(imovel)))
+        fim_medidas = 320 + 60 * len(medidas_aluguel(imovel))
         preco = f'{moeda(custo_mensal(imovel))}<small>/mês</small>'
         wa_visita = wa_imovel(corretor, imovel)
     else:
@@ -1428,7 +1431,10 @@ def cartaz_imovel(corretor: dict, imovel: dict, n: int = 0, aluguel: bool = Fals
         preco = moeda(valor_venda(imovel))
         wa_visita = wa_compra(corretor, imovel)
     medidas = f'<dl class="medidas">{medidas}</dl>' if medidas else ""
-    chamada = (f'<p class="cartaz-chamada" data-reveal style="--atraso:240ms">{e(imovel["chamada"])}</p>'
+    # no aluguel a frase e os botões entram depois da última linha da conta
+    atraso_chamada = f'--atraso:{base + fim_medidas + 40}ms' if aluguel else '--atraso:240ms'
+    atraso_acoes = f'--atraso:{base + fim_medidas + 120}ms' if aluguel else '--atraso:300ms'
+    chamada = (f'<p class="cartaz-chamada" data-reveal style="{atraso_chamada}">{e(imovel["chamada"])}</p>'
                if imovel.get("chamada") else "")
     # o botão cheio é o passo mais rico que existe (passeio; sem ele, a ficha);
     # o de contorno é sempre a visita, pelo WhatsApp
@@ -1456,7 +1462,7 @@ def cartaz_imovel(corretor: dict, imovel: dict, n: int = 0, aluguel: bool = Fals
     <p class="cartaz-preco" {entra(220)}>{preco}</p>
     {medidas}
     {chamada}
-    <div class="acoes" data-reveal style="--atraso:300ms">{acoes}</div>
+    <div class="acoes" data-reveal style="{atraso_acoes}">{acoes}</div>
   </div>
   {trio}
 </article>"""
@@ -1578,13 +1584,13 @@ ALUGAR = {
     "residencial": {
         "arquivo": "alugar-residencial.html",
         "titulo_pagina": "Aluguel residencial em Feira de Santana | Igor Santiago Imóveis",
-        "descricao": ("Imóveis para alugar em Feira de Santana, com a conta do mês na página: aluguel, "
-                      "condomínio e IPTU informados antes da visita. Igor Santiago, CRECI-BA 28.140."),
+        "descricao": ("Imóveis para alugar em Feira de Santana, com a conta do mês na página: o aluguel, "
+                      "o que está incluso e o que fica à parte. Igor Santiago, CRECI-BA 28.140."),
         "sobrelinha": "Alugar",
         "titulo": ("Alugar em", "Feira de Santana."),
         "titulo_quebra_celular": "Santana.",
-        "apoio": ("Cada imóvel com a conta do mês na página: aluguel, condomínio e IPTU "
-                  "informados, antes da visita."),
+        "apoio": ("Cada imóvel com a conta do mês na página: o aluguel, o que está incluso "
+                  "e o que fica à\u00a0parte."),
         "apoio_vazio": ("Nenhum imóvel para alugar publicado neste momento. "
                         "Diga o que procura: quem responde sou eu, em até {prazo}."),
         "lista_rotulo": "Imóveis para alugar",
@@ -1593,27 +1599,30 @@ ALUGAR = {
         "como_apoio": "Quem conduz o aluguel é uma pessoa só. Você fala comigo em todas as etapas.",
         "etapas": [
             ("Conversa", "Você me diz o bairro, o tipo de imóvel e quanto cabe no mês."),
-            ("Conta do mês", "Aluguel, condomínio e IPTU informados na página, antes de sair de casa."),
+            ("Conta do mês", "O aluguel e o que está incluso aparecem na página, antes de sair de\u00a0casa."),
             ("Visita", "Agendada pelo WhatsApp e acompanhada por mim. A localização exata é enviada no agendamento."),
             ("Contrato", "Garantia e documentos explicados antes da proposta. Sigo com você até a entrega das chaves."),
         ],
         "entrada_sobrelinha": "Para entrar",
         "entrada_titulo": ("A conta", "de entrada."),
-        "entrada_apoio": "Primeiro aluguel e caução, pagos no ato. Escolha o imóvel e veja o valor antes da visita.",
+        "entrada_apoio": "Primeiro aluguel e caução, pagos no ato. Escolha o imóvel e veja o valor antes da\u00a0visita.",
         "entrada_apoio_um": "Primeiro aluguel e caução, pagos no ato. O valor aparece aqui, antes da visita.",
         "entrada_primeiro": "Primeiro aluguel",
         "entrada_caucao": "Caução · {n}",
         "entrada_total": "Você paga no ato",
-        "entrada_depois": "Depois, {valor} por mês{inclusos}.",
+        "entrada_depois": "Depois, {valor} por mês{inclusos}.{iptu}",
+        "entrada_iptu_fora": " IPTU à parte.",
+        "entrada_iptu_consultar": " IPTU a confirmar.",
         "entrada_ficha": "Ver a ficha",
         "faq_titulo": ("Antes de", "alugar."),
         "nota": ("Aluguel, condomínio e IPTU confirmados na documentação antes da proposta. "
-                 "As condições do contrato, eu esclareço com você antes da assinatura."),
+                 "Eu esclareço as condições do contrato com você antes da\u00a0assinatura."),
         "rubrica_link": "Minha trajetória",
         "fecho_titulo": ("Conte o que", "quer alugar."),
         "fecho_apoio": ("Bairro, tipo de imóvel e quanto cabe no mês.", "Quem responde sou eu, em até {prazo}."),
         "fecho_botao": "Quero falar com Igor",
         "fecho_alternativa": "Prefiro falar pelo WhatsApp",
+        "fecho_primeiro": "Apartamento",
         "mensagem": "Olá, Igor. Quero agendar uma conversa para alugar um apartamento ou casa.",
         # dúvidas de quem procura sala não entram na página de quem procura onde morar
         "faq_fora": ("Posso procurar uma sala sem ter CNPJ ainda?",),
@@ -1651,7 +1660,7 @@ def medidas_aluguel(imovel: dict) -> list[tuple[str, str]]:
         nomes = juntar_e([NOMES_CONTAS.get(c, c) for c in inclusas])
         itens.append(("Incluso", nomes[:1].upper() + nomes[1:]))
     if "iptu" not in inclusas and not imovel.get("iptu"):
-        itens.append(("IPTU", "Não incluído" if imovel.get("iptu_nao_incluido") == "sim" else "Consultar"))
+        itens.append(("IPTU", "Não incluso" if imovel.get("iptu_nao_incluido") == "sim" else "Consultar"))
     if imovel.get("finalidade") != "comercial":
         if imovel.get("quartos"):
             itens.append(("Quartos", str(imovel["quartos"])))
@@ -1700,6 +1709,10 @@ def secao_entrada(textos: dict, lista: list[dict]) -> str:
         inclusos = (", com " + juntar_e(inclusas) + (" inclusos" if len(inclusas) > 1 else " incluso")
                     if inclusas and mes == imovel["preco"] else
                     " com os encargos informados" if mes != imovel["preco"] else "")
+        # o IPTU que não entra no número não some da frase
+        iptu = ("" if "iptu" in imovel.get("contas_inclusas", []) or imovel.get("iptu")
+                else textos["entrada_iptu_fora"] if imovel.get("iptu_nao_incluido") == "sim"
+                else textos["entrada_iptu_consultar"])
         alvo = f'e-{e(imovel["slug"])}'
         nome = nome_curto(imovel)
         rotulo_caucao = textos["entrada_caucao"].format(n="1 aluguel" if meses == 1 else f"{meses} aluguéis")
@@ -1716,8 +1729,8 @@ def secao_entrada(textos: dict, lista: list[dict]) -> str:
   </dl>
   <div class="conta-regua" aria-hidden="true"></div>
   <p class="conta-total" data-entrada-total="{total}" aria-label="{e(acessivel)}"><span class="conta-legenda">{e(textos["entrada_total"])}:</span> <strong>{moeda(total)}</strong></p>
-  <p class="conta-nota">{e(textos["entrada_depois"].format(valor=moeda(mes), inclusos=inclusos))}
-    <a href="imovel/{e(imovel["slug"])}.html">{e(textos["entrada_ficha"])}</a></p>
+  <p class="conta-nota">{e(textos["entrada_depois"].format(valor=moeda(mes), inclusos=inclusos, iptu=iptu))}
+    <a class="rubrica-link" href="imovel/{e(imovel["slug"])}.html">{e(textos["entrada_ficha"])}</a></p>
 </div>''')
     if not contas:
         return ""
@@ -1812,7 +1825,7 @@ def pagina_alugar(corretor: dict, imoveis: list[dict], finalidade: str, publicar
 
     fecho = formulario_lead(corretor, publicar, fecho={
         "titulo": textos["fecho_titulo"], "apoio": textos["fecho_apoio"], "botao": textos["fecho_botao"],
-        "alternativa": textos["fecho_alternativa"], "wa": wa})
+        "alternativa": textos["fecho_alternativa"], "wa": wa, "primeiro": textos["fecho_primeiro"]})
     corpo = cabeca + cartazes + como + folha + fecho
 
     primeiro = next((i for i in lista_imoveis if fotos_imovel(i)), None)
