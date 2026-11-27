@@ -1398,7 +1398,8 @@ def cartaz_imovel(corretor: dict, imovel: dict, n: int = 0, aluguel: bool = Fals
         destino = (f'href="{e(passeio)}" target="_blank" rel="noopener" '
                    f'aria-label="{e(rotulo_passeio(imovel))}: {e(nome)}"' if passeio
                    else f'href="{ficha}" aria-label="Ver as fotos na ficha: {e(nome)}"')
-        trio = f'<div class="cartaz-trio"><a class="vitrine" {destino}>{quadros}</a>{legenda}</div>'
+        # sem passeio o botão cheio já diz "Ver a ficha · N fotos": a legenda repetiria o link
+        trio = f'<div class="cartaz-trio"><a class="vitrine" {destino}>{quadros}</a>{legenda if passeio else ""}</div>'
 
     if aluguel:
         # valor escrito em palavra ("Condomínio, água e luz") não pesa como número

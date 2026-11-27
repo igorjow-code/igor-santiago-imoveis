@@ -3,6 +3,8 @@
 slug: sala-comercial-getulio-vargas-33m2
 titulo: Sala comercial de 33 m² em Feira de Santana
 nome_curto: Getúlio Vargas
+# Três fotos de dentro para a vitrine do cartaz (início do nome do arquivo): sala, vista da janela, acesso.
+fotos_cartaz: 09, 12, 07
 operacao: locacao
 finalidade: comercial
 tipo: Sala comercial
