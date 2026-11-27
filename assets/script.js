@@ -437,7 +437,7 @@
   "use strict";
   if (!document.documentElement.classList.contains("js")) return;
   if (!("IntersectionObserver" in window)) return;
-  var linha = document.querySelector(".folha .conta-total[data-total]");
+  var linha = document.querySelector(".folha .conta-total[data-total][data-parcelas]");
   var forte = linha && linha.querySelector("strong");
   var fim = linha ? Number(linha.dataset.total) : 0;
   // só há soma para mostrar quando mais de uma parcela em reais entra no total
@@ -459,6 +459,66 @@
     window.setTimeout(function () { forte.textContent = texto; }, espera + dura + 400);
   }, { threshold: .15, rootMargin: "0px 0px -40px 0px" });
   olho.observe(linha);
+})();
+
+// --- alugar: a conta de entrada troca de imóvel no toque ------------------------
+// Sem JS as contas ficam uma abaixo da outra. Com JS a lista da esquerda escolhe qual
+// aparece; com movimento, a conta soma de novo a cada escolha (e na primeira vez que
+// entra na tela). O texto que vem no HTML é sempre o valor final.
+(function () {
+  "use strict";
+  var raiz = document.querySelector("[data-entrada]");
+  if (!raiz) return;
+  var escolha = raiz.querySelector(".entrada-escolha");
+  var botoes = Array.prototype.slice.call(raiz.querySelectorAll(".entrada-botao"));
+  var contas = Array.prototype.slice.call(raiz.querySelectorAll(".entrada-conta"));
+  if (!escolha || botoes.length < 2 || botoes.length !== contas.length) return;
+  var vivo = document.documentElement.classList.contains("js");
+  var relogio = 0, quadro = 0;
+  function moeda(n) { return "R$ " + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+  function somar(conta) {
+    var linha = conta.querySelector("[data-entrada-total]");
+    var forte = linha && linha.querySelector("strong");
+    var fim = linha ? Number(linha.getAttribute("data-entrada-total")) : 0;
+    if (!forte || !fim) return;
+    var texto = forte.getAttribute("data-final") || forte.textContent;
+    forte.setAttribute("data-final", texto);
+    window.clearTimeout(relogio); cancelAnimationFrame(quadro);
+    conta.classList.remove("soma"); void conta.offsetWidth; conta.classList.add("soma");
+    var espera = 460, dura = 900, comeco = performance.now() + espera;
+    forte.textContent = moeda(0);
+    function passo(agora) {
+      var t = Math.min(1, Math.max(0, (agora - comeco) / dura));
+      if (t >= 1) { forte.textContent = texto; return; }
+      forte.textContent = moeda(fim * (1 - Math.pow(1 - t, 4)));
+      quadro = requestAnimationFrame(passo);
+    }
+    quadro = requestAnimationFrame(passo);
+    relogio = window.setTimeout(function () { cancelAnimationFrame(quadro); forte.textContent = texto; }, espera + dura + 400);
+  }
+  function mostrar(k, animar) {
+    botoes.forEach(function (b, n) { b.setAttribute("aria-pressed", n === k ? "true" : "false"); });
+    contas.forEach(function (c, n) {
+      var forte = c.querySelector("[data-entrada-total] strong");
+      if (forte && forte.getAttribute("data-final")) forte.textContent = forte.getAttribute("data-final");
+      c.hidden = n !== k;
+    });
+    if (animar && vivo) somar(contas[k]);
+  }
+  escolha.hidden = false;
+  raiz.classList.add("entrada--abas");
+  botoes.forEach(function (b, k) { b.addEventListener("click", function () { mostrar(k, true); }); });
+  mostrar(0, false);
+  if (vivo && "IntersectionObserver" in window) {
+    var olho = new IntersectionObserver(function (entradas) {
+      if (!entradas[0].isIntersecting) return;
+      olho.disconnect();
+      var k = 0;
+      botoes.forEach(function (b, n) { if (b.getAttribute("aria-pressed") === "true") k = n; });
+      somar(contas[k]);
+    }, { threshold: .35 });
+    olho.observe(raiz.querySelector(".entrada-contas"));
+  }
 })();
 
 // --- capa: os telhados da logo abrem e mostram a casa -------------------------
@@ -525,7 +585,7 @@
       });
       raiz.classList.toggle("sem-flutuante", blocosLivres.length > 0);
     });
-    Array.prototype.forEach.call(ficha ? [] : document.querySelectorAll("main .medidas, main .rubrica"), function (b) {
+    Array.prototype.forEach.call(ficha ? [] : document.querySelectorAll("main .medidas, main .rubrica, main .entrada"), function (b) {
       olhoCanto.observe(b);
     });
   } else {

@@ -1764,3 +1764,118 @@ html:not(.js) .ficha-passeio .fio { height: 2px; background: var(--laranja); }
      botão laranja da página aponta na beira da primeira tela */
   .preco-a-vista .pagina-ficha .barra-mobile { transform: translateY(220%); }
 }
+
+
+/* ==========================================================================
+   ALUGAR — a página organizada em volta da conta (26/11/2026)
+   No cartaz, o número grande é o que se paga por mês e as linhas dizem o que
+   entra nele. Na folha de papel, a conta de entrada: a lista da esquerda
+   escolhe o imóvel (a linha escolhida enche de laranja, o gesto da lista) e a
+   conta soma. O fecho é o formulário: a linha do campo vira laranja no foco.
+   Mesmos quatro gestos; nenhuma peça nova além da conta de entrada.
+   ========================================================================== */
+.cartaz-preco small { margin-left: .22em; font: 700 .4em/1 var(--sans); letter-spacing: 0; color: var(--texto-2); }
+.cabeca-indice b small { margin-left: .2em; font: 700 .62em/1 var(--sans); letter-spacing: 0; color: var(--texto-2); transition: color .5s var(--sai); }
+/* valor escrito em palavra ("Condomínio, água e luz") não pesa como número */
+.medida--palavra dd { font: 700 1.06rem/1.3 var(--sans); letter-spacing: 0; white-space: normal; text-wrap: balance; }
+/* etapas sem rubrica ao lado: a frase fica na base do título */
+@media (min-width: 900px) { .como--so .bloco-cabeca { align-items: end; } }
+
+/* --- a conta de entrada, na folha ------------------------------------------------ */
+.folha--alugar .entrada { padding-bottom: clamp(48px, 5.6vw, 84px); }
+.entrada-apoio { max-width: 38ch; margin-top: 18px; font-size: 18px; line-height: 1.5; color: var(--tinta-2); }
+.entrada-escolha { margin-top: clamp(26px, 3.2vw, 40px); border-bottom: 1px solid var(--linha-papel); }
+.entrada-botao {
+  position: relative; isolation: isolate; display: flex; width: 100%; justify-content: space-between; align-items: baseline; gap: 18px;
+  min-height: 60px; padding: 18px 0 16px; border: 0; border-top: 1px solid var(--linha-papel); border-radius: 0;
+  background: none; cursor: pointer; text-align: left;
+  font: 700 14px/1.3 var(--sans); letter-spacing: .13em; text-transform: uppercase; color: var(--tinta-suave);
+  transition: color .5s var(--sai), padding .6s var(--sai);
+}
+.entrada-botao::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; background: var(--laranja);
+  transform: scaleY(0); transform-origin: bottom; transition: transform .6s var(--sai);
+}
+.entrada-botao b { font: 900 1.2rem/1 var(--display); letter-spacing: -.01em; color: var(--tinta); white-space: nowrap; transition: color .5s var(--sai); }
+.entrada-botao b small { margin-left: .2em; font: 700 .62em/1 var(--sans); letter-spacing: 0; color: var(--tinta-suave); transition: color .5s var(--sai); }
+.entrada-botao[aria-pressed="true"] { padding-left: 16px; padding-right: 16px; color: var(--tinta-laranja); }
+.entrada-botao[aria-pressed="true"]::before { transform: none; }
+.entrada-botao[aria-pressed="true"] b, .entrada-botao[aria-pressed="true"] b small { color: var(--tinta-laranja); }
+@media (hover: hover) { .entrada-botao:hover { color: var(--tinta); } .entrada-botao[aria-pressed="true"]:hover { color: var(--tinta-laranja); } }
+.entrada-contas { container-type: inline-size; }
+.entrada-conta + .entrada-conta { margin-top: clamp(40px, 4.6vw, 56px); }
+.entrada-conta .folha-h { margin-bottom: 8px; }
+.folha .entrada-conta .conta-linha:first-child { border-top: 0; }
+.entrada .conta-nota a { display: inline-flex; align-items: center; min-height: 44px; margin-left: .3em; color: var(--tinta); font-weight: 700; text-underline-offset: 4px; white-space: nowrap; }
+/* a conta soma de novo a cada imóvel escolhido */
+.js .entrada-conta.soma .folha-h { animation: sobe .6s var(--sai) both; }
+.js .entrada-conta.soma .conta-linha { animation: sobe .7s var(--sai) .08s both; }
+.js .entrada-conta.soma .conta-linha:nth-child(2) { animation-delay: .2s; }
+.js .entrada-conta.soma .conta-regua { animation: fio-risca .8s var(--sai) .34s both; }
+.js .entrada-conta.soma .conta-total { animation: sobe .7s var(--sai) .46s both; }
+.js .entrada-conta.soma .conta-nota { animation: sobe .7s var(--sai) .6s both; }
+@media (min-width: 900px) {
+  /* a conta nasce na altura do título, não da sobrelinha */
+  .entrada .entrada-contas { padding-top: clamp(28px, 3vw, 40px); }
+}
+
+/* --- fecho com formulário: a linha do campo vira laranja no foco ----------------- */
+.fecho--form .form-pele { max-width: 560px; margin: clamp(34px, 4.4vw, 52px) auto 0; text-align: left; }
+.form-pele .form-campo { gap: 6px; margin-bottom: 24px; }
+.form-pele .form-campo label { font: 700 14px/1.3 var(--sans); letter-spacing: .13em; text-transform: uppercase; color: var(--texto-2); }
+.form-pele .form-campo input, .form-pele .form-campo select {
+  min-height: 56px; padding: 0 2px; border: 0; border-bottom: 1.5px solid rgba(255,255,255,.34); border-radius: 0;
+  background-color: transparent; color: var(--marfim); color-scheme: dark; font: 400 1.14rem/1.2 var(--sans);
+  transition: border-color .5s var(--sai), box-shadow .5s var(--sai);
+}
+.form-pele .form-campo select {
+  -webkit-appearance: none; appearance: none; padding-right: 34px; cursor: pointer;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 10'%3E%3Cpath d='M1 1l7 7 7-7' fill='none' stroke='%23eb6316' stroke-width='2'/%3E%3C/svg%3E") right 4px center / 16px 10px no-repeat;
+}
+.form-pele .form-campo select option { color: #f7f5f2; background: #161616; }
+.form-pele .form-campo input:hover, .form-pele .form-campo select:hover { border-bottom-color: rgba(255,255,255,.6); }
+.form-pele .form-campo input:focus-visible, .form-pele .form-campo select:focus-visible {
+  outline: none; border-bottom-color: var(--laranja); box-shadow: 0 1.5px 0 var(--laranja);
+}
+.form-pele .consentimento { grid-template-columns: 44px minmax(0, 1fr); gap: 0 8px; margin: 30px 0 26px; font-size: 16px; line-height: 1.5; color: var(--texto-2); }
+.form-pele .consentimento input {
+  -webkit-appearance: none; appearance: none; position: relative; width: 44px; height: 44px; margin: -9px 0 0 -10px;
+  background: none; border: 0; cursor: pointer;
+}
+.form-pele .consentimento input::before {
+  content: ""; position: absolute; left: 10px; top: 10px; width: 24px; height: 24px;
+  box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.5); transition: background-color .4s var(--sai), box-shadow .4s var(--sai);
+}
+.form-pele .consentimento input::after {
+  content: ""; position: absolute; left: 18px; top: 13px; width: 7px; height: 13px;
+  border: solid var(--tinta-laranja); border-width: 0 2.5px 2.5px 0; transform: rotate(45deg) scale(0); transition: transform .4s var(--sai);
+}
+.form-pele .consentimento input:checked::before { background: var(--laranja); box-shadow: inset 0 0 0 1.5px var(--laranja); }
+.form-pele .consentimento input:checked::after { transform: rotate(45deg); }
+.form-pele .consentimento input:focus-visible { outline: none; }
+.form-pele .consentimento input:focus-visible::before { outline: 2px solid var(--laranja-claro); outline-offset: 3px; }
+.form-pele .consentimento a { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; color: var(--marfim); text-underline-offset: 4px; }
+.form-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 26px; }
+.form-pele button.bt { border: 0; cursor: pointer; }
+.form-pele button.bt:disabled { background: rgba(255,255,255,.14); color: var(--marfim-suave); cursor: not-allowed; transform: none; }
+.form-acoes .rubrica-link { font-size: 16px; color: var(--texto-2); }
+.form-nota { margin-top: 18px; font-size: 15.5px; color: var(--marfim-suave); }
+.pagina-alugar .fecho .bloco-titulo { --teto: clamp(2.2rem, 6.2vw, 5.6rem); }
+.entrada .conta-nota a { display: flex; width: fit-content; margin-left: 0; }
+/* desktop: sem trio, a foto acompanha a altura da coluna de texto (o acervo é em pé:
+   moldura alta mostra mais do imóvel e não sobra vazio embaixo da foto) */
+@media (min-width: 900px) {
+  .pagina-alugar .cartaz:not(.cartaz--com-trio) { grid-template-areas: "fio fio" "foto texto"; grid-template-rows: auto auto; }
+  .pagina-alugar .cartaz:not(.cartaz--com-trio):nth-child(even) { grid-template-areas: "fio fio" "texto foto"; }
+  .pagina-alugar .cartaz:not(.cartaz--com-trio) .cartaz-foto {
+    aspect-ratio: auto; align-self: stretch; min-height: clamp(340px, 34vw, 500px);
+  }
+}
+@media (min-width: 900px) {
+  /* a moldura tem a altura da linha da grade; a foto preenche a moldura (sem isto a foto em
+     pé empurrava a moldura para a própria altura) */
+  .pagina-alugar .cartaz:not(.cartaz--com-trio) .cartaz-foto { position: relative; }
+  .pagina-alugar .cartaz:not(.cartaz--com-trio) .cartaz-foto img { position: absolute; inset: 0; }
+  /* texto curto fica no meio da foto; texto comprido estica a foto */
+  .pagina-alugar .cartaz:not(.cartaz--com-trio) .cartaz-texto { align-self: center; padding-block: clamp(20px, 3.4vw, 56px); }
+}

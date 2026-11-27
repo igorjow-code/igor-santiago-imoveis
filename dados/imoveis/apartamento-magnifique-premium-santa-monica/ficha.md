@@ -18,6 +18,8 @@ iptu:
 garantias: caucao
 # Opcional: descreva os valores ou etapas específicos da garantia acordada.
 garantia_detalhe: Primeiro aluguel + dois meses de caução no ato (3 valores de aluguel no total).
+# Meses de caução pagos no ato, em número: alimenta a conta de entrada das páginas de aluguel.
+caucao_meses: 2
 mobiliado:
 aceita_pet:
 contas_inclusas: condominio

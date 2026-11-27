@@ -403,9 +403,81 @@ class SiteTests(unittest.TestCase):
             if all(re.fullmatch(r'from|to|[\d.]+%', s) for s in seletores):
                 continue
             achadas += 1
-            # fora do .js só o fundo laranja do último quadro (que enche no toque) começa recolhido
-            self.assertTrue(all(s.startswith('.js ') or s == '.tira-fim a::before' for s in seletores), regra[0])
+            # fora do .js só começam recolhidos os fundos laranja que enchem no toque: o do último
+            # quadro da tira e o da linha escolhida na conta de entrada (conteúdo nenhum)
+            fundos = {'.tira-fim a::before', '.entrada-botao::before'}
+            self.assertTrue(all(s.startswith('.js ') or s in fundos for s in seletores), regra[0])
         self.assertGreater(achadas, 3)
+
+    def test_alugar_com_a_pele_nova_conta_do_mes_e_conta_de_entrada(self):
+        imoveis = [dict(i) for i in self.imoveis]
+        lista = b.para_alugar(imoveis, 'residencial')
+        self.assertGreaterEqual(len(lista), 2)
+        # a conta de entrada só existe para quem traz caucao_meses na ficha
+        lista[0]['caucao_meses'] = 2
+        pagina = b.pagina_segmento(self.corretor, imoveis, 'residencial')
+        self.assertIn('class="pagina-capa pagina-interna pagina-alugar"', pagina)
+        self.assertNotIn('class="card', pagina)
+        self.assertIn('<a href="alugar-residencial.html" class="ativo">Alugar</a>', pagina)
+        # só aluguel residencial, do maior para o menor custo do mês
+        for imovel in imoveis:
+            self.assertEqual(f'id="v-{imovel["slug"]}"' in pagina, imovel in lista)
+        custos = [b.custo_mensal(i) for i in lista]
+        self.assertEqual(custos, sorted(custos, reverse=True))
+        posicoes = [pagina.index(f'id="v-{i["slug"]}"') for i in lista]
+        self.assertEqual(posicoes, sorted(posicoes))
+        # o número grande do cartaz é o custo do mês, e o botão cheio leva à ficha
+        for imovel in lista:
+            self.assertIn(f'{b.moeda(b.custo_mensal(imovel))}<small>/mês</small>', pagina)
+            self.assertIn(f'href="imovel/{imovel["slug"]}.html"', pagina)
+        # conta de entrada: primeiro aluguel + caução, só do imóvel que informou
+        primeiro = lista[0]
+        total = primeiro['preco'] * 3
+        self.assertEqual(b.entrada_aluguel(primeiro), (primeiro['preco'], primeiro['preco'] * 2, total))
+        self.assertIsNone(b.entrada_aluguel(lista[1]))
+        self.assertIn(f'data-entrada-total="{total}"', pagina)
+        self.assertEqual(pagina.count('class="entrada-conta"'), 1)
+        self.assertNotIn('entrada-escolha', pagina)            # um imóvel só: não há o que escolher
+        lista[1]['caucao_meses'] = 1
+        pagina_dois = b.pagina_segmento(self.corretor, imoveis, 'residencial')
+        self.assertEqual(pagina_dois.count('class="entrada-conta"'), 2)
+        self.assertEqual(pagina_dois.count('class="entrada-botao"'), 2)
+        self.assertIn('Caução · 1 aluguel<', pagina_dois)
+        self.assertIn('class="entrada-escolha" role="group" aria-label="Escolha o imóvel" hidden', pagina_dois)
+        # sem caucao_meses em nenhuma ficha a seção não aparece (nada é deduzido de texto livre)
+        self.assertNotIn('data-entrada', b.pagina_segmento(self.corretor, self.imoveis, 'residencial'))
+        # o formulário é o fecho da página; a página é assinada
+        self.assertIn('id="quero-alugar"', pagina)
+        self.assertIn('fecho--form', pagina)
+        self.assertIn('class="rubrica"', pagina)
+        self.assertGreaterEqual(pagina.count(self.corretor['creci']), 3)
+        # dados estruturados: lista na ordem da tela e etapas iguais às visíveis
+        grafo = json.loads(re.search(r'<script type="application/ld\+json">(.*?)</script>', pagina, re.S)[1])['@graph']
+        itens = next(no for no in grafo if no['@type'] == 'ItemList')
+        self.assertEqual([i['url'].rsplit('/', 1)[1] for i in itens['itemListElement']],
+                         [f'{i["slug"]}.html' for i in lista])
+        etapas = next(no for no in grafo if no['@type'] == 'HowTo')['step']
+        visiveis = re.findall(r'<li class="etapa"[^>]*><span class="etapa-n">\d\d</span><h3>(.*?)</h3><p>(.*?)</p></li>', pagina)
+        self.assertEqual([(unescape(n), unescape(x)) for n, x in visiveis], [(e['name'], e['text']) for e in etapas])
+        self.assertEqual(len(etapas), 4)
+        # dúvida de sala comercial não entra na página de quem procura onde morar
+        self.assertNotIn('CNPJ', pagina)
+
+    def test_medidas_do_cartaz_de_aluguel_dizem_o_que_entra_na_conta(self):
+        base = dict(operacao='locacao', finalidade='residencial', preco=2000)
+        self.assertEqual(b.medidas_aluguel(dict(base, contas_inclusas=['condominio', 'agua', 'luz'])),
+                         [('Incluso', 'Condomínio, água e luz'), ('IPTU', 'Consultar')])
+        self.assertEqual(b.medidas_aluguel(dict(base, contas_inclusas=['condominio'], iptu_nao_incluido='sim',
+                                                quartos=1, vagas=1, mobiliado='sim', preco_venda=370000)),
+                         [('Incluso', 'Condomínio'), ('IPTU', 'Não incluído'), ('Quartos', '1'), ('Vagas', '1'),
+                          ('Mobília', 'Mobiliado'), ('Ou compra', 'R$ 370.000')])
+        # com encargo fora do aluguel, as parcelas aparecem e somam o custo do mês
+        com_encargos = dict(base, condominio=300, iptu=1200)
+        self.assertEqual(b.custo_mensal(com_encargos), 2400)
+        self.assertEqual(b.medidas_aluguel(com_encargos),
+                         [('Aluguel', 'R$ 2.000'), ('Condomínio', 'R$ 300'), ('IPTU ÷ 12', 'R$ 100')])
+        self.assertEqual(b.juntar_e(['condomínio']), 'condomínio')
+        self.assertEqual(b.juntar_e(['condomínio', 'IPTU']), 'condomínio e IPTU')
 
     def test_metragem_com_virgula_e_valor_de_venda(self):
         with tempfile.TemporaryDirectory() as pasta:
@@ -417,6 +489,24 @@ class SiteTests(unittest.TestCase):
             self.assertEqual(b.valor_venda(ficha), 1600000)
             with self.assertRaises(ValueError):
                 b.ler_ficha(self.ficha(pasta, 'preco: 1600,50'))
+
+    def test_mapa_da_ficha_e_imagem_fixa_do_bairro(self):
+        imovel = dict(self.imoveis[0], bairro='Santa Mônica', cidade='Feira de Santana')
+        mapa = b.local_ficha(imovel)
+        self.assertIn('<figure class="local-mapa"', mapa)
+        self.assertIn('src="../assets/mapas/santa-monica-feira-de-santana.webp"', mapa)
+        self.assertIn('alt="Mapa do bairro Santa Mônica, em Feira de Santana"', mapa)
+        self.assertNotIn('<iframe', mapa)
+        self.assertNotIn('export/embed', mapa)
+        # o crédito do mapa fica visível na página
+        self.assertIn('openstreetmap.org/copyright', mapa)
+        # bairro sem coordenada continua sem mapa: nada é adivinhado
+        self.assertEqual(b.local_ficha(dict(imovel, bairro='Bairro Sem Ponto')), '')
+        # todo bairro com coordenada tem a imagem gerada
+        for chave in b.COORDENADAS_BAIRRO:
+            self.assertTrue(b.mapa_bairro_arquivo(chave).is_file(), chave)
+        pagina = b.pagina_imovel(self.corretor, imovel, self.imoveis)
+        self.assertNotIn('<iframe', pagina)
 
     def test_metadata_social_e_canonical_da_home(self):
         home = b.pagina_home(self.corretor, self.imoveis, publicar=True)
@@ -490,24 +580,6 @@ class SiteTests(unittest.TestCase):
             shutil.copy2(b.DADOS / 'corretor.json', raiz / 'dados' / 'corretor.json')
             ficha = raiz / 'dados' / 'imoveis' / 'unico-rascunho' / 'ficha.md'
             ficha.parent.mkdir(parents=True)
-    def test_mapa_da_ficha_e_imagem_fixa_do_bairro(self):
-        imovel = dict(self.imoveis[0], bairro='Santa Mônica', cidade='Feira de Santana')
-        mapa = b.local_ficha(imovel)
-        self.assertIn('<figure class="local-mapa"', mapa)
-        self.assertIn('src="../assets/mapas/santa-monica-feira-de-santana.webp"', mapa)
-        self.assertIn('alt="Mapa do bairro Santa Mônica, em Feira de Santana"', mapa)
-        self.assertNotIn('<iframe', mapa)
-        self.assertNotIn('export/embed', mapa)
-        # o crédito do mapa fica visível na página
-        self.assertIn('openstreetmap.org/copyright', mapa)
-        # bairro sem coordenada continua sem mapa: nada é adivinhado
-        self.assertEqual(b.local_ficha(dict(imovel, bairro='Bairro Sem Ponto')), '')
-        # todo bairro com coordenada tem a imagem gerada
-        for chave in b.COORDENADAS_BAIRRO:
-            self.assertTrue(b.mapa_bairro_arquivo(chave).is_file(), chave)
-        pagina = b.pagina_imovel(self.corretor, imovel, self.imoveis)
-        self.assertNotIn('<iframe', pagina)
-
             ficha.write_text(
                 (raiz / 'dados' / '_modelo' / 'ficha.md').read_text(encoding='utf-8')
                 .replace('slug: __PREENCHER__', 'slug: unico-rascunho'),

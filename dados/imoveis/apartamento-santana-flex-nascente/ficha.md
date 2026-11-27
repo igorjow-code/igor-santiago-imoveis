@@ -18,6 +18,8 @@ contas_inclusas: condominio
 iptu_nao_incluido: sim
 garantias: caucao
 garantia_detalhe: Primeiro aluguel + dois meses de caução no ato (3 valores de aluguel no total).
+# Meses de caução pagos no ato, em número: alimenta a conta de entrada das páginas de aluguel.
+caucao_meses: 2
 situacao: disponivel
 destaque: false
 demo: false
