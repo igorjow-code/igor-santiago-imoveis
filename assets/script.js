@@ -329,6 +329,18 @@
       });
       vez(0);
       rolo.removeAttribute("tabindex");
+      // a foto de dentro da folha abre a mesma foto ampliada
+      Array.prototype.forEach.call(document.querySelectorAll(".folha-foto[data-foto]"), function (f) {
+        var k = Number(f.dataset.foto);
+        if (!comFoto[k] || raiz.closest(".ficha-videos")) return;
+        f.setAttribute("role", "button");
+        f.setAttribute("tabindex", "0");
+        f.setAttribute("aria-label", "Ampliar foto " + (k + 1) + " de " + comFoto.length);
+        f.addEventListener("click", function () { abrirLuz(comFoto, k, rolo); });
+        f.addEventListener("keydown", function (ev) {
+          if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); abrirLuz(comFoto, k, rolo); }
+        });
+      });
     }
 
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(pedir);
@@ -337,7 +349,7 @@
   });
 
   // --- luz: a foto ampliada, com as mesmas setas, o mesmo contador e o mesmo fio ---
-  var luz = null, luzFoto, luzConta, luzFio, lista = [], onde = 0, deOnde = null;
+  var luz = null, luzFoto, luzConta, luzFio, lista = [], onde = 0, deOnde = null, abriu = null;
   function doisDigitos(n) { return (n < 10 ? "0" : "") + n; }
   function mostrar(k) {
     onde = (k + lista.length) % lista.length;
@@ -385,11 +397,15 @@
       document.documentElement.classList.remove("luz-aberta");
       var quadro = lista[onde];
       if (deOnde && quadro) deOnde.scrollTo({ left: quadro.offsetLeft - lista[0].offsetLeft, behavior: "auto" });
-      if (quadro) quadro.focus({ preventScroll: true });
+      // o foco volta para quem abriu (a foto da tira ou a foto da folha)
+      var volta = abriu && document.contains(abriu) ? abriu : quadro;
+      if (volta) volta.focus({ preventScroll: true });
+      abriu = null;
     });
   }
   function abrirLuz(quadros, k, rolo) {
     if (!luz) montar();
+    abriu = document.activeElement && document.activeElement.classList.contains("folha-foto") ? document.activeElement : null;
     lista = quadros;
     deOnde = rolo;
     mostrar(k);

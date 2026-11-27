@@ -327,6 +327,8 @@ class SiteTests(unittest.TestCase):
             # a faixa do passeio não repete as fotos que a pessoa acabou de ver na tira
             self.assertIn('id="passeio"', pagina)
             self.assertNotIn('vitrine-quadro', pagina)
+            # uma foto de dentro quebra a sequência de linhas da folha (a primeira pedida na ficha)
+            self.assertIn('<figure class="folha-foto" data-foto="3" data-reveal><img src="../assets/imoveis/casa-teste/04-suite.webp"', pagina)
             # venda: a folha mostra o valor, não uma conta de aluguel
             self.assertIn('<p class="valor-rotulo" data-reveal>Valor de venda</p>', pagina)
             self.assertNotIn('conta-linha', pagina)
@@ -367,6 +369,26 @@ class SiteTests(unittest.TestCase):
         # sem foto não existe tira nem imagem de imóvel reservada
         self.assertIn('ficha-topo--sem-foto', pagina)
         self.assertNotIn('data-tira', pagina)
+        self.assertNotIn('folha-foto', pagina)
+        # vídeo de poucos segundos não vai para o site; o longo e o de duração ilegível vão
+        with tempfile.TemporaryDirectory() as pasta:
+            videos = Path(pasta) / 'videos-tratados'
+            videos.mkdir()
+
+            def mp4(segundos):
+                return (b'\x00' * 8 + b'mvhd' + b'\x00' * 12 + (1000).to_bytes(4, 'big')
+                        + (segundos * 1000).to_bytes(4, 'big') + b'\x00' * 16)
+            (videos / '01-curto.mp4').write_bytes(mp4(3))
+            (videos / '02-longo.mp4').write_bytes(mp4(47))
+            (videos / '03-ilegivel.mp4').write_bytes(b'fixture')
+            self.assertEqual((b.duracao_mp4(videos / '01-curto.mp4'), b.duracao_mp4(videos / '02-longo.mp4'),
+                              b.duracao_mp4(videos / '03-ilegivel.mp4')), (3, 47, 0))
+            com_videos = dict(aluguel, _arquivo=Path(pasta) / 'ficha.md')
+            self.assertEqual([v.name for v in b.videos_imovel(com_videos)], ['02-longo.mp4', '03-ilegivel.mp4'])
+            tira = b.tira_videos(com_videos)
+            self.assertNotIn('01-curto', tira)
+            self.assertIn('Vídeo 01 · 0:47', tira)
+            self.assertIn('2 vídeos', tira)
         comercial = dict(next(i for i in self.imoveis if i['finalidade'] == 'comercial'), _arquivo=None)
         self.assertIn('<a href="../alugar-sala-comercial.html" class="ativo">Comercial</a>',
                       b.pagina_imovel(self.corretor, comercial, [comercial]))

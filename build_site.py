@@ -1675,12 +1675,20 @@ def rotulo_passeio(imovel: dict) -> str:
     return "Passear " + artigo_tipo(imovel)[1]
 
 
+VIDEO_MINIMO = 5  # segundos
+
+
 def videos_imovel(imovel: dict) -> list[Path]:
+    """Vídeos que vão para o site. Trecho com menos de VIDEO_MINIMO segundos fica de fora
+    (decisão de Igor em 26/11/2026, IS-52): o arquivo continua na pasta, só não é publicado.
+    Vídeo de duração ilegível entra (não dá para dizer que é curto)."""
     ficha = imovel.get('_arquivo')
     if not ficha:
         return []
     pasta = Path(ficha).parent / 'videos-tratados'
-    return sorted(pasta.glob('*.mp4')) if pasta.is_dir() else []
+    if not pasta.is_dir():
+        return []
+    return [v for v in sorted(pasta.glob('*.mp4')) if not 0 < duracao_mp4(v) < VIDEO_MINIMO]
 
 
 def duracao_mp4(arquivo: Path) -> int:
@@ -1946,6 +1954,14 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
     destaques = (f'<h3 class="folha-h">{e(FICHA["destaques"])}</h3><ul class="folha-lista">{destaques}</ul>'
                  if destaques else '')
     duvidas = secao_duvidas(FICHA['faq_titulo'], imovel['duvidas']) if imovel['duvidas'] else ''
+    # uma foto de dentro quebra a sequência de linhas da folha; o toque abre a foto ampliada
+    foto_folha = ''
+    dentro = fotos_cartaz(imovel, fotos)
+    if dentro:
+        ordem = fotos.index(dentro[0])
+        alt_folha = f"{imovel['tipo']} em {imovel['bairro']}, foto {ordem + 1} de {len(fotos)}"
+        foto_folha = (f'<figure class="folha-foto" data-foto="{ordem}" data-reveal>'
+                      + imagem_html(imovel, dentro[0], alt_folha, "../") + '</figure>')
     folha = f"""
 <div class="folha" id="ficha">
   <span class="folha-telhado" data-reveal aria-hidden="true"></span>
@@ -1962,6 +1978,7 @@ def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: b
       <div class="folha-leitura">
         <h3 class="folha-h">{e(FICHA['sobre'])}</h3>
         {disponivel}{paragrafos}
+        {foto_folha}
         {destaques}
         {local_ficha(imovel)}
       </div>

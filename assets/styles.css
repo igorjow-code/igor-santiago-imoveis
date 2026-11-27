@@ -1648,6 +1648,21 @@ html.luz-aberta { overflow: hidden; }
 .folha-leitura > p + p { margin-top: 1em; }
 .folha-leitura > p.folha-abre { font-size: clamp(1.24rem, 1.6vw, 1.42rem); line-height: 1.46; color: var(--tinta); }
 .folha-leitura > p.folha-disponivel { margin-bottom: 14px; font-weight: 700; color: var(--tinta); }
+/* uma foto de dentro, com corte de telhado, entre a descrição e os destaques */
+.folha-foto {
+  --corte: polygon(0 14%, 100% 0, 100% 100%, 0 100%);
+  position: relative; margin: clamp(30px, 3.6vw, 44px) 0 0; aspect-ratio: 4 / 3; overflow: hidden;
+  clip-path: var(--corte); background: var(--preto-suave);
+}
+.folha-foto img { width: 100%; height: 100%; object-fit: cover; }
+.js .folha-foto[data-reveal] { opacity: 1; transform: none; clip-path: var(--reto); }
+.js .folha-foto[data-reveal].in-view { clip-path: var(--corte); transition: clip-path 1.25s var(--sai) .1s; }
+.folha-foto[role="button"] { cursor: zoom-in; }
+.folha-foto[role="button"]:focus-visible { outline: none; }
+.folha-foto[role="button"]:focus-visible::before {
+  content: ""; position: absolute; inset: 8px; z-index: 2; border: 2px solid var(--laranja-claro); pointer-events: none;
+}
+@media (min-width: 900px) { .folha-foto { aspect-ratio: 16 / 10; } }
 /* destaques em colunas de texto: cada item ocupa só a altura que tem */
 .folha-lista { list-style: none; margin: 0; padding: 0; column-gap: clamp(24px, 3vw, 40px); }
 .folha-lista li { break-inside: avoid; padding: 13px 0; border-top: 1px solid var(--linha-papel); font-size: 18px; line-height: 1.45; color: var(--tinta-2); }
