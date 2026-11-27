@@ -484,10 +484,10 @@
     var texto = forte.getAttribute("data-final") || forte.textContent;
     forte.setAttribute("data-final", texto);
     window.clearTimeout(relogio); cancelAnimationFrame(quadro);
-    conta.classList.remove("soma"); void conta.offsetWidth; conta.classList.add("soma");
+    conta.classList.remove("soma"); conta.classList.toggle("troca", vezes > 0); void conta.offsetWidth; conta.classList.add("soma");
     // a primeira soma é a apresentação; quem compara imóveis recebe a resposta depressa
     var celular = window.matchMedia && window.matchMedia("(max-width: 899px)").matches;
-    var espera = vezes ? 120 : (celular ? 160 : 460), dura = vezes ? 450 : 900, comeco = performance.now() + espera;
+    var espera = vezes ? 40 : (celular ? 160 : 460), dura = vezes ? 420 : 900, comeco = performance.now() + espera;
     vezes++;
     forte.textContent = moeda(0);
     function passo(agora) {

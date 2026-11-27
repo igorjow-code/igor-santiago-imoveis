@@ -1419,9 +1419,9 @@ def cartaz_imovel(corretor: dict, imovel: dict, n: int = 0, aluguel: bool = Fals
         # valor escrito em palavra ("Condomínio, água e luz") não pesa como número
         medidas = "".join(
             f'<div class="medida{"" if any(c.isdigit() for c in valor) else " medida--palavra"}" '
-            f'{entra(320 + 60 * k)}><dt>{e(rotulo)}</dt><dd>{e(valor)}</dd></div>'
+            f'{entra(200 + 45 * k)}><dt>{e(rotulo)}</dt><dd>{e(valor)}</dd></div>'
             for k, (rotulo, valor) in enumerate(medidas_aluguel(imovel)))
-        fim_medidas = 320 + 60 * len(medidas_aluguel(imovel))
+        fim_medidas = 200 + 45 * len(medidas_aluguel(imovel))
         preco = f'{moeda(custo_mensal(imovel))}<small>/mês</small>'
         wa_visita = wa_imovel(corretor, imovel)
     else:
@@ -1432,10 +1432,10 @@ def cartaz_imovel(corretor: dict, imovel: dict, n: int = 0, aluguel: bool = Fals
         wa_visita = wa_compra(corretor, imovel)
     medidas = f'<dl class="medidas">{medidas}</dl>' if medidas else ""
     # no aluguel a frase e os botões entram depois da última linha da conta
-    atraso_chamada = f'--atraso:{base + fim_medidas + 40}ms' if aluguel else '--atraso:240ms'
-    atraso_acoes = f'--atraso:{base + fim_medidas + 120}ms' if aluguel else '--atraso:300ms'
+    atraso_chamada = '--atraso:240ms'
+    atraso_acoes = f'--atraso:{min(base, 300) + fim_medidas + 80}ms' if aluguel else '--atraso:300ms'
     chamada = (f'<p class="cartaz-chamada" data-reveal style="{atraso_chamada}">{e(imovel["chamada"])}</p>'
-               if imovel.get("chamada") else "")
+               if imovel.get("chamada") and not aluguel else "")
     # o botão cheio é o passo mais rico que existe (passeio; sem ele, a ficha);
     # o de contorno é sempre a visita, pelo WhatsApp
     visita = (f'<a class="bt bt-fino" href="{e(wa_visita)}" target="_blank" rel="noopener">'
@@ -1599,7 +1599,7 @@ ALUGAR = {
         "como_apoio": "Quem conduz o aluguel é uma pessoa só. Você fala comigo em todas as etapas.",
         "etapas": [
             ("Conversa", "Você me diz o bairro, o tipo de imóvel e quanto cabe no mês."),
-            ("Conta do mês", "O aluguel e o que está incluso aparecem na página, antes de sair de\u00a0casa."),
+            ("Conta do mês", "O aluguel e o que está incluso aparecem na página, antes de você sair de\u00a0casa."),
             ("Visita", "Agendada pelo WhatsApp e acompanhada por mim. A localização exata é enviada no agendamento."),
             ("Contrato", "Garantia e documentos explicados antes da proposta. Sigo com você até a entrega das chaves."),
         ],
@@ -1660,7 +1660,7 @@ def medidas_aluguel(imovel: dict) -> list[tuple[str, str]]:
         nomes = juntar_e([NOMES_CONTAS.get(c, c) for c in inclusas])
         itens.append(("Incluso", nomes[:1].upper() + nomes[1:]))
     if "iptu" not in inclusas and not imovel.get("iptu"):
-        itens.append(("IPTU", "Não incluso" if imovel.get("iptu_nao_incluido") == "sim" else "Consultar"))
+        itens.append(("IPTU", "À parte" if imovel.get("iptu_nao_incluido") == "sim" else "A confirmar"))
     if imovel.get("finalidade") != "comercial":
         if imovel.get("quartos"):
             itens.append(("Quartos", str(imovel["quartos"])))

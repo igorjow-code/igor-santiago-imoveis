@@ -1907,3 +1907,21 @@ html:not(.js) .ficha-passeio .fio { height: 2px; background: var(--laranja); }
   .js .entrada-conta.soma .conta-linha:nth-child(2) { animation-delay: .46s; }
 }
 .form-pele .form-campo input::placeholder { color: rgba(247,245,242,.45); }
+
+/* --- consertos da 2ª rodada do crítico (27/11/2026) ------------------------------ */
+/* com a lista ligada só uma conta aparece: a margem entre contas fazia o total pular */
+.entrada--abas .entrada-conta + .entrada-conta { margin-top: 0; }
+@media (min-width: 900px) {
+  .entrada .entrada-contas { align-self: start; }
+  .entrada--abas .conta-nota { min-height: 6.4em; }
+}
+/* celular: o número de entrada é o clímax da página */
+@media (max-width: 899px) { .folha .entrada-conta .conta-total strong { font-size: clamp(3rem, 14.5vw, 3.6rem); } }
+/* troca de imóvel depois da primeira soma: curta, com o total primeiro */
+.js .entrada-conta.soma.troca .conta-total { animation: sobe .35s var(--sai) .04s both; }
+.js .entrada-conta.soma.troca .conta-linha { animation: sobe .35s var(--sai) .1s both; }
+.js .entrada-conta.soma.troca .conta-linha:nth-child(2) { animation-delay: .16s; }
+.js .entrada-conta.soma.troca .conta-regua { animation: fio-risca .4s var(--sai) .1s both; }
+.js .entrada-conta.soma.troca .conta-nota { animation: sobe .35s var(--sai) .2s both; }
+@media (prefers-reduced-motion: reduce) { .entrada-botao::before { transition: none; } }
+.cabeca-indice b small, .entrada-botao b small { font-size: max(.7em, 14px); }
