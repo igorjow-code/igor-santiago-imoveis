@@ -1667,8 +1667,25 @@ html.luz-aberta { overflow: hidden; }
 .folha-lista { list-style: none; margin: 0; padding: 0; column-gap: clamp(24px, 3vw, 40px); }
 .folha-lista li { break-inside: avoid; padding: 13px 0; border-top: 1px solid var(--linha-papel); font-size: 18px; line-height: 1.45; color: var(--tinta-2); }
 @media (min-width: 600px) { .folha-lista { columns: 2; } }
-.local-mapa { position: relative; aspect-ratio: 16 / 10; overflow: hidden; border: 1px solid var(--linha-papel); background: var(--superficie); }
-.local-mapa iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; filter: grayscale(.85) contrast(1.04); }
+/* mapa do bairro: imagem fixa, em cinza, com corte de telhado (decisão de Igor, IS-52).
+   A imagem é multiplicada sobre o papel; o círculo marca a região, nunca o endereço. */
+.local-mapa {
+  --corte: polygon(0 14%, 100% 0, 100% 100%, 0 100%);
+  position: relative; margin: 0; aspect-ratio: 4 / 3; overflow: hidden;
+  clip-path: var(--corte); background: #e9e5de;
+}
+.local-mapa img { width: 100%; height: 100%; object-fit: cover; mix-blend-mode: multiply; }
+.local-alvo {
+  position: absolute; left: 50%; top: 50%; width: 28%; aspect-ratio: 1; margin: -14% 0 0 -14%;
+  border-radius: 50%; border: 2px solid var(--laranja-fundo); background: rgba(235,99,22,.18);
+}
+.js .local-mapa[data-reveal] { opacity: 1; transform: none; clip-path: var(--reto); }
+.js .local-mapa[data-reveal].in-view { clip-path: var(--corte); transition: clip-path 1.25s var(--sai) .1s; }
+.js .local-mapa[data-reveal] .local-alvo { transform: scale(.3); opacity: 0; }
+.js .local-mapa[data-reveal].in-view .local-alvo { transform: none; opacity: 1; transition: transform 1s var(--sai) .7s, opacity .6s var(--sai) .7s; }
+@media (min-width: 900px) { .local-mapa { aspect-ratio: 16 / 10; } }
+.folha-leitura > p.local-credito { font-size: 14.5px; color: var(--tinta-suave); }
+.local-credito a { display: inline-flex; align-items: center; min-height: 44px; color: inherit; text-underline-offset: 3px; }
 .folha-leitura > p.local-nota { margin-top: 12px; font-size: 16.5px; }
 .local-nota a { display: flex; width: fit-content; align-items: center; min-height: 44px; margin-top: 4px; color: var(--tinta); text-underline-offset: 4px; }
 @media (min-width: 900px) {

@@ -43,7 +43,17 @@ COORDENADAS_BAIRRO = {
     "Sim|Feira de Santana": (-12.2512799, -38.9260106),
     "Ponto Central|Feira de Santana": (-12.2526425, -38.9520510),
     "Brasília|Feira de Santana": (-12.2666487, -38.9505934),
+    # Nominatim, 26/11/2026: node 1671984061, Capuchinhos (suburb).
+    "Capuchinhos|Feira de Santana": (-12.2588706, -38.9468529),
+    # Sem entrada, de propósito (26/11/2026): "35º BI" não tem ponto de bairro no
+    # Nominatim e "Getúlio Vargas" é avenida, não bairro. Não adivinhar coordenada.
 }
+
+
+def mapa_bairro_arquivo(chave: str) -> Path:
+    """Imagem fixa do mapa de um bairro ("Bairro|Cidade"), gerada por gerar_mapas.py."""
+    nome = re.sub(r"[^a-z0-9]+", "-", _sem_acento(chave.lower())).strip("-")
+    return ASSETS / "mapas" / f"{nome}.webp"
 
 # Campos que toda ficha precisa ter para virar pagina.
 OBRIGATORIOS = ("slug", "titulo", "operacao", "finalidade", "tipo", "bairro", "cidade", "preco")
@@ -1841,22 +1851,27 @@ def tira_videos(imovel: dict) -> str:
 
 def local_ficha(imovel: dict) -> str:
     """Mapa do bairro (nunca o endereço exato: a localização é enviada no agendamento)."""
-    coordenada = COORDENADAS_BAIRRO.get(f"{imovel['bairro']}|{imovel['cidade']}")
-    if not coordenada:
+    # Imagem fixa do bairro, em cinza e com corte de telhado (decisão de Igor, IS-52):
+    # nada de quadro vivo de outro site dentro da ficha. A imagem é gerada uma vez por
+    # gerar_mapas.py; sem coordenada ou sem imagem, a ficha sai sem mapa.
+    chave = f"{imovel['bairro']}|{imovel['cidade']}"
+    coordenada = COORDENADAS_BAIRRO.get(chave)
+    arquivo = mapa_bairro_arquivo(chave)
+    if not coordenada or not arquivo.is_file():
         return ""
     lat, lon = coordenada
-    delta = 0.012
-    bbox = f"{lon - delta},{lat - delta},{lon + delta},{lat + delta}"
-    embed = (f"https://www.openstreetmap.org/export/embed.html"
-             f"?bbox={bbox}&layer=mapnik&marker={lat},{lon}")
+    largura, altura = dimensoes_imagem(arquivo) or (1280, 960)
+    url = "../" + quote(arquivo.relative_to(ROOT).as_posix(), safe="/")
     rota = f"https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=15/{lat}/{lon}"
     return f"""<h3 class="folha-h">{e(FICHA['local'])}</h3>
-<div class="local-mapa" data-reveal>
-  <iframe src="{e(embed)}" loading="lazy" title="Mapa de {e(imovel['bairro'])}, {e(imovel['cidade'])}"
-          referrerpolicy="no-referrer-when-downgrade"></iframe>
-</div>
+<figure class="local-mapa" data-reveal>
+  <img src="{e(url)}" width="{largura}" height="{altura}" loading="lazy" decoding="async"
+       alt="Mapa do bairro {e(imovel['bairro'])}, em {e(imovel['cidade'])}" />
+  <span class="local-alvo" aria-hidden="true"></span>
+</figure>
 <p class="local-nota">{e(imovel['bairro'])} · {e(imovel['cidade'])}. {e(FICHA['local_nota'])}
-  <a href="{e(rota)}" target="_blank" rel="noopener">Ver rota</a></p>"""
+  <a href="{e(rota)}" target="_blank" rel="noopener">Ver rota</a></p>
+<p class="local-credito">Mapa: © colaboradores do <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></p>"""
 
 
 def pagina_imovel(corretor: dict, imovel: dict, imoveis: list[dict], publicar: bool = False) -> str:
@@ -2590,3 +2605,5 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
+        elif not mapa_bairro_arquivo(bairro).is_file():
+            faltas.append(f"{ficha} → bairro sem imagem de mapa: {bairro} (rodar gerar_mapas.py)")

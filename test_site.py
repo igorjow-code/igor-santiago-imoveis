@@ -490,6 +490,24 @@ class SiteTests(unittest.TestCase):
             shutil.copy2(b.DADOS / 'corretor.json', raiz / 'dados' / 'corretor.json')
             ficha = raiz / 'dados' / 'imoveis' / 'unico-rascunho' / 'ficha.md'
             ficha.parent.mkdir(parents=True)
+    def test_mapa_da_ficha_e_imagem_fixa_do_bairro(self):
+        imovel = dict(self.imoveis[0], bairro='Santa Mônica', cidade='Feira de Santana')
+        mapa = b.local_ficha(imovel)
+        self.assertIn('<figure class="local-mapa"', mapa)
+        self.assertIn('src="../assets/mapas/santa-monica-feira-de-santana.webp"', mapa)
+        self.assertIn('alt="Mapa do bairro Santa Mônica, em Feira de Santana"', mapa)
+        self.assertNotIn('<iframe', mapa)
+        self.assertNotIn('export/embed', mapa)
+        # o crédito do mapa fica visível na página
+        self.assertIn('openstreetmap.org/copyright', mapa)
+        # bairro sem coordenada continua sem mapa: nada é adivinhado
+        self.assertEqual(b.local_ficha(dict(imovel, bairro='Bairro Sem Ponto')), '')
+        # todo bairro com coordenada tem a imagem gerada
+        for chave in b.COORDENADAS_BAIRRO:
+            self.assertTrue(b.mapa_bairro_arquivo(chave).is_file(), chave)
+        pagina = b.pagina_imovel(self.corretor, imovel, self.imoveis)
+        self.assertNotIn('<iframe', pagina)
+
             ficha.write_text(
                 (raiz / 'dados' / '_modelo' / 'ficha.md').read_text(encoding='utf-8')
                 .replace('slug: __PREENCHER__', 'slug: unico-rascunho'),
